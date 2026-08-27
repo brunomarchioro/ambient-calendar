@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ApiSettingsRouteImport } from './routes/api/settings'
+import { Route as ApiDeviceScheduleRouteImport } from './routes/api/device/schedule'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -28,35 +29,49 @@ const ApiSettingsRoute = ApiSettingsRouteImport.update({
   path: '/api/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiDeviceScheduleRoute = ApiDeviceScheduleRouteImport.update({
+  id: '/api/device/schedule',
+  path: '/api/device/schedule',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/api/health': typeof ApiHealthRoute
   '/api/settings': typeof ApiSettingsRoute
+  '/api/device/schedule': typeof ApiDeviceScheduleRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/api/health': typeof ApiHealthRoute
   '/api/settings': typeof ApiSettingsRoute
+  '/api/device/schedule': typeof ApiDeviceScheduleRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/api/health': typeof ApiHealthRoute
   '/api/settings': typeof ApiSettingsRoute
+  '/api/device/schedule': typeof ApiDeviceScheduleRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/api/health' | '/api/settings'
+  fullPaths: '/' | '/api/health' | '/api/settings' | '/api/device/schedule'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/health' | '/api/settings'
-  id: '__root__' | '/' | '/api/health' | '/api/settings'
+  to: '/' | '/api/health' | '/api/settings' | '/api/device/schedule'
+  id:
+    | '__root__'
+    | '/'
+    | '/api/health'
+    | '/api/settings'
+    | '/api/device/schedule'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ApiHealthRoute: typeof ApiHealthRoute
   ApiSettingsRoute: typeof ApiSettingsRoute
+  ApiDeviceScheduleRoute: typeof ApiDeviceScheduleRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -82,6 +97,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiSettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/device/schedule': {
+      id: '/api/device/schedule'
+      path: '/api/device/schedule'
+      fullPath: '/api/device/schedule'
+      preLoaderRoute: typeof ApiDeviceScheduleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -89,6 +111,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ApiHealthRoute: ApiHealthRoute,
   ApiSettingsRoute: ApiSettingsRoute,
+  ApiDeviceScheduleRoute: ApiDeviceScheduleRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
