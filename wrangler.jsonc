@@ -8,7 +8,8 @@
     {
       "binding": "DB",
       "database_name": "alerts",
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "defee329-c666-42c5-92ba-46b5b47f86a9",
+      "migrations_dir": "db/migrations",
     },
   ],
   "triggers": {
