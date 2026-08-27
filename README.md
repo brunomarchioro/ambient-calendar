@@ -15,3 +15,14 @@ curl http://127.0.0.1:3000/api/health
 ```
 
 Expect `{"ok":true}`. After you change `wrangler.jsonc`, run `npm run cf-typegen`.
+
+## Device token (local)
+
+Copy `.dev.vars.example` to `.dev.vars` and set `DEVICE_API_TOKEN` to a long random value. Wrangler loads that file for local secrets. Do not commit `.dev.vars`.
+
+```sh
+curl -sS -D - -H "Authorization: Bearer $DEVICE_API_TOKEN" \
+  http://127.0.0.1:3000/api/device/schedule
+```
+
+A missing or wrong Bearer returns 401. A valid token returns the §6 schedule envelope.
