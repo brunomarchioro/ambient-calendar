@@ -1,0 +1,29 @@
+menu "Alerts device"
+
+config ALERTS_WIFI_SSID
+	string "Wi-Fi SSID"
+	default "YOUR_SSID"
+
+config ALERTS_WIFI_PASSWORD
+	string "Wi-Fi password"
+	default "YOUR_PASSWORD"
+
+config ALERTS_API_BASE_URL
+	string "API base URL, https, no trailing slash"
+	default "https://example.invalid"
+
+config ALERTS_DEVICE_API_TOKEN
+	string "DEVICE_API_TOKEN, same value as the Worker secret"
+	default "replace-me"
+
+config ALERTS_POLL_INTERVAL_S
+	int "Schedule poll interval in seconds"
+	default 300
+	range 30 3600
+
+config ALERTS_HEAP_FLOOR_KB
+	int "Serial recipe fails if free heap is below this after first poll, in KB"
+	default 40
+	range 40 256
+
+endmenu
