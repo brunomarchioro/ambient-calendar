@@ -1,11 +1,11 @@
 import { expect, test } from 'vitest'
-import { SETTINGS_DEFAULTS } from './settings'
+import { SETTINGS_DEFAULTS } from '@app/domain/settings'
 import {
   formatIsoWithOffset,
   horizonEnd,
   toDeviceSchedule,
   type EventRow,
-} from './device-schedule'
+} from '@app/domain/device-schedule'
 
 const now = new Date('2026-08-27T14:00:00-03:00')
 const settings = { ...SETTINGS_DEFAULTS }

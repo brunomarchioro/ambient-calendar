@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import type { Settings } from './settings'
+import type { Settings } from '@app/domain/settings'
 
 export type GoogleSecrets = {
   clientId: string

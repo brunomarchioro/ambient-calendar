@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { authorizeDevice } from './device-auth'
+import { authorizeDevice } from '@app/server/device-auth'
 
 test('missing Authorization is 401', async () => {
   const response = authorizeDevice(null, 'secret')

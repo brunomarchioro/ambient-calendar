@@ -2,8 +2,8 @@ import { Button, Card, Field, Heading, Input, NativeSelect, Stack, Text } from '
 import { useForm } from '@tanstack/react-form'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
-import { parseSettings, settingsSchema, type Settings } from '../settings'
-import { fetchSettings, saveSettings, settingsQueryKey } from '../web'
+import { parseSettings, settingsSchema, type Settings } from '@app/domain/settings'
+import { fetchSettings, saveSettings, settingsQueryKey } from '@app/client/web'
 
 const TIMEZONES = [
   'America/Sao_Paulo',

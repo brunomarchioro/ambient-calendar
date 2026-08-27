@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { env } from 'cloudflare:workers'
-import { authorizeDevice } from '../../../device-auth'
-import { loadDeviceSchedule, unavailable } from '../../../device-schedule'
+import { authorizeDevice } from '@app/server/device-auth'
+import { loadDeviceSchedule, unavailable } from '@app/domain/device-schedule'
 
 export const Route = createFileRoute('/api/device/schedule')({
   server: {

@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { SETTINGS_DEFAULTS, parseSettings, seedIfMissing } from './settings'
+import { SETTINGS_DEFAULTS, parseSettings, seedIfMissing } from '@app/domain/settings'
 
 test('seed defaults match §4', () => {
   expect(SETTINGS_DEFAULTS).toEqual({

@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { expect, test } from 'vitest'
-import { SETTINGS_DEFAULTS, type Settings } from './settings'
+import { SETTINGS_DEFAULTS, type Settings } from '@app/domain/settings'
 import {
   FIXTURE_ALLDAY,
   FIXTURE_CANCELLED,
@@ -10,14 +10,14 @@ import {
   FIXTURE_TIMED,
   TOKEN_INVALID_GRANT,
   TOKEN_OK,
-} from './sync.fixtures'
+} from '@app/domain/sync.fixtures'
 import {
   horizonFrom,
   mapGoogleItem,
   memoryStore,
   readGoogleSecrets,
   runScheduledSync,
-} from './sync'
+} from '@app/domain/sync'
 
 const SECRETS = {
   clientId: 'client.apps.googleusercontent.com',
@@ -305,7 +305,7 @@ test('readGoogleSecrets requires all three values', () => {
 })
 
 test('wrangler cron remains */15', () => {
-  const text = readFileSync(new URL('../wrangler.jsonc', import.meta.url), 'utf8')
+  const text = readFileSync(new URL('../../../wrangler.jsonc', import.meta.url), 'utf8')
   expect(text).toMatch(/"crons":\s*\[\s*"\*\/15 \* \* \* \*"\s*\]/)
 })
 

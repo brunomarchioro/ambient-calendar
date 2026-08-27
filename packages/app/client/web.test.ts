@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest'
-import { formatInTimeZone, instantFromWallClock, parseEventsJson } from './event'
-import { SETTINGS_DEFAULTS, parseSettings } from './settings'
+import { formatInTimeZone, instantFromWallClock, parseEventsJson } from '@app/domain/event'
+import { SETTINGS_DEFAULTS, parseSettings } from '@app/domain/settings'
 import {
   canMutateEvent,
   defaultLembreteStart,
@@ -8,7 +8,7 @@ import {
   parseLembreteForm,
   toDatetimeLocal,
   upcomingEvents,
-} from './web'
+} from '@app/client/web'
 
 const tz = SETTINGS_DEFAULTS.timezone
 

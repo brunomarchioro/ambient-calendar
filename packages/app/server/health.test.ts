@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { getHealth } from './health'
+import { getHealth } from '@app/server/health'
 
 test('GET health is 200 JSON { ok: true }', async () => {
   const response = await getHealth()

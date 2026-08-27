@@ -5,8 +5,8 @@ import {
   normalizeWrite,
   parseEventRow,
   parseEventWrite,
-} from './event'
-import { SETTINGS_DEFAULTS } from './settings'
+} from '@app/domain/event'
+import { SETTINGS_DEFAULTS } from '@app/domain/settings'
 
 const tz = SETTINGS_DEFAULTS.timezone
 

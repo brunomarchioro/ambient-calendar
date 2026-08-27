@@ -2,8 +2,8 @@ import { Badge, Box, Button, Card, Heading, HStack, Stack, Text } from '@chakra-
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import { useState } from 'react'
-import { LembreteForm } from '../components/LembreteForm'
-import type { Event, EventWrite, ManualEvent } from '../event'
+import { LembreteForm } from '@app/client/components/LembreteForm'
+import type { Event, EventWrite, ManualEvent } from '@app/domain/event'
 import {
   canMutateEvent,
   createLembrete,
@@ -14,7 +14,7 @@ import {
   settingsQueryKey,
   upcomingEvents,
   updateLembrete,
-} from '../web'
+} from '@app/client/web'
 
 export const Route = createFileRoute('/')({
   ssr: false,

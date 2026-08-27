@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react'
 import { ChakraProvider, Container, Flex, Heading, HStack, Text } from '@chakra-ui/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { HeadContent, Link, Outlet, Scripts, createRootRoute, useRouterState } from '@tanstack/react-router'
-import { system } from '../theme'
+import { system } from '@app/client/theme'
 
 export const Route = createRootRoute({
   ssr: false,

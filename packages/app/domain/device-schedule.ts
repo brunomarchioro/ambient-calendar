@@ -1,4 +1,4 @@
-import { getOrSeedSettings, type Settings } from './settings'
+import { getOrSeedSettings, type Settings } from '@app/domain/settings'
 
 export type DeviceEvent = {
   id: string

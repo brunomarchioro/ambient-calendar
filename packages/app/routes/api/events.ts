@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { env } from 'cloudflare:workers'
-import { createManualEvent, listEvents, parseEventWrite, readJsonBody } from '../../event'
+import { createManualEvent, listEvents, parseEventWrite, readJsonBody } from '@app/domain/event'
 
 export const Route = createFileRoute('/api/events')({
   server: {

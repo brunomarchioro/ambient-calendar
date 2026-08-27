@@ -6,8 +6,8 @@ import {
   type Event,
   type EventWrite,
   type ManualEvent,
-} from './event'
-import { parseSettings, type Settings } from './settings'
+} from '@app/domain/event'
+import { parseSettings, type Settings } from '@app/domain/settings'
 
 export const eventsQueryKey = ['events'] as const
 export const settingsQueryKey = ['settings'] as const

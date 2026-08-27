@@ -1,7 +1,7 @@
 import handler from '@tanstack/react-start/server-entry'
-import { getOrSeedSettings } from './settings'
-import { FIXTURE_GOOGLE_ITEMS } from './sync.fixtures'
-import { d1Store, readGoogleSecrets, runScheduledSync } from './sync'
+import { getOrSeedSettings } from '@app/domain/settings'
+import { FIXTURE_GOOGLE_ITEMS } from '@app/domain/sync.fixtures'
+import { d1Store, readGoogleSecrets, runScheduledSync } from '@app/domain/sync'
 
 export default {
   fetch: handler.fetch,

@@ -1,13 +1,13 @@
 import { Button, Field, Input, Stack, Text } from '@chakra-ui/react'
 import { useForm } from '@tanstack/react-form'
-import type { EventWrite, ManualEvent } from '../event'
-import { normalizeWrite } from '../event'
+import type { EventWrite, ManualEvent } from '@app/domain/event'
+import { normalizeWrite } from '@app/domain/event'
 import {
   defaultLembreteStart,
   parseLembreteForm,
   toDatetimeLocal,
   type LembreteFormValues,
-} from '../web'
+} from '@app/client/web'
 
 function emptyValues(timeZone: string): LembreteFormValues {
   return {

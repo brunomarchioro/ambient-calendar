@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { env } from 'cloudflare:workers'
-import { getOrSeedSettings, parseSettings, putSettings } from '../../settings'
+import { getOrSeedSettings, parseSettings, putSettings } from '@app/domain/settings'
 
 export const Route = createFileRoute('/api/settings')({
   server: {

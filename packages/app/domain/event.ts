@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { getOrSeedSettings } from './settings'
+import { getOrSeedSettings } from '@app/domain/settings'
 
 const isoDateTime = z.iso.datetime({ offset: true })
 
