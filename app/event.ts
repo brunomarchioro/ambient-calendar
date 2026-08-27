@@ -29,6 +29,33 @@ export type Event =
 
 export type ManualEvent = Extract<Event, { source: 'manual' }>
 
+const eventBasePublicSchema = z.object({
+  id: z.string().min(1),
+  title: z.string(),
+  startAt: z.string().min(1),
+  endAt: z.string().min(1).nullable(),
+  allDay: z.boolean(),
+  timezone: z.string().min(1),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+})
+
+export const eventPublicSchema = z.discriminatedUnion('source', [
+  eventBasePublicSchema.extend({
+    source: z.literal('google'),
+    externalId: z.string().min(1),
+  }),
+  eventBasePublicSchema.extend({
+    source: z.literal('manual'),
+    externalId: z.null(),
+  }),
+])
+
+export function parseEventsJson(input: unknown): Event[] | null {
+  const parsed = z.array(eventPublicSchema).safeParse(input)
+  return parsed.success ? parsed.data : null
+}
+
 const eventRowSchema = z.object({
   id: z.string().min(1),
   source: z.enum(['google', 'manual']),
@@ -115,14 +142,21 @@ function calendarDate(instant: Date, timeZone: string): string {
   }).format(instant)
 }
 
-function wallMidnight(ymd: string, timeZone: string): Date {
+export function instantFromWallClock(wall: string, timeZone: string): Date {
+  const withSeconds = wall.length === 16 ? `${wall}:00` : wall
+  const [ymd, hms = '00:00:00'] = withSeconds.split('T')
   const [year, month, day] = ymd.split('-').map(Number)
-  const utcGuess = Date.UTC(year, month - 1, day, 0, 0, 0)
+  const [hour, minute, second] = hms.split(':').map(Number)
+  const utcGuess = Date.UTC(year, month - 1, day, hour, minute, second ?? 0)
   const offset = timeZoneOffsetMs(utcGuess, timeZone)
   let instantMs = utcGuess - offset
   const offset2 = timeZoneOffsetMs(instantMs, timeZone)
   if (offset2 !== offset) instantMs = utcGuess - offset2
   return new Date(instantMs)
+}
+
+function wallMidnight(ymd: string, timeZone: string): Date {
+  return instantFromWallClock(`${ymd}T00:00:00`, timeZone)
 }
 
 function midnightInstant(instant: Date, timeZone: string): Date {

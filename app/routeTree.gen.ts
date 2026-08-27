@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ApiEventsRouteImport } from './routes/api/events'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ApiSettingsRouteImport } from './routes/api/settings'
@@ -18,6 +19,11 @@ import { Route as ApiEventsIdRouteImport } from './routes/api/events.$id'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiEventsRoute = ApiEventsRouteImport.update({
@@ -43,6 +49,7 @@ const ApiEventsIdRoute = ApiEventsIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/settings': typeof SettingsRoute
   '/api/events': typeof ApiEventsRouteWithChildren
   '/api/health': typeof ApiHealthRoute
   '/api/settings': typeof ApiSettingsRoute
@@ -50,6 +57,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/settings': typeof SettingsRoute
   '/api/events': typeof ApiEventsRouteWithChildren
   '/api/health': typeof ApiHealthRoute
   '/api/settings': typeof ApiSettingsRoute
@@ -58,6 +66,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/settings': typeof SettingsRoute
   '/api/events': typeof ApiEventsRouteWithChildren
   '/api/health': typeof ApiHealthRoute
   '/api/settings': typeof ApiSettingsRoute
@@ -65,14 +74,34 @@ export interface FileRoutesById {
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/api/events' | '/api/health' | '/api/settings' | '/api/events/$id'
+  fullPaths:
+    | '/'
+    | '/settings'
+    | '/api/events'
+    | '/api/health'
+    | '/api/settings'
+    | '/api/events/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/events' | '/api/health' | '/api/settings' | '/api/events/$id'
-  id: '__root__' | '/' | '/api/events' | '/api/health' | '/api/settings' | '/api/events/$id'
+  to:
+    | '/'
+    | '/settings'
+    | '/api/events'
+    | '/api/health'
+    | '/api/settings'
+    | '/api/events/$id'
+  id:
+    | '__root__'
+    | '/'
+    | '/settings'
+    | '/api/events'
+    | '/api/health'
+    | '/api/settings'
+    | '/api/events/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  SettingsRoute: typeof SettingsRoute
   ApiEventsRoute: typeof ApiEventsRouteWithChildren
   ApiHealthRoute: typeof ApiHealthRoute
   ApiSettingsRoute: typeof ApiSettingsRoute
@@ -85,6 +114,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/events': {
@@ -132,6 +168,7 @@ const ApiEventsRouteWithChildren = ApiEventsRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  SettingsRoute: SettingsRoute,
   ApiEventsRoute: ApiEventsRouteWithChildren,
   ApiHealthRoute: ApiHealthRoute,
   ApiSettingsRoute: ApiSettingsRoute,
