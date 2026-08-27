@@ -3,7 +3,6 @@ interface D1PreparedStatement {
   first<T = unknown>(): Promise<T | null>
   all<T = unknown>(): Promise<{ results: T[] }>
   run(): Promise<unknown>
-  all<T = unknown>(): Promise<{ results: T[] }>
 }
 
 interface D1Database {
@@ -11,6 +10,8 @@ interface D1Database {
 }
 
 interface Env {
+  DB: D1Database
+  DEVICE_API_TOKEN?: string
   GOOGLE_CLIENT_ID?: string
   GOOGLE_CLIENT_SECRET?: string
   GOOGLE_REFRESH_TOKEN?: string
