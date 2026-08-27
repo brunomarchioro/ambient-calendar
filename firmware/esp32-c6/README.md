@@ -8,6 +8,8 @@ Wi-Fi, HTTPS poll of `GET /api/device/schedule`, LittleFS cache, NVS meta, SNTP 
 cd firmware/esp32-c6/host && make test
 ```
 
+Runs JSON parse tests and scheduler state tests (Now, Alert, Ambient, Empty, all-day exclusion, focus ties).
+
 ## Device build
 
 Requires [ESP-IDF](https://docs.espressif.com/projects/esp-idf/) ≥ 5.5 and target `esp32c6`.
