@@ -10,18 +10,21 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ApiEventsRouteImport } from './routes/api/events'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ApiSettingsRouteImport } from './routes/api/settings'
-<<<<<<< HEAD
 import { Route as ApiEventsIdRouteImport } from './routes/api/events.$id'
-=======
 import { Route as ApiDeviceScheduleRouteImport } from './routes/api/device/schedule'
->>>>>>> pr-device
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiEventsRoute = ApiEventsRouteImport.update({
@@ -39,75 +42,78 @@ const ApiSettingsRoute = ApiSettingsRouteImport.update({
   path: '/api/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
-<<<<<<< HEAD
 const ApiEventsIdRoute = ApiEventsIdRouteImport.update({
   id: '/$id',
   path: '/$id',
   getParentRoute: () => ApiEventsRoute,
-=======
+} as any)
 const ApiDeviceScheduleRoute = ApiDeviceScheduleRouteImport.update({
   id: '/api/device/schedule',
   path: '/api/device/schedule',
   getParentRoute: () => rootRouteImport,
->>>>>>> pr-device
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/settings': typeof SettingsRoute
   '/api/events': typeof ApiEventsRouteWithChildren
   '/api/health': typeof ApiHealthRoute
   '/api/settings': typeof ApiSettingsRoute
-<<<<<<< HEAD
   '/api/events/$id': typeof ApiEventsIdRoute
-=======
   '/api/device/schedule': typeof ApiDeviceScheduleRoute
->>>>>>> pr-device
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/settings': typeof SettingsRoute
   '/api/events': typeof ApiEventsRouteWithChildren
   '/api/health': typeof ApiHealthRoute
   '/api/settings': typeof ApiSettingsRoute
-<<<<<<< HEAD
   '/api/events/$id': typeof ApiEventsIdRoute
-=======
   '/api/device/schedule': typeof ApiDeviceScheduleRoute
->>>>>>> pr-device
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/settings': typeof SettingsRoute
   '/api/events': typeof ApiEventsRouteWithChildren
   '/api/health': typeof ApiHealthRoute
   '/api/settings': typeof ApiSettingsRoute
-<<<<<<< HEAD
   '/api/events/$id': typeof ApiEventsIdRoute
-}
-export interface FileRouteTypes {
-  fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/api/events' | '/api/health' | '/api/settings' | '/api/events/$id'
-  fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/events' | '/api/health' | '/api/settings' | '/api/events/$id'
-  id: '__root__' | '/' | '/api/events' | '/api/health' | '/api/settings' | '/api/events/$id'
-=======
   '/api/device/schedule': typeof ApiDeviceScheduleRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/api/health' | '/api/settings' | '/api/device/schedule'
+  fullPaths:
+    | '/'
+    | '/settings'
+    | '/api/events'
+    | '/api/health'
+    | '/api/settings'
+    | '/api/events/$id'
+    | '/api/device/schedule'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/health' | '/api/settings' | '/api/device/schedule'
+  to:
+    | '/'
+    | '/settings'
+    | '/api/events'
+    | '/api/health'
+    | '/api/settings'
+    | '/api/events/$id'
+    | '/api/device/schedule'
   id:
     | '__root__'
     | '/'
+    | '/settings'
+    | '/api/events'
     | '/api/health'
     | '/api/settings'
+    | '/api/events/$id'
     | '/api/device/schedule'
->>>>>>> pr-device
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  SettingsRoute: typeof SettingsRoute
   ApiEventsRoute: typeof ApiEventsRouteWithChildren
   ApiHealthRoute: typeof ApiHealthRoute
   ApiSettingsRoute: typeof ApiSettingsRoute
@@ -121,6 +127,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/events': {
@@ -144,21 +157,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiSettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
-<<<<<<< HEAD
     '/api/events/$id': {
       id: '/api/events/$id'
       path: '/$id'
       fullPath: '/api/events/$id'
       preLoaderRoute: typeof ApiEventsIdRouteImport
       parentRoute: typeof ApiEventsRoute
-=======
+    }
     '/api/device/schedule': {
       id: '/api/device/schedule'
       path: '/api/device/schedule'
       fullPath: '/api/device/schedule'
       preLoaderRoute: typeof ApiDeviceScheduleRouteImport
       parentRoute: typeof rootRouteImport
->>>>>>> pr-device
     }
   }
 }
@@ -177,6 +188,7 @@ const ApiEventsRouteWithChildren = ApiEventsRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  SettingsRoute: SettingsRoute,
   ApiEventsRoute: ApiEventsRouteWithChildren,
   ApiHealthRoute: ApiHealthRoute,
   ApiSettingsRoute: ApiSettingsRoute,
