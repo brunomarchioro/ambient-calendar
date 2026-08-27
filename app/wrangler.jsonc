@@ -3,7 +3,7 @@
   "name": "alerts",
   "compatibility_date": "2026-08-27",
   "compatibility_flags": ["nodejs_compat"],
-  "main": "packages/app/worker.ts",
+  "main": "worker.ts",
   "d1_databases": [
     {
       "binding": "DB",

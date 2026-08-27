@@ -4,10 +4,10 @@ import { defineConfig } from 'vitest/config'
 export default defineConfig({
   resolve: {
     alias: {
-      '@app': path.resolve(import.meta.dirname, 'packages/app'),
+      '@app': path.resolve(import.meta.dirname, '.'),
     },
   },
   test: {
-    include: ['packages/app/**/*.test.ts'],
+    include: ['**/*.test.ts'],
   },
 })

@@ -305,7 +305,7 @@ test('readGoogleSecrets requires all three values', () => {
 })
 
 test('wrangler cron remains */15', () => {
-  const text = readFileSync(new URL('../../../wrangler.jsonc', import.meta.url), 'utf8')
+  const text = readFileSync(new URL('../wrangler.jsonc', import.meta.url), 'utf8')
   expect(text).toMatch(/"crons":\s*\[\s*"\*\/15 \* \* \* \*"\s*\]/)
 })
 

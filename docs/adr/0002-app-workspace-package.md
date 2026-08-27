@@ -2,7 +2,7 @@
 
 ## Status
 
-Aceito (2026-08-27)
+Superseded by [ADR 0003](./0003-node-app-folder.md) (2026-08-27).
 
 ## Contexto
 

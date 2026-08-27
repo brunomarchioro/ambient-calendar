@@ -38,7 +38,7 @@ Tests alone are not sufficient verification. A PR is verified only when its unit
   - [ ] pr-web after pr-events and pr-device.
   - [ ] pr-fw-platform after pr-device (or a checked-in schedule fixture that matches the §6 JSON).
   - [ ] pr-fw-hmi after pr-fw-platform.
-- [ ] Hold the file boundaries. pr-scaffold and API PRs touch `packages/app/`, `db/`, `wrangler.jsonc`, `package.json`, `shared/`. pr-web touches web routes and UI under `packages/app/` only. Firmware PRs touch only `firmware/esp32-c6/`.
+- [ ] Hold the file boundaries. pr-scaffold and API PRs touch `app/`, `wrangler.jsonc`, `package.json` under `app/`. pr-web touches web routes and UI under `app/` only. Firmware PRs touch only `firmware/esp32-c6/`.
 - [ ] Hold the review gate. pr-web and pr-fw-hmi change an interaction. They wait for the operator's review in chat with screenshots and a video before merge.
 
 ### PR mechanics, for every PR
@@ -72,7 +72,7 @@ Each live lane runs on its own cloud VM at the PR head. Drive web and HTTP throu
 
 - [ ] Create `package.json`.
 - [ ] Create `wrangler.jsonc` with `nodejs_compat`, D1 binding stub, and `triggers.crons` stub.
-- [ ] Create `packages/app/` TanStack Start SPA (`ssr: false`) with Vite and `@cloudflare/vite-plugin` before `tanstackStart()`.
+- [ ] Create `app/` TanStack Start SPA (`ssr: false`) with Vite and `@cloudflare/vite-plugin` before `tanstackStart()`.
 - [ ] Create custom Worker entry that exports `fetch` from Start and a no-op `scheduled`.
 - [ ] Create `GET /api/health` as a server route. No `createServerFn`.
 
@@ -123,7 +123,7 @@ Each live lane runs on its own cloud VM at the PR head. Drive web and HTTP throu
 
 **Files.**
 
-- [ ] Create `db/migrations/` with Event and Settings tables matching `docs/index.md` §4.
+- [ ] Create `app/db/migrations/` with Event and Settings tables matching `docs/index.md` §4.
 - [ ] Create Settings seed with defaults `America/Sao_Paulo`, 30, 7, 2.
 - [ ] Create `GET /api/settings` and `PUT /api/settings` server routes with Zod bounds.
 - [ ] Create shared Event and Settings types under `shared/contracts/` only if both server and a future client need them in this PR.
@@ -500,7 +500,7 @@ No throwaway prototype branch in this planning pass. Map ticket 07 already class
 
 Settled by decree for the build.
 
-- Monorepo path is `packages/app/` (`@app/alerts`) per `docs/index.md` §11 and ADR 0002. Relocate if a scaffold emits `app/` or `src/`.
+- Monorepo path is `app/` (`@app/alerts`) per `docs/index.md` §11 and ADR 0003. All Node tooling lives under `app/`.
 - Schedule and sync share half-open `[now, now+lookaheadDays)`.
 - Google list uses `eventTypes=default`.
 - OAuth scope prefers `calendar.events.readonly`.

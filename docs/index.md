@@ -283,17 +283,17 @@ Mínimo alinhado à research TanStack/Workers. Tooling CI fino fora do MVP.
 
 ```text
 alerts/
-├── packages/
-│   └── app/                # @app/alerts — TanStack Start (domain, server, client, routes)
-│       ├── domain/
-│       ├── server/
-│       ├── client/
-│       ├── routes/
-│       └── worker.ts       # Wrangler entry (fetch + scheduled)
-├── db/
-│   └── migrations/         # D1 via Wrangler
-├── shared/                 # adiado — tipos compartilhados quando houver 2º consumidor Node
-│   └── contracts/
+├── app/                    # @app/alerts — Node/Worker (UI, API, Cron, D1)
+│   ├── domain/
+│   ├── server/
+│   ├── client/
+│   ├── routes/
+│   ├── db/migrations/
+│   ├── worker.ts
+│   ├── package.json
+│   ├── vite.config.ts
+│   ├── wrangler.jsonc
+│   └── vitest.config.ts
 ├── firmware/
 │   └── esp32-c6/
 │       ├── network/
@@ -304,10 +304,7 @@ alerts/
 ├── docs/
 │   ├── index.md            # esta spec
 │   └── research/
-├── CONTEXT.md
-├── wrangler.jsonc          # tooling na raiz
-├── vite.config.ts
-└── package.json            # npm workspaces: packages/*
+└── CONTEXT.md
 ```
 
 Um Worker serve UI + API + Cron.
