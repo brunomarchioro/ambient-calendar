@@ -366,13 +366,13 @@ export async function runScheduledSync(input: {
     return { kind: 'skipped', reason: 'missing_secrets' }
   }
   const token = await refreshAccessToken(input.secrets, input.fetch, input.log)
-  if (token.kind !== 'ok') return token
+  if (token.kind !== 'ok' || !('accessToken' in token)) return token
   const listed = await listPrimaryEvents(
     token.accessToken,
     horizonFrom(input.now, input.settings.lookaheadDays, input.settings.timezone),
     input.fetch,
     input.log,
   )
-  if (listed.kind !== 'ok') return listed
+  if (listed.kind !== 'ok' || !('items' in listed)) return listed
   return persistItems(input.store, listed.items, input.settings.timezone, input.now, newId)
 }
