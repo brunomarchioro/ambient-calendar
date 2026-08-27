@@ -14,8 +14,8 @@ import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ApiEventsRouteImport } from './routes/api/events'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ApiSettingsRouteImport } from './routes/api/settings'
-import { Route as ApiEventsIdRouteImport } from './routes/api/events.$id'
 import { Route as ApiDeviceScheduleRouteImport } from './routes/api/device/schedule'
+import { Route as ApiEventsIdRouteImport } from './routes/api/events.$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -42,15 +42,15 @@ const ApiSettingsRoute = ApiSettingsRouteImport.update({
   path: '/api/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiEventsIdRoute = ApiEventsIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => ApiEventsRoute,
-} as any)
 const ApiDeviceScheduleRoute = ApiDeviceScheduleRouteImport.update({
   id: '/api/device/schedule',
   path: '/api/device/schedule',
   getParentRoute: () => rootRouteImport,
+} as any)
+const ApiEventsIdRoute = ApiEventsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => ApiEventsRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -59,8 +59,8 @@ export interface FileRoutesByFullPath {
   '/api/events': typeof ApiEventsRouteWithChildren
   '/api/health': typeof ApiHealthRoute
   '/api/settings': typeof ApiSettingsRoute
-  '/api/events/$id': typeof ApiEventsIdRoute
   '/api/device/schedule': typeof ApiDeviceScheduleRoute
+  '/api/events/$id': typeof ApiEventsIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -68,8 +68,8 @@ export interface FileRoutesByTo {
   '/api/events': typeof ApiEventsRouteWithChildren
   '/api/health': typeof ApiHealthRoute
   '/api/settings': typeof ApiSettingsRoute
-  '/api/events/$id': typeof ApiEventsIdRoute
   '/api/device/schedule': typeof ApiDeviceScheduleRoute
+  '/api/events/$id': typeof ApiEventsIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -78,8 +78,8 @@ export interface FileRoutesById {
   '/api/events': typeof ApiEventsRouteWithChildren
   '/api/health': typeof ApiHealthRoute
   '/api/settings': typeof ApiSettingsRoute
-  '/api/events/$id': typeof ApiEventsIdRoute
   '/api/device/schedule': typeof ApiDeviceScheduleRoute
+  '/api/events/$id': typeof ApiEventsIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -89,8 +89,8 @@ export interface FileRouteTypes {
     | '/api/events'
     | '/api/health'
     | '/api/settings'
-    | '/api/events/$id'
     | '/api/device/schedule'
+    | '/api/events/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -98,8 +98,8 @@ export interface FileRouteTypes {
     | '/api/events'
     | '/api/health'
     | '/api/settings'
-    | '/api/events/$id'
     | '/api/device/schedule'
+    | '/api/events/$id'
   id:
     | '__root__'
     | '/'
@@ -107,8 +107,8 @@ export interface FileRouteTypes {
     | '/api/events'
     | '/api/health'
     | '/api/settings'
-    | '/api/events/$id'
     | '/api/device/schedule'
+    | '/api/events/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -157,19 +157,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiSettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/events/$id': {
-      id: '/api/events/$id'
-      path: '/$id'
-      fullPath: '/api/events/$id'
-      preLoaderRoute: typeof ApiEventsIdRouteImport
-      parentRoute: typeof ApiEventsRoute
-    }
     '/api/device/schedule': {
       id: '/api/device/schedule'
       path: '/api/device/schedule'
       fullPath: '/api/device/schedule'
       preLoaderRoute: typeof ApiDeviceScheduleRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/api/events/$id': {
+      id: '/api/events/$id'
+      path: '/$id'
+      fullPath: '/api/events/$id'
+      preLoaderRoute: typeof ApiEventsIdRouteImport
+      parentRoute: typeof ApiEventsRoute
     }
   }
 }
