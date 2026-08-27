@@ -8,7 +8,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "db:migrate:local": "wrangler d1 migrations apply alerts --local",
-    "cf-typegen": "wrangler types --include-runtime false"
+    "cf-typegen": "wrangler types"
   },
   "dependencies": {
     "@chakra-ui/react": "^3.36.1",
