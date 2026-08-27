@@ -2,12 +2,14 @@
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "hmi.h"
 #include "littlefs_cache.h"
 #include "nvs_meta.h"
 #include "poll.h"
 #include "scheduler.h"
 #include "sdkconfig.h"
 #include "time_seed.h"
+#include "touch.h"
 #include "wifi.h"
 
 static const char *TAG = "main";
@@ -24,11 +26,13 @@ static void log_nvs_meta(void)
 
 void app_main(void)
 {
-	ESP_LOGI(TAG, "alerts esp32-c6 platform boot");
+	ESP_LOGI(TAG, "alerts esp32-c6 hmi boot");
 	ESP_ERROR_CHECK(alerts_nvs_meta_init());
 	ESP_ERROR_CHECK(alerts_littlefs_init());
 	ESP_ERROR_CHECK(alerts_bsp_init());
 	ESP_ERROR_CHECK(alerts_lvgl_init());
+	ESP_ERROR_CHECK(alerts_touch_init());
+	ESP_ERROR_CHECK(alerts_hmi_init());
 	ESP_ERROR_CHECK(alerts_time_init());
 
 	if (alerts_poll_load_cache() == ESP_OK) {
@@ -43,8 +47,14 @@ void app_main(void)
 	ESP_ERROR_CHECK(alerts_scheduler_init());
 	alerts_bsp_log_heap("after first poll");
 
+	int poll_countdown = 0;
 	for (;;) {
-		vTaskDelay(pdMS_TO_TICKS(CONFIG_ALERTS_POLL_INTERVAL_S * 1000));
-		(void)alerts_poll_schedule_once();
+		(void)alerts_hmi_loop_once();
+		alerts_touch_tick_ms(1000);
+		vTaskDelay(pdMS_TO_TICKS(1000));
+		if (++poll_countdown >= CONFIG_ALERTS_POLL_INTERVAL_S) {
+			poll_countdown = 0;
+			(void)alerts_poll_schedule_once();
+		}
 	}
 }
