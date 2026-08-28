@@ -1,0 +1,133 @@
+# Ambient Calendar Display — `app/`
+
+Pacote `@app/alerts`: TanStack Start (UI + rotas HTTP) + Cloudflare Workers + D1 (SQLite).
+
+Monorepo: firmware em `firmware/`, spec em `docs/`, visão geral em [`../README.md`](../README.md).
+
+## Pré-requisitos
+
+- Node.js 20+
+- npm
+
+## Primeira execução
+
+```sh
+cd app
+npm install
+cp .dev.vars.example .dev.vars   # edite DEVICE_API_TOKEN (e Google, se for usar sync)
+npm run db:migrate:local         # cria o D1 local e aplica migrations
+npm test
+npm run dev
+```
+
+`npm run dev` sobe Vite com `@cloudflare/vite-plugin` em **`http://127.0.0.1:3000`**.
+
+Health check:
+
+```sh
+curl http://127.0.0.1:3000/api/health
+```
+
+Esperado: `{"ok":true}`.
+
+Após alterar `wrangler.jsonc`, regenere tipos:
+
+```sh
+npm run cf-typegen
+```
+
+## Secrets locais (`.dev.vars`)
+
+Wrangler carrega `app/.dev.vars` em dev. **Não commite** esse arquivo.
+
+| Variável | Uso |
+| -------- | --- |
+| `DEVICE_API_TOKEN` | Bearer para `GET /api/device/schedule` (firmware/simulador) |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REFRESH_TOKEN` | Sync com Google Calendar (Cron) — ver [como obter credenciais](../README.md#google-calendar-api) |
+| `GOOGLE_SYNC_FIXTURE=1` | Sync usa fixture local quando credenciais Google estão vazias |
+
+Teste do device:
+
+```sh
+curl -sS -D - -H "Authorization: Bearer $DEVICE_API_TOKEN" \
+  http://127.0.0.1:3000/api/device/schedule
+```
+
+Token ausente ou inválido → **401**. Token válido → envelope de schedule (spec §6).
+
+## Banco de dados (Cloudflare D1)
+
+ORM: **Drizzle**. Schemas em `src/server/*/repository/schema.ts`. SQL versionado em `db/migrations/`.
+
+Configuração Wrangler: binding `DB`, database name `alerts`, pasta `db/migrations/` (`wrangler.jsonc`).
+
+### Inicializar e aplicar migrations (local)
+
+Na **primeira vez** (ou após puxar migrations novas):
+
+```sh
+npm run db:migrate:local
+```
+
+Equivalente a:
+
+```sh
+npx wrangler d1 migrations apply alerts --local
+```
+
+Isso cria/atualiza o SQLite local do D1 (estado em `.wrangler/state/`) e registra migrations aplicadas na tabela `d1_migrations`.
+
+A migration inicial (`0000_oval_iron_man.sql`) cria as tabelas `Event` e `Settings` e faz seed idempotente de Settings (`INSERT OR IGNORE`, defaults: `America/Sao_Paulo`, reminder 30 min, lookahead 7 dias, showNextEvents 2).
+
+**Ordem recomendada:** migrations **antes** de `npm run dev` na primeira vez. Rodar de novo é idempotente.
+
+### Aplicar migrations (produção)
+
+Com Wrangler autenticado na conta Cloudflare:
+
+```sh
+npx wrangler d1 migrations apply alerts --remote
+```
+
+### Criar uma nova migration
+
+1. Altere os schemas Drizzle em `src/server/events/repository/schema.ts` e/ou `src/server/settings/repository/schema.ts`.
+2. Gere o SQL:
+
+```sh
+npm run db:generate
+```
+
+3. Revise o arquivo em `db/migrations/`.
+4. Aplique localmente (`npm run db:migrate:local`) e teste.
+5. Commit do `.sql` + `db/migrations/meta/`.
+
+### Inspecionar dados
+
+```sh
+npm run db:studio
+```
+
+Abre Drizzle Studio contra o schema definido em `drizzle.config.ts`.
+
+### Consulta SQL direta (local)
+
+```sh
+npx wrangler d1 execute alerts --local --command "SELECT * FROM Settings"
+```
+
+## Scripts úteis
+
+| Script | Descrição |
+| ------ | --------- |
+| `npm run dev` | Dev server (Vite + Worker) em `:3000` |
+| `npm test` | Vitest |
+| `npm run build` | Build de produção |
+| `npm run db:migrate:local` | Aplica migrations no D1 local |
+| `npm run db:generate` | Gera migration a partir dos schemas Drizzle |
+| `npm run db:studio` | Drizzle Studio |
+| `npm run cf-typegen` | Tipos TypeScript do binding Cloudflare |
+
+## Simulador de firmware
+
+O simulador HMI consome a mesma API local. Veja [`../firmware/simulator/README.md`](../firmware/simulator/README.md). Use a mesma URL (`http://127.0.0.1:3000`) e o mesmo token definido em `DEVICE_API_TOKEN` / `ALERTS_DEVICE_API_TOKEN`.

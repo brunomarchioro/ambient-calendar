@@ -8,8 +8,14 @@ Unit tests without a window stay in [`../esp32-c6/host/`](../esp32-c6/host/).
 
 - `gcc`, `make`, `git`, `pkg-config`
 - `libsdl2-dev`, `libcurl4-openssl-dev`
-- Local Worker: `cd app && npx wrangler dev`
+- Local Worker: `cd app && npm run dev` (porta **3000**)
 - Same `DEVICE_API_TOKEN` as the firmware (`ALERTS_DEVICE_API_TOKEN`)
+
+### Installation
+
+```bash
+sudo apt install libsdl2-dev libcurl4-openssl-dev
+```
 
 ## Build and run
 
@@ -17,21 +23,21 @@ Unit tests without a window stay in [`../esp32-c6/host/`](../esp32-c6/host/).
 cd firmware/simulator/esp32-c6
 make deps    # clones LVGL v9.2.2 once
 make
-export ALERTS_API_BASE_URL=http://127.0.0.1:8787
+export ALERTS_API_BASE_URL=http://127.0.0.1:3000
 export ALERTS_DEVICE_API_TOKEN=your-token
 ./alerts_hmi_sim
 ```
 
-CLI overrides: `./alerts_hmi_sim --url http://127.0.0.1:8787 --token your-token`
+CLI overrides: `./alerts_hmi_sim --url http://127.0.0.1:3000 --token your-token`
 
 ## Controls
 
-| Input | Action |
-| --- | --- |
-| Click | Short tap (toggle overlay) |
+| Input        | Action                       |
+| ------------ | ---------------------------- |
+| Click        | Short tap (toggle overlay)   |
 | Left / Right | Scrub simulated time ±15 min |
-| R | Re-poll schedule from API |
-| Q / Esc | Quit |
+| R            | Re-poll schedule from API    |
+| Q / Esc      | Quit                         |
 
 ## Tests
 
