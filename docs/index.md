@@ -297,6 +297,7 @@ alerts/
 │   ├── wrangler.jsonc
 │   └── vitest.config.ts
 ├── firmware/
+│   ├── simulator/          # HMI sim (LVGL/SDL); ver ADR 0005
 │   └── esp32-c6/
 │       ├── network/
 │       ├── sync/

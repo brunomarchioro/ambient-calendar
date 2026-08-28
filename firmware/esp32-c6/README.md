@@ -10,7 +10,9 @@ cd firmware/esp32-c6/host && make test
 
 Runs JSON parse tests and HMI frame tests (Empty, Ambient, Alerta, Agora, all-day exclusion, focus ties, Overlay list).
 
-## Device build
+## HMI simulator (host)
+
+LVGL/SDL interactive build for dev review without hardware. See [`../simulator/README.md`](../simulator/README.md) and ADR 0005.
 
 Requires [ESP-IDF](https://docs.espressif.com/projects/esp-idf/) ≥ 5.5 and target `esp32c6`.
 
