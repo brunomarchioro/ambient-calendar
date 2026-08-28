@@ -1,8 +1,8 @@
 {
-  "include": ["**/*.ts", "**/*.tsx"],
+  "include": ["src/**/*.ts", "src/**/*.tsx", "worker.ts", "drizzle.config.ts"],
   "compilerOptions": {
     "paths": {
-      "@app/*": ["./*"]
+      "@/*": ["./src/*"]
     },
     "strict": true,
     "esModuleInterop": true,

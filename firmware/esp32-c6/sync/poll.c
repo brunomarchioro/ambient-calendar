@@ -38,7 +38,7 @@ esp_err_t alerts_poll_load_cache(void)
 		return ESP_FAIL;
 	}
 	s_have_schedule = true;
-	ESP_LOGI(TAG, "cache events=%u truncated=%d", (unsigned)s_schedule.event_count, s_schedule.events_truncated);
+	ESP_LOGI(TAG, "cache events=%u", (unsigned)s_schedule.event_count);
 	return ESP_OK;
 }
 

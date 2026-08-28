@@ -1,6 +1,7 @@
 #include "schedule_parse.h"
 
 #include <ctype.h>
+#include <limits.h>
 #include <string.h>
 
 typedef struct {
@@ -333,6 +334,31 @@ static int parse_int(cur_t *c, int *out)
 	return ALERTS_PARSE_OK;
 }
 
+static int parse_int64(cur_t *c, int64_t *out)
+{
+	int sign = 1;
+	int64_t v = 0;
+	int64_t cap = INT64_MAX / 10;
+	skip_ws(c);
+	if (peek(c) == '-') {
+		sign = -1;
+		c->p++;
+	}
+	if (peek(c) < '0' || peek(c) > '9') {
+		return ALERTS_PARSE_TYPE;
+	}
+	while (peek(c) >= '0' && peek(c) <= '9') {
+		int digit = peek(c) - '0';
+		if (v > cap || (v == cap && digit > INT64_MAX % 10)) {
+			return ALERTS_PARSE_TYPE;
+		}
+		v = v * 10 + digit;
+		c->p++;
+	}
+	*out = sign < 0 ? -v : v;
+	return ALERTS_PARSE_OK;
+}
+
 static int parse_bool(cur_t *c, bool *out)
 {
 	skip_ws(c);
@@ -347,98 +373,7 @@ static int parse_bool(cur_t *c, bool *out)
 	return ALERTS_PARSE_TYPE;
 }
 
-static int two_digits(const char *s)
-{
-	if (s[0] < '0' || s[0] > '9' || s[1] < '0' || s[1] > '9') {
-		return -1;
-	}
-	return (s[0] - '0') * 10 + (s[1] - '0');
-}
-
-static int four_digits(const char *s)
-{
-	int i;
-	int v = 0;
-	for (i = 0; i < 4; i++) {
-		if (s[i] < '0' || s[i] > '9') {
-			return -1;
-		}
-		v = v * 10 + (s[i] - '0');
-	}
-	return v;
-}
-
-/* Howard Hinnant days_from_civil, unix days since 1970-01-01. */
-static int64_t days_from_civil(int y, unsigned m, unsigned d)
-{
-	y -= m <= 2;
-	{
-		const int era = (y >= 0 ? y : y - 399) / 400;
-		const unsigned yoe = (unsigned)(y - era * 400);
-		const unsigned doy = (153 * (m + (m > 2 ? -3 : 9)) + 2) / 5 + d - 1;
-		const unsigned doe = yoe * 365 + yoe / 4 - yoe / 100 + yoe / 400 + doy;
-		return (int64_t)era * 146097 + (int64_t)doe - 719468;
-	}
-}
-
-int alerts_iso8601_to_unix(const char *iso, int64_t *unix_out)
-{
-	size_t n;
-	int y, mo, d, hh, mm, ss;
-	int off_min = 0;
-	const char *p;
-	if (iso == NULL || unix_out == NULL) {
-		return ALERTS_PARSE_ARG;
-	}
-	n = strlen(iso);
-	if (n < 19) {
-		return ALERTS_PARSE_TIME;
-	}
-	if (iso[4] != '-' || iso[7] != '-' || iso[10] != 'T' || iso[13] != ':' || iso[16] != ':') {
-		return ALERTS_PARSE_TIME;
-	}
-	y = four_digits(iso);
-	mo = two_digits(iso + 5);
-	d = two_digits(iso + 8);
-	hh = two_digits(iso + 11);
-	mm = two_digits(iso + 14);
-	ss = two_digits(iso + 17);
-	if (y < 1970 || mo < 1 || mo > 12 || d < 1 || d > 31 || hh < 0 || hh > 23 || mm < 0 || mm > 59 ||
-	    ss < 0 || ss > 60) {
-		return ALERTS_PARSE_TIME;
-	}
-	p = iso + 19;
-	if (*p == 'Z' && p[1] == '\0') {
-		off_min = 0;
-	} else if (*p == '+' || *p == '-') {
-		int sign = (*p == '+') ? 1 : -1;
-		int oh, om;
-		p++;
-		if (p[0] == '\0' || p[1] == '\0') {
-			return ALERTS_PARSE_TIME;
-		}
-		oh = two_digits(p);
-		p += 2;
-		if (*p == ':') {
-			p++;
-		}
-		if (p[0] == '\0' || p[1] == '\0' || p[2] != '\0') {
-			return ALERTS_PARSE_TIME;
-		}
-		om = two_digits(p);
-		if (oh < 0 || oh > 14 || om < 0 || om > 59) {
-			return ALERTS_PARSE_TIME;
-		}
-		off_min = sign * (oh * 60 + om);
-	} else {
-		return ALERTS_PARSE_TIME;
-	}
-	*unix_out = days_from_civil(y, (unsigned)mo, (unsigned)d) * 86400 + (int64_t)hh * 3600 +
-		    (int64_t)mm * 60 + ss - (int64_t)off_min * 60;
-	return ALERTS_PARSE_OK;
-}
-
-static int parse_end_at(cur_t *c, alerts_event_t *ev)
+static int parse_end_unix(cur_t *c, alerts_event_t *ev)
 {
 	skip_ws(c);
 	if (peek(c) == 'n') {
@@ -447,22 +382,28 @@ static int parse_end_at(cur_t *c, alerts_event_t *ev)
 			return ALERTS_PARSE_TYPE;
 		}
 		ev->has_end = false;
-		ev->end_at[0] = '\0';
 		ev->end_unix = 0;
 		return ALERTS_PARSE_OK;
 	}
 	{
-		int err = parse_string(c, ev->end_at, sizeof(ev->end_at));
-		if (err != ALERTS_PARSE_OK) {
-			return err;
-		}
-		err = alerts_iso8601_to_unix(ev->end_at, &ev->end_unix);
+		int err = parse_int64(c, &ev->end_unix);
 		if (err != ALERTS_PARSE_OK) {
 			return err;
 		}
 		ev->has_end = true;
 		return ALERTS_PARSE_OK;
 	}
+}
+
+static int validate_event(const alerts_event_t *ev)
+{
+	if (ev->start_unix <= 0) {
+		return ALERTS_PARSE_MISSING;
+	}
+	if (ev->has_end && ev->end_unix <= ev->start_unix) {
+		return ALERTS_PARSE_MISSING;
+	}
+	return ALERTS_PARSE_OK;
 }
 
 static int parse_event(cur_t *c, alerts_event_t *ev)
@@ -495,14 +436,11 @@ static int parse_event(cur_t *c, alerts_event_t *ev)
 		} else if (strcmp(key, "title") == 0) {
 			err = parse_string(c, ev->title, sizeof(ev->title));
 			saw_title = true;
-		} else if (strcmp(key, "startAt") == 0) {
-			err = parse_string(c, ev->start_at, sizeof(ev->start_at));
-			if (err == ALERTS_PARSE_OK) {
-				err = alerts_iso8601_to_unix(ev->start_at, &ev->start_unix);
-			}
+		} else if (strcmp(key, "startUnix") == 0) {
+			err = parse_int64(c, &ev->start_unix);
 			saw_start = true;
-		} else if (strcmp(key, "endAt") == 0) {
-			err = parse_end_at(c, ev);
+		} else if (strcmp(key, "endUnix") == 0) {
+			err = parse_end_unix(c, ev);
 			saw_end = true;
 		} else if (strcmp(key, "allDay") == 0) {
 			err = parse_bool(c, &ev->all_day);
@@ -530,7 +468,7 @@ static int parse_event(cur_t *c, alerts_event_t *ev)
 	if (ev->id[0] == '\0') {
 		return ALERTS_PARSE_MISSING;
 	}
-	return ALERTS_PARSE_OK;
+	return validate_event(ev);
 }
 
 static int parse_events(cur_t *c, alerts_schedule_t *out)
@@ -555,7 +493,6 @@ static int parse_events(cur_t *c, alerts_schedule_t *out)
 			out->event_count++;
 		} else {
 			alerts_event_t discard;
-			out->events_truncated = true;
 			err = parse_event(c, &discard);
 			if (err != ALERTS_PARSE_OK) {
 				return err;
@@ -603,11 +540,8 @@ int alerts_schedule_parse(const char *json, size_t len, alerts_schedule_t *out)
 		if (err != ALERTS_PARSE_OK) {
 			return err;
 		}
-		if (strcmp(key, "serverTime") == 0) {
-			err = parse_string(&c, out->server_time, sizeof(out->server_time));
-			if (err == ALERTS_PARSE_OK) {
-				err = alerts_iso8601_to_unix(out->server_time, &out->server_unix);
-			}
+		if (strcmp(key, "serverUnix") == 0) {
+			err = parse_int64(&c, &out->server_unix);
 			saw_server = true;
 		} else if (strcmp(key, "timezone") == 0) {
 			err = parse_string(&c, out->timezone, sizeof(out->timezone));
@@ -645,7 +579,7 @@ int alerts_schedule_parse(const char *json, size_t len, alerts_schedule_t *out)
 	if (!saw_server || !saw_tz || !saw_rem || !saw_show || !saw_events) {
 		return ALERTS_PARSE_MISSING;
 	}
-	if (out->timezone[0] == '\0') {
+	if (out->timezone[0] == '\0' || out->server_unix <= 0) {
 		return ALERTS_PARSE_MISSING;
 	}
 	return ALERTS_PARSE_OK;
@@ -666,8 +600,6 @@ const char *alerts_schedule_parse_strerror(int err)
 		return "missing";
 	case ALERTS_PARSE_TYPE:
 		return "type";
-	case ALERTS_PARSE_TIME:
-		return "time";
 	default:
 		return "unknown";
 	}

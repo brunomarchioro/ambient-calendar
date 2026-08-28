@@ -7,7 +7,7 @@ import viteReact from '@vitejs/plugin-react'
 export default defineConfig({
   resolve: {
     alias: {
-      '@app': path.resolve(import.meta.dirname, '.'),
+      '@': path.resolve(import.meta.dirname, 'src'),
     },
   },
   server: {
@@ -17,7 +17,7 @@ export default defineConfig({
   plugins: [
     cloudflare({ viteEnvironment: { name: 'ssr' } }),
     tanstackStart({
-      srcDirectory: '.',
+      srcDirectory: 'src',
       spa: { enabled: true },
     }),
     viteReact(),
