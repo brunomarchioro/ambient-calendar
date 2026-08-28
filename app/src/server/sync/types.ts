@@ -1,16 +1,6 @@
-import { formatGoogleDateTime, zonedMidnight } from '@/shared/common/instant'
-import type { Settings } from '@/shared/settings/types'
-
-export type GoogleSecrets = {
-  clientId: string
-  clientSecret: string
-  refreshToken: string
-}
-
-export type Horizon = {
-  timeMin: string
-  timeMax: string
-  timeZone: string
+export type GoogleMirrorScope = {
+  googleAccountId: string
+  googleCalendarId: string
 }
 
 export type MappedEvent = {
@@ -26,6 +16,8 @@ export type SyncEventRow = {
   id: string
   source: 'google' | 'manual'
   externalId: string | null
+  googleAccountId: string | null
+  googleCalendarId: string | null
   title: string
   startAt: string
   endAt: string | null
@@ -35,16 +27,33 @@ export type SyncEventRow = {
   updatedAt: string
 }
 
+export type Horizon = {
+  timeMin: string
+  timeMax: string
+  timeZone: string
+}
+
+export type SyncTarget = {
+  googleAccountId: string
+  googleCalendarId: string
+  refreshTokenEnc: string
+  email: string
+}
+
 export type SyncOutcome =
   | { kind: 'ok'; upserted: number; deleted: number }
-  | { kind: 'invalid_grant' }
-  | { kind: 'skipped'; reason: 'missing_secrets' }
+  | { kind: 'partial'; upserted: number; deleted: number; errors: string[] }
+  | { kind: 'skipped'; reason: 'no_accounts' | 'missing_oauth_config' }
   | { kind: 'error'; message: string }
 
 export type MirrorStore = {
-  listGoogleExternalIds(): Promise<string[]>
-  upsertGoogle(event: MappedEvent, nowIso: string, newId: () => string): Promise<void>
-  deleteGoogleNotIn(keepExternalIds: readonly string[]): Promise<number>
+  upsertGoogle(
+    scope: GoogleMirrorScope,
+    event: MappedEvent,
+    nowIso: string,
+    newId: () => string,
+  ): Promise<void>
+  deleteGoogleNotIn(scope: GoogleMirrorScope, keepExternalIds: readonly string[]): Promise<number>
 }
 
 export function horizonFrom(now: Date, lookaheadDays: number, timeZone: string): Horizon {
@@ -53,16 +62,4 @@ export function horizonFrom(now: Date, lookaheadDays: number, timeZone: string):
     timeMax: new Date(now.getTime() + lookaheadDays * 24 * 60 * 60 * 1000).toISOString(),
     timeZone,
   }
-}
-
-export function readGoogleSecrets(env: {
-  GOOGLE_CLIENT_ID?: string
-  GOOGLE_CLIENT_SECRET?: string
-  GOOGLE_REFRESH_TOKEN?: string
-}): GoogleSecrets | null {
-  const clientId = env.GOOGLE_CLIENT_ID
-  const clientSecret = env.GOOGLE_CLIENT_SECRET
-  const refreshToken = env.GOOGLE_REFRESH_TOKEN
-  if (!clientId || !clientSecret || !refreshToken) return null
-  return { clientId, clientSecret, refreshToken }
 }

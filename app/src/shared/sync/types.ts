@@ -1,13 +1,3 @@
-import { z } from 'zod'
-
-export const googleConnectionTestSchema = z.object({
-  ok: z.boolean(),
-  message: z.string(),
-  eventCount: z.number().int().nonnegative().optional(),
-})
-
-export type GoogleConnectionTest = z.infer<typeof googleConnectionTestSchema>
-
-export function parseGoogleConnectionTest(input: unknown) {
-  return googleConnectionTestSchema.safeParse(input)
-}
+/** @deprecated use @/shared/google/types GoogleSyncResult */
+export type { GoogleSyncResult as GoogleConnectionTest } from '@/shared/google/types'
+export { parseGoogleSyncResult as parseGoogleConnectionTest } from '@/shared/google/types'

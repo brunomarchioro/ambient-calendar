@@ -21,7 +21,7 @@ export function mapGoogleItem(item: unknown, timezone: string): MappedEvent | nu
   if (!parsed.success) return null
   const { id, status, summary, start, end } = parsed.data
   if (status === 'cancelled') return null
-  const title = summary ?? ''
+  const title = summary?.trim() ? summary.trim() : 'Ocupado'
   if (start.date) {
     return {
       externalId: id,

@@ -34,7 +34,14 @@ export function EventCard({
               <Heading size="sm">{event.title}</Heading>
               <Text color="fg.muted">{eventWhen(event)}</Text>
             </Stack>
-            <Badge colorPalette={manual ? 'blue' : 'gray'}>{manual ? 'Lembrete' : 'Google'}</Badge>
+            <HStack gap="2" flexWrap="wrap">
+              {!manual && event.calendarSummary ? (
+                <Badge colorPalette="purple" variant="subtle">
+                  {event.calendarSummary}
+                </Badge>
+              ) : null}
+              <Badge colorPalette={manual ? 'blue' : 'gray'}>{manual ? 'Lembrete' : 'Google'}</Badge>
+            </HStack>
           </HStack>
           {manual ? (
             <HStack gap="3" flexWrap="wrap">

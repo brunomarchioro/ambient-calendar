@@ -9,7 +9,7 @@ O sistema completo: display ESP32, backend e interface web de configuração.
 _Avoid_: Alerts (nome do repo apenas), calendar-display
 
 **Event**:
-Ocorrência agendada com título e janela de tempo, independente da origem (`google` ou `manual`).
+Ocorrência agendada com título e janela de tempo, independente da origem (`google` ou `manual`). Events `google` pertencem a uma **Conta Google** e a um **Calendário Google** (colunas de espelho; não expostas no device).
 _Avoid_: Appointment, meeting
 
 **Lembrete**:
@@ -27,6 +27,14 @@ _Avoid_: Now (como entidade), Live, in-progress
 **Settings**:
 Preferências singleton do Ambient Calendar Display: fuso, janela de Alerta, horizonte de sync e quantos próximos Events a HMI lista.
 _Avoid_: Config, Preferences, AppConfig
+
+**Conta Google**:
+Conta Google conectada ao Ambient Calendar Display via OAuth (credencial offline + identidade, ex.: e-mail). Pode haver mais de uma por deploy.
+_Avoid_: User, account (genérico), GoogleUser
+
+**Calendário Google**:
+Agenda dentro de uma Conta Google escolhida para espelho no D1. Identificado pelo `calendarId` da API Google; pode ser `primary`, próprio ou compartilhado.
+_Avoid_: Agenda Google (colide com a página Agenda), calendar (sem qualificador)
 
 **Overlay**:
 Modo de apresentação temporário que mostra a lista de próximos Events por cima do estado atual do display (Empty, Ambient, Alerta ou Agora). Abre com toque curto; fecha com segundo toque ou após 15 s. O scheduler continua calculando o estado de fundo; o Overlay só altera o que é desenhado.

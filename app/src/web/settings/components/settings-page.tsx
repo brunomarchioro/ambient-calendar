@@ -1,9 +1,32 @@
-import { Button, Card, Field, Heading, Input, NativeSelect, Stack, Text } from '@chakra-ui/react'
+import {
+  Badge,
+  Box,
+  Button,
+  Card,
+  Checkbox,
+  Field,
+  Heading,
+  HStack,
+  Input,
+  NativeSelect,
+  Stack,
+  Text,
+} from '@chakra-ui/react'
 import { useForm } from '@tanstack/react-form'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useSearch } from '@tanstack/react-router'
 import { parseSettings, settingsSchema, type Settings } from '@/shared/settings/types'
+import type { GoogleAccountPublic } from '@/shared/google/types'
 import { eventsQueryKey } from '@/web/events/api/events-query'
-import { testGoogleConnectionMutationOptions } from '@/web/settings/api/google-connection-mutation'
+import {
+  disconnectGoogleAccountMutationOptions,
+  googleSyncMutationOptions,
+  patchGoogleCalendarMutationOptions,
+} from '@/web/settings/api/google-mutations'
+import {
+  googleAccountsQueryKey,
+  googleAccountsQueryOptions,
+} from '@/web/settings/api/google-accounts-query'
 import {
   saveSettingsMutationOptions,
   settingsQueryKey,
@@ -23,6 +46,13 @@ const TIMEZONES = [
   'America/Noronha',
   'UTC',
 ]
+
+const GOOGLE_STATUS_MESSAGES: Record<string, string> = {
+  connected: 'Conta Google conectada.',
+  error: 'Não foi possível conectar a conta Google.',
+  no_refresh: 'Google não devolveu refresh token. Tente reconectar com consent.',
+  limit: 'Limite de contas Google atingido.',
+}
 
 export function SettingsPage() {
   const queryClient = useQueryClient()
@@ -51,9 +81,10 @@ export function SettingsPage() {
               pending={saveMutation.isPending}
               error={saveMutation.error instanceof Error ? saveMutation.error.message : null}
               onSave={(settings) => saveMutation.mutateAsync(settings)}
-              onGoogleSyncSuccess={() =>
-                queryClient.invalidateQueries({ queryKey: eventsQueryKey })
-              }
+              onGoogleChange={() => {
+                void queryClient.invalidateQueries({ queryKey: googleAccountsQueryKey })
+                void queryClient.invalidateQueries({ queryKey: eventsQueryKey })
+              }}
             />
           </Card.Body>
         </Card.Root>
@@ -67,23 +98,23 @@ function SettingsForm({
   pending,
   error,
   onSave,
-  onGoogleSyncSuccess,
+  onGoogleChange,
 }: {
   settings: Settings
   pending: boolean
   error: string | null
   onSave: (settings: Settings) => Promise<Settings>
-  onGoogleSyncSuccess: () => void
+  onGoogleChange: () => void
 }) {
+  const search = useSearch({ strict: false }) as { google?: string }
+  const oauthBanner =
+    search.google && GOOGLE_STATUS_MESSAGES[search.google]
+      ? GOOGLE_STATUS_MESSAGES[search.google]
+      : null
+
   const zones = TIMEZONES.includes(settings.timezone)
     ? TIMEZONES
     : [settings.timezone, ...TIMEZONES]
-  const testMutation = useMutation({
-    ...testGoogleConnectionMutationOptions(),
-    onSuccess: (data) => {
-      if (data.ok) onGoogleSyncSuccess()
-    },
-  })
   const form = useForm({
     defaultValues: settings,
     validators: {
@@ -150,32 +181,178 @@ function SettingsForm({
           Salvar
         </Button>
 
-        <Stack gap="2" pt="2" borderTopWidth="1px">
-          <Text fontSize="sm" color="fg.muted">
-            Testa OAuth, sincroniza o calendário primary no horizonte atual e atualiza a agenda.
-          </Text>
+        <GoogleAccountsSection oauthBanner={oauthBanner} onChange={onGoogleChange} />
+      </Stack>
+    </form>
+  )
+}
+
+function GoogleAccountsSection({
+  oauthBanner,
+  onChange,
+}: {
+  oauthBanner: string | null
+  onChange: () => void
+}) {
+  const queryClient = useQueryClient()
+  const accountsQuery = useQuery(googleAccountsQueryOptions())
+  const syncMutation = useMutation({
+    ...googleSyncMutationOptions(),
+    onSuccess: (data) => {
+      if (data.ok) onChange()
+    },
+  })
+  const disconnectMutation = useMutation({
+    ...disconnectGoogleAccountMutationOptions(),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: googleAccountsQueryKey })
+      onChange()
+    },
+  })
+  const patchMutation = useMutation({
+    ...patchGoogleCalendarMutationOptions(),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: googleAccountsQueryKey })
+    },
+  })
+
+  const accounts = accountsQuery.data ?? []
+  const hasAccounts = accounts.length > 0
+
+  return (
+    <Stack gap="3" pt="2" borderTopWidth="1px">
+      <Heading size="sm">Contas Google</Heading>
+      {oauthBanner ? (
+        <Text fontSize="sm" color="fg.muted" role="status">
+          {oauthBanner}
+        </Text>
+      ) : null}
+      {accountsQuery.isPending ? <Text fontSize="sm">Carregando contas…</Text> : null}
+      {accountsQuery.error ? (
+        <Text color="fg.error" role="alert">
+          {accountsQuery.error.message}
+        </Text>
+      ) : null}
+      {accounts.map((account) => (
+        <GoogleAccountCard
+          key={account.id}
+          account={account}
+          disconnecting={disconnectMutation.isPending}
+          patching={patchMutation.isPending}
+          onDisconnect={() => disconnectMutation.mutate(account.id)}
+          onReconnect={() => {
+            window.location.href = `/api/google/oauth/start?mode=reconnect&accountId=${account.id}`
+          }}
+          onToggleCalendar={(id, enabled) => patchMutation.mutate({ id, enabled })}
+        />
+      ))}
+      <HStack gap="3" flexWrap="wrap">
+        <Button
+          type="button"
+          variant="outline"
+          alignSelf="flex-start"
+          onClick={() => {
+            window.location.href = '/api/google/oauth/start?mode=connect'
+          }}
+        >
+          Adicionar conta Google
+        </Button>
+        {hasAccounts ? (
           <Button
             type="button"
             variant="outline"
-            loading={testMutation.isPending}
+            loading={syncMutation.isPending}
             alignSelf="flex-start"
-            onClick={() => testMutation.mutate()}
+            onClick={() => syncMutation.mutate()}
           >
-            Testar e sincronizar Google
+            Sincronizar agora
           </Button>
-          {testMutation.error ? (
-            <Text color="fg.error" role="alert">
-              {testMutation.error.message}
-            </Text>
-          ) : null}
-          {testMutation.data ? (
-            <Text color={testMutation.data.ok ? 'fg.muted' : 'fg.error'} role="status">
-              {testMutation.data.message}
+        ) : null}
+      </HStack>
+      {syncMutation.data ? (
+        <Text color={syncMutation.data.ok ? 'fg.muted' : 'fg.error'} role="status">
+          {syncMutation.data.message}
+        </Text>
+      ) : null}
+      {syncMutation.error ? (
+        <Text color="fg.error" role="alert">
+          {syncMutation.error.message}
+        </Text>
+      ) : null}
+    </Stack>
+  )
+}
+
+function GoogleAccountCard({
+  account,
+  disconnecting,
+  patching,
+  onDisconnect,
+  onReconnect,
+  onToggleCalendar,
+}: {
+  account: GoogleAccountPublic
+  disconnecting: boolean
+  patching: boolean
+  onDisconnect: () => void
+  onReconnect: () => void
+  onToggleCalendar: (calendarRowId: string, enabled: boolean) => void
+}) {
+  const needsReconnect = account.status === 'needs_reconnect'
+  return (
+    <Box borderWidth="1px" borderRadius="md" p="3">
+      <Stack gap="3">
+        <HStack justify="space-between" flexWrap="wrap" gap="2">
+          <Stack gap="0">
+            <Text fontWeight="medium">{account.email}</Text>
+            {needsReconnect ? (
+              <Badge colorPalette="orange" alignSelf="flex-start">
+                Reconectar
+              </Badge>
+            ) : null}
+          </Stack>
+          <HStack gap="2">
+            {needsReconnect ? (
+              <Button type="button" size="sm" variant="outline" onClick={onReconnect}>
+                Reconectar
+              </Button>
+            ) : null}
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              colorPalette="red"
+              loading={disconnecting}
+              onClick={onDisconnect}
+            >
+              Desconectar
+            </Button>
+          </HStack>
+        </HStack>
+        <Stack gap="2" pl="1">
+          {account.calendars.map((cal) => (
+            <Checkbox.Root
+              key={cal.id}
+              checked={cal.enabled}
+              disabled={patching || needsReconnect}
+              onCheckedChange={(details) => {
+                const enabled = details.checked === true
+                if (enabled !== cal.enabled) onToggleCalendar(cal.id, enabled)
+              }}
+            >
+              <Checkbox.HiddenInput />
+              <Checkbox.Control />
+              <Checkbox.Label>{cal.summary}</Checkbox.Label>
+            </Checkbox.Root>
+          ))}
+          {account.calendars.length === 0 ? (
+            <Text fontSize="sm" color="fg.muted">
+              Nenhum calendário importado.
             </Text>
           ) : null}
         </Stack>
       </Stack>
-    </form>
+    </Box>
   )
 }
 

@@ -24,7 +24,13 @@ type EventBase = {
 }
 
 export type EventPublic =
-  | (EventBase & { source: 'google'; externalId: string })
+  | (EventBase & {
+      source: 'google'
+      externalId: string
+      googleAccountId: string
+      googleCalendarId: string
+      calendarSummary: string | null
+    })
   | (EventBase & { source: 'manual'; externalId: null })
 
 export type ManualEvent = Extract<EventPublic, { source: 'manual' }>
@@ -44,6 +50,9 @@ export const eventPublicSchema = z.discriminatedUnion('source', [
   eventBasePublicSchema.extend({
     source: z.literal('google'),
     externalId: z.string().min(1),
+    googleAccountId: z.string().min(1),
+    googleCalendarId: z.string().min(1),
+    calendarSummary: z.string().nullable(),
   }),
   eventBasePublicSchema.extend({
     source: z.literal('manual'),

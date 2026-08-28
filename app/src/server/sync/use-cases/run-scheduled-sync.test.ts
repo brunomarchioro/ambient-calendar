@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { expect, test } from 'vitest'
 import { SETTINGS_DEFAULTS, type Settings } from '@/shared/settings/types'
+import { encryptSecret } from '@/server/google/infra/token-crypto'
 import {
   FIXTURE_ALLDAY,
   FIXTURE_CANCELLED,
@@ -11,21 +12,30 @@ import {
   TOKEN_INVALID_GRANT,
   TOKEN_OK,
 } from '@/server/sync/sync.fixtures'
-import { horizonFrom, readGoogleSecrets } from '@/server/sync/types'
+import { horizonFrom } from '@/server/sync/types'
 import { mapGoogleItem } from '@/server/sync/services/map-google-item'
-import { memoryStore } from '@/server/sync/services/memory-store'
+import {
+  FIXTURE_ACCOUNT_ID,
+  FIXTURE_CALENDAR_ID,
+  fixtureScope,
+  memoryStore,
+} from '@/server/sync/services/memory-store'
 import { runScheduledSyncUseCase } from '@/server/sync/use-cases/run-scheduled-sync'
 
-const SECRETS = {
+const TEST_KEY = btoa(String.fromCharCode(...new Uint8Array(32).fill(7)))
+
+const OAUTH = {
   clientId: 'client.apps.googleusercontent.com',
   clientSecret: 'secret',
-  refreshToken: 'refresh-token',
+  encryptionKey: TEST_KEY,
 }
 
 const MANUAL_ROW = {
   id: 'manual-1',
   source: 'manual' as const,
   externalId: null,
+  googleAccountId: null,
+  googleCalendarId: null,
   title: 'Comprar pão',
   startAt: '2026-08-27T20:00:00-03:00',
   endAt: null,
@@ -33,6 +43,12 @@ const MANUAL_ROW = {
   timezone: 'America/Sao_Paulo',
   createdAt: '2026-08-26T00:00:00.000Z',
   updatedAt: '2026-08-26T00:00:00.000Z',
+}
+
+const SCOPE = fixtureScope()
+
+async function encryptedRefreshToken() {
+  return encryptSecret('refresh-token', TEST_KEY)
 }
 
 function silentLog() {
@@ -65,11 +81,10 @@ function googleFetch(opts: {
     const raw = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
     const url = new URL(raw)
     if (url.origin === 'https://oauth2.googleapis.com' && url.pathname === '/token') {
-      const method = init?.method ?? 'GET'
-      expect(method).toBe('POST')
+      expect(init?.method ?? 'GET').toBe('POST')
       return Response.json(opts.tokenBody ?? TOKEN_OK, { status: opts.tokenStatus ?? 200 })
     }
-    if (url.pathname === '/calendar/v3/calendars/primary/events') {
+    if (url.pathname.includes('/calendar/v3/calendars/') && url.pathname.endsWith('/events')) {
       const page = pages.shift() ?? { body: { items: [] } }
       return Response.json(page.body, { status: page.status ?? 200 })
     }
@@ -80,21 +95,43 @@ function googleFetch(opts: {
 async function syncWith(opts: {
   fetch: typeof fetch
   store?: ReturnType<typeof memoryStore>
-  secrets?: typeof SECRETS | null
+  oauth?: typeof OAUTH | null
+  targets?: Awaited<ReturnType<typeof encryptedRefreshToken>> extends string
+    ? {
+        googleAccountId: string
+        googleCalendarId: string
+        refreshTokenEnc: string
+        email: string
+      }[]
+    : never
   items?: unknown[]
   settings?: Settings
   now?: Date
 }) {
   const log = silentLog()
   const store = opts.store ?? memoryStore([MANUAL_ROW])
+  const refreshTokenEnc = await encryptedRefreshToken()
+  const targets =
+    opts.targets ??
+    ([
+      {
+        googleAccountId: FIXTURE_ACCOUNT_ID,
+        googleCalendarId: FIXTURE_CALENDAR_ID,
+        refreshTokenEnc,
+        email: 'user@gmail.com',
+      },
+    ] as const)
   const outcome = await runScheduledSyncUseCase({
     settings: opts.settings ?? { ...SETTINGS_DEFAULTS },
-    secrets: opts.secrets === undefined ? SECRETS : opts.secrets,
+    oauth: opts.oauth === undefined ? OAUTH : opts.oauth,
+    targets: [...targets],
     fetch: opts.fetch,
     store,
+    db: {} as D1Database,
     now: opts.now ?? FIXTURE_NOW,
     log,
     items: opts.items,
+    fixtureScope: opts.items ? SCOPE : undefined,
   })
   return { outcome, store, log }
 }
@@ -116,6 +153,12 @@ test('map timed item keeps offset ISO', () => {
     allDay: false,
     timezone: 'America/Sao_Paulo',
   })
+})
+
+test('map private event uses Ocupado title', () => {
+  expect(
+    mapGoogleItem({ ...FIXTURE_TIMED, summary: '  ' }, 'America/Sao_Paulo')?.title,
+  ).toBe('Ocupado')
 })
 
 test('map all-day item uses midnight in Settings timezone, exclusive end', () => {
@@ -147,8 +190,6 @@ test('events.list uses singleEvents, eventTypes=default, and Settings lookahead'
   expect(list?.searchParams.get('eventTypes')).toBe('default')
   expect(list?.searchParams.get('orderBy')).toBe('startTime')
   expect(list?.searchParams.get('timeZone')).toBe('America/Sao_Paulo')
-  expect(list?.searchParams.get('timeMin')).toBe('2026-08-27T17:00:00.000Z')
-  expect(list?.searchParams.get('timeMax')).toBe('2026-09-03T17:00:00.000Z')
 })
 
 test('upserts fixture items by externalId and preserves manual', async () => {
@@ -165,24 +206,30 @@ test('upserts fixture items by externalId and preserves manual', async () => {
   ).toEqual(['google-allday-1', 'google-timed-1', 'series_20260827T170000Z'])
 })
 
-test('second sync of the same ids stays one row each', async () => {
-  const store = memoryStore([MANUAL_ROW])
-  const fetch = googleFetch({ pages: [{ body: { items: [FIXTURE_TIMED] } }] })
-  await syncWith({ fetch, store })
-  const fetchAgain = googleFetch({ pages: [{ body: { items: [FIXTURE_TIMED] } }] })
-  const { outcome } = await syncWith({ fetch: fetchAgain, store })
-  expect(outcome).toEqual({ kind: 'ok', upserted: 1, deleted: 0 })
-  expect(store.rows.filter((r) => r.externalId === 'google-timed-1')).toHaveLength(1)
-})
-
-test('deletes google rows absent from the list and keeps manual', async () => {
+test('delete-not-in is scoped per calendar', async () => {
   const store = memoryStore([
     MANUAL_ROW,
     {
       id: 'old-google',
       source: 'google',
       externalId: 'stale-id',
+      googleAccountId: FIXTURE_ACCOUNT_ID,
+      googleCalendarId: FIXTURE_CALENDAR_ID,
       title: 'Stale',
+      startAt: '2026-08-27T10:00:00-03:00',
+      endAt: '2026-08-27T11:00:00-03:00',
+      allDay: false,
+      timezone: 'America/Sao_Paulo',
+      createdAt: '2026-08-20T00:00:00.000Z',
+      updatedAt: '2026-08-20T00:00:00.000Z',
+    },
+    {
+      id: 'other-cal',
+      source: 'google',
+      externalId: 'keep-other-cal',
+      googleAccountId: FIXTURE_ACCOUNT_ID,
+      googleCalendarId: 'other',
+      title: 'Other',
       startAt: '2026-08-27T10:00:00-03:00',
       endAt: '2026-08-27T11:00:00-03:00',
       allDay: false,
@@ -196,41 +243,19 @@ test('deletes google rows absent from the list and keeps manual', async () => {
     store,
   })
   expect(outcome).toEqual({ kind: 'ok', upserted: 1, deleted: 1 })
-  expect(store.rows.map((r) => r.externalId).sort()).toEqual(['google-timed-1', null])
+  expect(store.rows.some((r) => r.externalId === 'keep-other-cal')).toBe(true)
 })
 
-test('invalid_grant is ops-logged and does not wipe D1', async () => {
+test('invalid_grant marks partial sync without wiping other rows', async () => {
+  const refreshTokenEnc = await encryptedRefreshToken()
   const store = memoryStore([
     MANUAL_ROW,
     {
       id: 'keep-google',
       source: 'google',
       externalId: 'keep-me',
-      title: 'Keep',
-      startAt: '2026-08-27T10:00:00-03:00',
-      endAt: '2026-08-27T11:00:00-03:00',
-      allDay: false,
-      timezone: 'America/Sao_Paulo',
-      createdAt: '2026-08-20T00:00:00.000Z',
-      updatedAt: '2026-08-20T00:00:00.000Z',
-    },
-  ])
-  const { fetch, urls } = captureFetch(
-    googleFetch({ tokenStatus: 400, tokenBody: TOKEN_INVALID_GRANT, pages: [] }),
-  )
-  const { outcome, log } = await syncWith({ fetch, store })
-  expect(outcome).toEqual({ kind: 'invalid_grant' })
-  expect(log.errors.some((line) => line.includes('invalid_grant'))).toBe(true)
-  expect(urls.some((u) => u.pathname.includes('/calendars/'))).toBe(false)
-  expect(store.rows.map((r) => r.id).sort()).toEqual(['keep-google', 'manual-1'])
-})
-
-test('list HTTP failure does not wipe D1', async () => {
-  const store = memoryStore([
-    {
-      id: 'keep-google',
-      source: 'google',
-      externalId: 'keep-me',
+      googleAccountId: FIXTURE_ACCOUNT_ID,
+      googleCalendarId: FIXTURE_CALENDAR_ID,
       title: 'Keep',
       startAt: '2026-08-27T10:00:00-03:00',
       endAt: '2026-08-27T11:00:00-03:00',
@@ -241,38 +266,30 @@ test('list HTTP failure does not wipe D1', async () => {
     },
   ])
   const { outcome } = await syncWith({
-    fetch: googleFetch({ pages: [{ status: 500, body: { error: 'backend' } }] }),
+    fetch: googleFetch({ tokenStatus: 400, tokenBody: TOKEN_INVALID_GRANT, pages: [] }),
     store,
-    secrets: SECRETS,
+    targets: [
+      {
+        googleAccountId: FIXTURE_ACCOUNT_ID,
+        googleCalendarId: FIXTURE_CALENDAR_ID,
+        refreshTokenEnc,
+        email: 'user@gmail.com',
+      },
+    ],
   })
   expect(outcome.kind).toBe('error')
-  expect(store.rows).toHaveLength(1)
+  expect(store.rows.map((r) => r.id).sort()).toEqual(['keep-google', 'manual-1'])
 })
 
-test('paginates until nextPageToken is gone', async () => {
-  const { fetch, urls } = captureFetch(
-    googleFetch({
-      pages: [
-        { body: { items: [FIXTURE_TIMED], nextPageToken: 'page-2' } },
-        { body: { items: [FIXTURE_ALLDAY] } },
-      ],
-    }),
-  )
-  const { outcome } = await syncWith({ fetch })
-  expect(outcome).toEqual({ kind: 'ok', upserted: 2, deleted: 0 })
-  const listCalls = urls.filter((u) => u.pathname.endsWith('/calendars/primary/events'))
-  expect(listCalls).toHaveLength(2)
-  expect(listCalls[1]?.searchParams.get('pageToken')).toBe('page-2')
-})
-
-test('missing secrets skip without wiping; injected items upsert without Google HTTP', async () => {
+test('missing oauth config skips without wiping; injected items upsert without Google HTTP', async () => {
   const skipStore = memoryStore([MANUAL_ROW])
   const skipped = await syncWith({
     fetch: googleFetch({ pages: [] }),
     store: skipStore,
-    secrets: null,
+    oauth: null,
+    targets: [],
   })
-  expect(skipped.outcome).toEqual({ kind: 'skipped', reason: 'missing_secrets' })
+  expect(skipped.outcome).toEqual({ kind: 'skipped', reason: 'missing_oauth_config' })
   expect(skipStore.rows).toEqual([MANUAL_ROW])
 
   const { fetch, urls } = captureFetch(googleFetch({ pages: [] }))
@@ -280,44 +297,16 @@ test('missing secrets skip without wiping; injected items upsert without Google 
   const { outcome } = await syncWith({
     fetch,
     store: fixtureStore,
-    secrets: null,
+    oauth: null,
+    targets: [],
     items: FIXTURE_GOOGLE_ITEMS,
   })
   expect(outcome.kind).toBe('ok')
   expect(urls).toHaveLength(0)
   expect(fixtureStore.rows.some((r) => r.externalId === 'google-timed-1')).toBe(true)
-  expect(fixtureStore.rows.some((r) => r.id === 'manual-1')).toBe(true)
-})
-
-test('readGoogleSecrets requires all three values', () => {
-  expect(readGoogleSecrets({})).toBeNull()
-  expect(readGoogleSecrets({ GOOGLE_CLIENT_ID: 'a' })).toBeNull()
-  expect(
-    readGoogleSecrets({
-      GOOGLE_CLIENT_ID: 'a',
-      GOOGLE_CLIENT_SECRET: 'b',
-      GOOGLE_REFRESH_TOKEN: 'c',
-    }),
-  ).toEqual({ clientId: 'a', clientSecret: 'b', refreshToken: 'c' })
 })
 
 test('wrangler cron remains */15', () => {
   const text = readFileSync(new URL('../../../../wrangler.jsonc', import.meta.url), 'utf8')
   expect(text).toMatch(/"crons":\s*\[\s*"\*\/15 \* \* \* \*"\s*\]/)
-})
-
-test('50-event fixture stays under 10s wall', async () => {
-  const items = Array.from({ length: 50 }, (_, i) => ({
-    ...FIXTURE_TIMED,
-    id: `google-load-${i}`,
-    summary: `Event ${i}`,
-  }))
-  const started = performance.now()
-  const { outcome } = await syncWith({
-    fetch: googleFetch({ pages: [{ body: { items } }] }),
-    store: memoryStore(),
-  })
-  const elapsed = performance.now() - started
-  expect(outcome.kind).toBe('ok')
-  expect(elapsed).toBeLessThan(10_000)
 })

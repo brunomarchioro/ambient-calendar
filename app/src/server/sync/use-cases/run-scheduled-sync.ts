@@ -1,145 +1,182 @@
-import { z } from 'zod'
-import type { GoogleSecrets, Horizon, MirrorStore, SyncOutcome } from '@/server/sync/types'
-import { horizonFrom } from '@/server/sync/types'
-import { mapGoogleItem } from '@/server/sync/services/map-google-item'
 import type { Settings } from '@/shared/settings/types'
+import { decryptSecret } from '@/server/google/infra/token-crypto'
+import { fetchCalendarEvents } from '@/server/google/infra/google-calendar-api'
+import { refreshAccessToken, type OAuthClientConfig } from '@/server/google/infra/google-oauth'
+import { updateGoogleAccountStatus } from '@/server/google/repository/google-queries'
+import { mapGoogleItem } from '@/server/sync/services/map-google-item'
+import type { Horizon, MirrorStore, SyncOutcome, SyncTarget } from '@/server/sync/types'
+import { horizonFrom } from '@/server/sync/types'
 
 type SyncLog = { error: (...args: unknown[]) => void }
 
-const TOKEN_URL = 'https://oauth2.googleapis.com/token'
-const EVENTS_URL = 'https://www.googleapis.com/calendar/v3/calendars/primary/events'
-const MAX_PAGES = 20 // ponytail: 20 pages, raise if a 7-day primary paginates past that
-
-const tokenOkSchema = z.object({ access_token: z.string().min(1) })
-const tokenErrSchema = z.object({ error: z.string() })
-const listSchema = z.object({
-  items: z.array(z.unknown()).optional(),
-  nextPageToken: z.string().optional(),
-})
-
-async function persistItems(
+async function persistScope(
   store: MirrorStore,
+  target: Pick<SyncTarget, 'googleAccountId' | 'googleCalendarId'>,
   items: unknown[],
   timezone: string,
   now: Date,
   newId: () => string,
-): Promise<Extract<SyncOutcome, { kind: 'ok' }>> {
+): Promise<{ upserted: number; deleted: number }> {
+  const scope = {
+    googleAccountId: target.googleAccountId,
+    googleCalendarId: target.googleCalendarId,
+  }
   const mapped = items.flatMap((item) => {
     const event = mapGoogleItem(item, timezone)
     return event ? [event] : []
   })
   const nowIso = now.toISOString()
   for (const event of mapped) {
-    await store.upsertGoogle(event, nowIso, newId)
+    await store.upsertGoogle(scope, event, nowIso, newId)
   }
-  const deleted = await store.deleteGoogleNotIn(mapped.map((event) => event.externalId))
-  return { kind: 'ok', upserted: mapped.length, deleted }
+  const deleted = await store.deleteGoogleNotIn(
+    scope,
+    mapped.map((event) => event.externalId),
+  )
+  return { upserted: mapped.length, deleted }
 }
 
-async function refreshAccessToken(
-  secrets: GoogleSecrets,
-  fetchImpl: typeof fetch,
-  log: SyncLog,
-): Promise<{ kind: 'ok'; accessToken: string } | SyncOutcome> {
-  let response: Response
+async function syncTarget(input: {
+  target: SyncTarget
+  oauth: OAuthClientConfig
+  horizon: Horizon
+  store: MirrorStore
+  now: Date
+  fetchImpl: typeof fetch
+  log: SyncLog
+  db: D1Database
+  newId: () => string
+}): Promise<
+  | { kind: 'ok'; upserted: number; deleted: number }
+  | { kind: 'invalid_grant' }
+  | { kind: 'error'; message: string }
+> {
+  let refreshToken: string
   try {
-    response = await fetchImpl(TOKEN_URL, {
-      method: 'POST',
-      headers: { 'content-type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        client_id: secrets.clientId,
-        client_secret: secrets.clientSecret,
-        refresh_token: secrets.refreshToken,
-        grant_type: 'refresh_token',
-      }),
+    refreshToken = await decryptSecret(input.target.refreshTokenEnc, input.oauth.encryptionKey)
+  } catch (err) {
+    input.log.error('google_sync: decrypt', err)
+    return { kind: 'error', message: 'decrypt' }
+  }
+  const token = await refreshAccessToken({
+    clientId: input.oauth.clientId,
+    clientSecret: input.oauth.clientSecret,
+    refreshToken,
+    fetchImpl: input.fetchImpl,
+  })
+  if (token.ok === false) {
+    if (token.kind === 'invalid_grant') {
+      try {
+        await updateGoogleAccountStatus(
+          input.db,
+          input.target.googleAccountId,
+          'needs_reconnect',
+          input.now.toISOString(),
+        )
+      } catch (err) {
+        input.log.error('google_sync: account_status', err)
+      }
+      return { kind: 'invalid_grant' }
+    }
+    input.log.error('google_sync: token_error', token.message)
+    return { kind: 'error', message: token.message }
+  }
+  let items: unknown[]
+  try {
+    items = await fetchCalendarEvents({
+      accessToken: token.accessToken,
+      calendarId: input.target.googleCalendarId,
+      timeMin: input.horizon.timeMin,
+      timeMax: input.horizon.timeMax,
+      timeZone: input.horizon.timeZone,
+      fetchImpl: input.fetchImpl,
     })
   } catch (err) {
-    log.error('google_sync:', err)
+    input.log.error('google_sync: list', input.target.googleCalendarId, err)
     return { kind: 'error', message: String(err) }
   }
-  const body: unknown = await response.json().catch(() => null)
-  const err = tokenErrSchema.safeParse(body)
-  if (err.success && err.data.error === 'invalid_grant') {
-    log.error('google_sync: invalid_grant')
-    return { kind: 'invalid_grant' }
-  }
-  const ok = tokenOkSchema.safeParse(body)
-  if (!response.ok || !ok.success) {
-    log.error('google_sync: token_error', response.status)
-    return { kind: 'error', message: `token ${response.status}` }
-  }
-  return { kind: 'ok', accessToken: ok.data.access_token }
-}
-
-async function listPrimaryEvents(
-  accessToken: string,
-  horizon: Horizon,
-  fetchImpl: typeof fetch,
-  log: SyncLog,
-): Promise<{ kind: 'ok'; items: unknown[] } | SyncOutcome> {
-  const items: unknown[] = []
-  let pageToken: string | undefined
-  for (let page = 0; page < MAX_PAGES; page += 1) {
-    const url = new URL(EVENTS_URL)
-    url.searchParams.set('singleEvents', 'true')
-    url.searchParams.set('orderBy', 'startTime')
-    url.searchParams.set('eventTypes', 'default')
-    url.searchParams.set('timeMin', horizon.timeMin)
-    url.searchParams.set('timeMax', horizon.timeMax)
-    url.searchParams.set('timeZone', horizon.timeZone)
-    if (pageToken) url.searchParams.set('pageToken', pageToken)
-    let response: Response
-    try {
-      response = await fetchImpl(url, {
-        headers: { authorization: `Bearer ${accessToken}` },
-      })
-    } catch (err) {
-      log.error('google_sync:', err)
-      return { kind: 'error', message: String(err) }
-    }
-    if (!response.ok) {
-      log.error('google_sync: list_error', response.status)
-      return { kind: 'error', message: `list ${response.status}` }
-    }
-    const parsed = listSchema.safeParse(await response.json().catch(() => null))
-    if (!parsed.success) {
-      log.error('google_sync: list_shape')
-      return { kind: 'error', message: 'list_shape' }
-    }
-    if (parsed.data.items) items.push(...parsed.data.items)
-    pageToken = parsed.data.nextPageToken
-    if (!pageToken) return { kind: 'ok', items }
-  }
-  log.error('google_sync: too many pages')
-  return { kind: 'error', message: 'too many pages' }
+  const result = await persistScope(
+    input.store,
+    input.target,
+    items,
+    input.horizon.timeZone,
+    input.now,
+    input.newId,
+  )
+  return { kind: 'ok', ...result }
 }
 
 export async function runScheduledSyncUseCase(input: {
   settings: Settings
-  secrets: GoogleSecrets | null
+  oauth: OAuthClientConfig | null
+  targets: SyncTarget[]
   fetch: typeof fetch
   store: MirrorStore
+  db: D1Database
   now: Date
   log: SyncLog
   items?: unknown[]
+  fixtureScope?: { googleAccountId: string; googleCalendarId: string }
   newId?: () => string
 }): Promise<SyncOutcome> {
   const newId = input.newId ?? (() => crypto.randomUUID())
-  if (input.items) {
-    return persistItems(input.store, input.items, input.settings.timezone, input.now, newId)
+  const horizon = horizonFrom(input.now, input.settings.lookaheadDays, input.settings.timezone)
+
+  if (input.items && input.fixtureScope) {
+    const result = await persistScope(
+      input.store,
+      input.fixtureScope,
+      input.items,
+      input.settings.timezone,
+      input.now,
+      newId,
+    )
+    return { kind: 'ok', ...result }
   }
-  if (!input.secrets) {
-    input.log.error('google_sync: missing_secrets')
-    return { kind: 'skipped', reason: 'missing_secrets' }
+
+  if (!input.oauth) {
+    input.log.error('google_sync: missing_oauth_config')
+    return { kind: 'skipped', reason: 'missing_oauth_config' }
   }
-  const token = await refreshAccessToken(input.secrets, input.fetch, input.log)
-  if (token.kind !== 'ok' || !('accessToken' in token)) return token
-  const listed = await listPrimaryEvents(
-    token.accessToken,
-    horizonFrom(input.now, input.settings.lookaheadDays, input.settings.timezone),
-    input.fetch,
-    input.log,
-  )
-  if (listed.kind !== 'ok' || !('items' in listed)) return listed
-  return persistItems(input.store, listed.items, input.settings.timezone, input.now, newId)
+  if (input.targets.length === 0) {
+    return { kind: 'skipped', reason: 'no_accounts' }
+  }
+
+  let upserted = 0
+  let deleted = 0
+  const errors: string[] = []
+  let anyOk = false
+
+  for (const target of input.targets) {
+    const outcome = await syncTarget({
+      target,
+      oauth: input.oauth,
+      horizon,
+      store: input.store,
+      now: input.now,
+      fetchImpl: input.fetch,
+      log: input.log,
+      db: input.db,
+      newId,
+    })
+    if (outcome.kind === 'ok') {
+      anyOk = true
+      upserted += outcome.upserted
+      deleted += outcome.deleted
+      continue
+    }
+    if (outcome.kind === 'invalid_grant') {
+      errors.push(`${target.email}: reconectar conta`)
+      continue
+    }
+    errors.push(`${target.email}/${target.googleCalendarId}: ${outcome.message}`)
+  }
+
+  if (!anyOk && errors.length > 0) {
+    return { kind: 'error', message: errors.join('; ') }
+  }
+  if (errors.length > 0) {
+    return { kind: 'partial', upserted, deleted, errors }
+  }
+  return { kind: 'ok', upserted, deleted }
 }

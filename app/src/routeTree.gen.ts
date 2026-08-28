@@ -17,7 +17,12 @@ import { Route as ApiSettingsRouteImport } from './routes/api/settings'
 import { Route as EventsIndexRouteImport } from './routes/events/index'
 import { Route as ApiDeviceScheduleRouteImport } from './routes/api/device/schedule'
 import { Route as ApiEventsIdRouteImport } from './routes/api/events.$id'
-import { Route as ApiSettingsGoogleConnectionRouteImport } from './routes/api/settings.google-connection'
+import { Route as ApiGoogleAccountsRouteImport } from './routes/api/google.accounts'
+import { Route as ApiGoogleSyncRouteImport } from './routes/api/google.sync'
+import { Route as ApiGoogleCalendarsIdRouteImport } from './routes/api/google.calendars.$id'
+import { Route as ApiGoogleOauthCallbackRouteImport } from './routes/api/google.oauth.callback'
+import { Route as ApiGoogleOauthStartRouteImport } from './routes/api/google.oauth.start'
+import { Route as ApiGoogleAccountsIdDisconnectRouteImport } from './routes/api/google.accounts.$id.disconnect'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -59,11 +64,36 @@ const ApiEventsIdRoute = ApiEventsIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => ApiEventsRoute,
 } as any)
-const ApiSettingsGoogleConnectionRoute =
-  ApiSettingsGoogleConnectionRouteImport.update({
-    id: '/google-connection',
-    path: '/google-connection',
-    getParentRoute: () => ApiSettingsRoute,
+const ApiGoogleAccountsRoute = ApiGoogleAccountsRouteImport.update({
+  id: '/api/google/accounts',
+  path: '/api/google/accounts',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiGoogleSyncRoute = ApiGoogleSyncRouteImport.update({
+  id: '/api/google/sync',
+  path: '/api/google/sync',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiGoogleCalendarsIdRoute = ApiGoogleCalendarsIdRouteImport.update({
+  id: '/api/google/calendars/$id',
+  path: '/api/google/calendars/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiGoogleOauthCallbackRoute = ApiGoogleOauthCallbackRouteImport.update({
+  id: '/api/google/oauth/callback',
+  path: '/api/google/oauth/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiGoogleOauthStartRoute = ApiGoogleOauthStartRouteImport.update({
+  id: '/api/google/oauth/start',
+  path: '/api/google/oauth/start',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiGoogleAccountsIdDisconnectRoute =
+  ApiGoogleAccountsIdDisconnectRouteImport.update({
+    id: '/$id/disconnect',
+    path: '/$id/disconnect',
+    getParentRoute: () => ApiGoogleAccountsRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -71,22 +101,32 @@ export interface FileRoutesByFullPath {
   '/settings': typeof SettingsRoute
   '/api/events': typeof ApiEventsRouteWithChildren
   '/api/health': typeof ApiHealthRoute
-  '/api/settings': typeof ApiSettingsRouteWithChildren
+  '/api/settings': typeof ApiSettingsRoute
   '/events/': typeof EventsIndexRoute
   '/api/device/schedule': typeof ApiDeviceScheduleRoute
   '/api/events/$id': typeof ApiEventsIdRoute
-  '/api/settings/google-connection': typeof ApiSettingsGoogleConnectionRoute
+  '/api/google/accounts': typeof ApiGoogleAccountsRouteWithChildren
+  '/api/google/sync': typeof ApiGoogleSyncRoute
+  '/api/google/calendars/$id': typeof ApiGoogleCalendarsIdRoute
+  '/api/google/oauth/callback': typeof ApiGoogleOauthCallbackRoute
+  '/api/google/oauth/start': typeof ApiGoogleOauthStartRoute
+  '/api/google/accounts/$id/disconnect': typeof ApiGoogleAccountsIdDisconnectRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/settings': typeof SettingsRoute
   '/api/events': typeof ApiEventsRouteWithChildren
   '/api/health': typeof ApiHealthRoute
-  '/api/settings': typeof ApiSettingsRouteWithChildren
+  '/api/settings': typeof ApiSettingsRoute
   '/events': typeof EventsIndexRoute
   '/api/device/schedule': typeof ApiDeviceScheduleRoute
   '/api/events/$id': typeof ApiEventsIdRoute
-  '/api/settings/google-connection': typeof ApiSettingsGoogleConnectionRoute
+  '/api/google/accounts': typeof ApiGoogleAccountsRouteWithChildren
+  '/api/google/sync': typeof ApiGoogleSyncRoute
+  '/api/google/calendars/$id': typeof ApiGoogleCalendarsIdRoute
+  '/api/google/oauth/callback': typeof ApiGoogleOauthCallbackRoute
+  '/api/google/oauth/start': typeof ApiGoogleOauthStartRoute
+  '/api/google/accounts/$id/disconnect': typeof ApiGoogleAccountsIdDisconnectRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -94,11 +134,16 @@ export interface FileRoutesById {
   '/settings': typeof SettingsRoute
   '/api/events': typeof ApiEventsRouteWithChildren
   '/api/health': typeof ApiHealthRoute
-  '/api/settings': typeof ApiSettingsRouteWithChildren
+  '/api/settings': typeof ApiSettingsRoute
   '/events/': typeof EventsIndexRoute
   '/api/device/schedule': typeof ApiDeviceScheduleRoute
   '/api/events/$id': typeof ApiEventsIdRoute
-  '/api/settings/google-connection': typeof ApiSettingsGoogleConnectionRoute
+  '/api/google/accounts': typeof ApiGoogleAccountsRouteWithChildren
+  '/api/google/sync': typeof ApiGoogleSyncRoute
+  '/api/google/calendars/$id': typeof ApiGoogleCalendarsIdRoute
+  '/api/google/oauth/callback': typeof ApiGoogleOauthCallbackRoute
+  '/api/google/oauth/start': typeof ApiGoogleOauthStartRoute
+  '/api/google/accounts/$id/disconnect': typeof ApiGoogleAccountsIdDisconnectRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -111,7 +156,12 @@ export interface FileRouteTypes {
     | '/events/'
     | '/api/device/schedule'
     | '/api/events/$id'
-    | '/api/settings/google-connection'
+    | '/api/google/accounts'
+    | '/api/google/sync'
+    | '/api/google/calendars/$id'
+    | '/api/google/oauth/callback'
+    | '/api/google/oauth/start'
+    | '/api/google/accounts/$id/disconnect'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -122,7 +172,12 @@ export interface FileRouteTypes {
     | '/events'
     | '/api/device/schedule'
     | '/api/events/$id'
-    | '/api/settings/google-connection'
+    | '/api/google/accounts'
+    | '/api/google/sync'
+    | '/api/google/calendars/$id'
+    | '/api/google/oauth/callback'
+    | '/api/google/oauth/start'
+    | '/api/google/accounts/$id/disconnect'
   id:
     | '__root__'
     | '/'
@@ -133,7 +188,12 @@ export interface FileRouteTypes {
     | '/events/'
     | '/api/device/schedule'
     | '/api/events/$id'
-    | '/api/settings/google-connection'
+    | '/api/google/accounts'
+    | '/api/google/sync'
+    | '/api/google/calendars/$id'
+    | '/api/google/oauth/callback'
+    | '/api/google/oauth/start'
+    | '/api/google/accounts/$id/disconnect'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -141,9 +201,14 @@ export interface RootRouteChildren {
   SettingsRoute: typeof SettingsRoute
   ApiEventsRoute: typeof ApiEventsRouteWithChildren
   ApiHealthRoute: typeof ApiHealthRoute
-  ApiSettingsRoute: typeof ApiSettingsRouteWithChildren
+  ApiSettingsRoute: typeof ApiSettingsRoute
   EventsIndexRoute: typeof EventsIndexRoute
   ApiDeviceScheduleRoute: typeof ApiDeviceScheduleRoute
+  ApiGoogleAccountsRoute: typeof ApiGoogleAccountsRouteWithChildren
+  ApiGoogleSyncRoute: typeof ApiGoogleSyncRoute
+  ApiGoogleCalendarsIdRoute: typeof ApiGoogleCalendarsIdRoute
+  ApiGoogleOauthCallbackRoute: typeof ApiGoogleOauthCallbackRoute
+  ApiGoogleOauthStartRoute: typeof ApiGoogleOauthStartRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -204,12 +269,47 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiEventsIdRouteImport
       parentRoute: typeof ApiEventsRoute
     }
-    '/api/settings/google-connection': {
-      id: '/api/settings/google-connection'
-      path: '/google-connection'
-      fullPath: '/api/settings/google-connection'
-      preLoaderRoute: typeof ApiSettingsGoogleConnectionRouteImport
-      parentRoute: typeof ApiSettingsRoute
+    '/api/google/accounts': {
+      id: '/api/google/accounts'
+      path: '/api/google/accounts'
+      fullPath: '/api/google/accounts'
+      preLoaderRoute: typeof ApiGoogleAccountsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/google/sync': {
+      id: '/api/google/sync'
+      path: '/api/google/sync'
+      fullPath: '/api/google/sync'
+      preLoaderRoute: typeof ApiGoogleSyncRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/google/calendars/$id': {
+      id: '/api/google/calendars/$id'
+      path: '/api/google/calendars/$id'
+      fullPath: '/api/google/calendars/$id'
+      preLoaderRoute: typeof ApiGoogleCalendarsIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/google/oauth/callback': {
+      id: '/api/google/oauth/callback'
+      path: '/api/google/oauth/callback'
+      fullPath: '/api/google/oauth/callback'
+      preLoaderRoute: typeof ApiGoogleOauthCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/google/oauth/start': {
+      id: '/api/google/oauth/start'
+      path: '/api/google/oauth/start'
+      fullPath: '/api/google/oauth/start'
+      preLoaderRoute: typeof ApiGoogleOauthStartRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/google/accounts/$id/disconnect': {
+      id: '/api/google/accounts/$id/disconnect'
+      path: '/$id/disconnect'
+      fullPath: '/api/google/accounts/$id/disconnect'
+      preLoaderRoute: typeof ApiGoogleAccountsIdDisconnectRouteImport
+      parentRoute: typeof ApiGoogleAccountsRoute
     }
   }
 }
@@ -226,26 +326,30 @@ const ApiEventsRouteWithChildren = ApiEventsRoute._addFileChildren(
   ApiEventsRouteChildren,
 )
 
-interface ApiSettingsRouteChildren {
-  ApiSettingsGoogleConnectionRoute: typeof ApiSettingsGoogleConnectionRoute
+interface ApiGoogleAccountsRouteChildren {
+  ApiGoogleAccountsIdDisconnectRoute: typeof ApiGoogleAccountsIdDisconnectRoute
 }
 
-const ApiSettingsRouteChildren: ApiSettingsRouteChildren = {
-  ApiSettingsGoogleConnectionRoute: ApiSettingsGoogleConnectionRoute,
+const ApiGoogleAccountsRouteChildren: ApiGoogleAccountsRouteChildren = {
+  ApiGoogleAccountsIdDisconnectRoute: ApiGoogleAccountsIdDisconnectRoute,
 }
 
-const ApiSettingsRouteWithChildren = ApiSettingsRoute._addFileChildren(
-  ApiSettingsRouteChildren,
-)
+const ApiGoogleAccountsRouteWithChildren =
+  ApiGoogleAccountsRoute._addFileChildren(ApiGoogleAccountsRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SettingsRoute: SettingsRoute,
   ApiEventsRoute: ApiEventsRouteWithChildren,
   ApiHealthRoute: ApiHealthRoute,
-  ApiSettingsRoute: ApiSettingsRouteWithChildren,
+  ApiSettingsRoute: ApiSettingsRoute,
   EventsIndexRoute: EventsIndexRoute,
   ApiDeviceScheduleRoute: ApiDeviceScheduleRoute,
+  ApiGoogleAccountsRoute: ApiGoogleAccountsRouteWithChildren,
+  ApiGoogleSyncRoute: ApiGoogleSyncRoute,
+  ApiGoogleCalendarsIdRoute: ApiGoogleCalendarsIdRoute,
+  ApiGoogleOauthCallbackRoute: ApiGoogleOauthCallbackRoute,
+  ApiGoogleOauthStartRoute: ApiGoogleOauthStartRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

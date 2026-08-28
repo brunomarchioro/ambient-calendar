@@ -1,15 +1,23 @@
 import { asc, eq } from 'drizzle-orm'
 import { createDb, type AppDb } from '@/server/common/infra/db'
 import { events } from '@/server/events/repository/schema'
+import { calendarSummaryByEventKeys } from '@/server/google/repository/google-queries'
 import { parseEventRow } from '@/server/events/services/parse-event-row'
 import type { EventPublic } from '@/shared/events/types'
 
 export async function listEvents(db: D1Database | AppDb): Promise<EventPublic[]> {
   const drizzle = typeof db === 'object' && 'select' in db ? db : createDb(db)
   const rows = await drizzle.select().from(events).orderBy(asc(events.startAt))
+  const summaries = await calendarSummaryByEventKeys(db)
   return rows.flatMap((row) => {
     const event = parseEventRow(row)
-    return event ? [event] : []
+    if (!event) return []
+    if (event.source === 'google') {
+      const calendarSummary =
+        summaries.get(`${event.googleAccountId}:${event.googleCalendarId}`) ?? null
+      return [{ ...event, calendarSummary }]
+    }
+    return [event]
   })
 }
 
@@ -37,6 +45,8 @@ export async function insertManualEvent(
     id: row.id,
     source: 'manual',
     externalId: null,
+    googleAccountId: null,
+    googleCalendarId: null,
     title: row.title,
     startAt: row.startAt,
     endAt: row.endAt,

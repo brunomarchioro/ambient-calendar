@@ -6,6 +6,8 @@ const eventRowSchema = z.object({
   id: z.string().min(1),
   source: z.enum(['google', 'manual']),
   externalId: z.string().min(1).nullable(),
+  googleAccountId: z.string().min(1).nullable().optional(),
+  googleCalendarId: z.string().min(1).nullable().optional(),
   title: z.string(),
   startAt: z.string().min(1),
   endAt: z.string().min(1).nullable(),
@@ -49,10 +51,17 @@ export function parseEventRow(row: unknown): EventPublic | null {
     updatedAt: r.updatedAt,
   }
   if (r.source === 'google') {
-    if (r.externalId === null) return null
-    return { ...base, source: 'google', externalId: r.externalId }
+    if (r.externalId === null || !r.googleAccountId || !r.googleCalendarId) return null
+    return {
+      ...base,
+      source: 'google',
+      externalId: r.externalId,
+      googleAccountId: r.googleAccountId,
+      googleCalendarId: r.googleCalendarId,
+      calendarSummary: null,
+    }
   }
-  if (r.externalId !== null) return null
+  if (r.externalId !== null || r.googleAccountId || r.googleCalendarId) return null
   return { ...base, source: 'manual', externalId: null }
 }
 

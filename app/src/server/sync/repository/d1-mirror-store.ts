@@ -1,23 +1,23 @@
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { createDb } from '@/server/common/infra/db'
 import { events } from '@/server/events/repository/schema'
-import type { MappedEvent, MirrorStore } from '@/server/sync/types'
+import type { GoogleMirrorScope, MappedEvent, MirrorStore } from '@/server/sync/types'
 
 export function d1MirrorStore(db: D1Database): MirrorStore {
   const drizzle = createDb(db)
   return {
-    async listGoogleExternalIds() {
-      const rows = await drizzle
-        .select({ externalId: events.externalId })
-        .from(events)
-        .where(eq(events.source, 'google'))
-      return rows.flatMap((row) => (row.externalId ? [row.externalId] : []))
-    },
-    async upsertGoogle(event: MappedEvent, nowIso: string, newId: () => string) {
+    async upsertGoogle(scope, event, nowIso, newId) {
       const existing = await drizzle
         .select({ id: events.id })
         .from(events)
-        .where(eq(events.externalId, event.externalId))
+        .where(
+          and(
+            eq(events.source, 'google'),
+            eq(events.googleAccountId, scope.googleAccountId),
+            eq(events.googleCalendarId, scope.googleCalendarId),
+            eq(events.externalId, event.externalId),
+          ),
+        )
         .limit(1)
       if (existing[0]) {
         await drizzle
@@ -37,6 +37,8 @@ export function d1MirrorStore(db: D1Database): MirrorStore {
         id: newId(),
         source: 'google',
         externalId: event.externalId,
+        googleAccountId: scope.googleAccountId,
+        googleCalendarId: scope.googleCalendarId,
         title: event.title,
         startAt: event.startAt,
         endAt: event.endAt,
@@ -46,13 +48,29 @@ export function d1MirrorStore(db: D1Database): MirrorStore {
         updatedAt: nowIso,
       })
     },
-    async deleteGoogleNotIn(keepExternalIds) {
-      const existing = await this.listGoogleExternalIds()
+    async deleteGoogleNotIn(scope, keepExternalIds) {
+      const rows = await drizzle
+        .select({ externalId: events.externalId })
+        .from(events)
+        .where(
+          and(
+            eq(events.source, 'google'),
+            eq(events.googleAccountId, scope.googleAccountId),
+            eq(events.googleCalendarId, scope.googleCalendarId),
+          ),
+        )
       const keep = new Set(keepExternalIds)
       let deleted = 0
-      for (const externalId of existing) {
-        if (keep.has(externalId)) continue
-        await drizzle.delete(events).where(eq(events.externalId, externalId))
+      for (const row of rows) {
+        if (row.externalId === null || keep.has(row.externalId)) continue
+        await drizzle.delete(events).where(
+          and(
+            eq(events.source, 'google'),
+            eq(events.googleAccountId, scope.googleAccountId),
+            eq(events.googleCalendarId, scope.googleCalendarId),
+            eq(events.externalId, row.externalId),
+          ),
+        )
         deleted += 1
       }
       return deleted

@@ -43,8 +43,11 @@ Wrangler carrega `app/.dev.vars` em dev. **Não commite** esse arquivo.
 | Variável | Uso |
 | -------- | --- |
 | `DEVICE_API_TOKEN` | Bearer para `GET /api/device/schedule` (firmware/simulador) |
-| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REFRESH_TOKEN` | Sync com Google Calendar (Cron) — ver [como obter credenciais](../README.md#google-calendar-api) |
-| `GOOGLE_SYNC_FIXTURE=1` | Sync usa fixture local quando credenciais Google estão vazias |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | OAuth Google (bootstrap do projeto GCP) |
+| `ENCRYPTION_KEY` | Chave AES-256 (base64, 32 bytes) para refresh tokens no D1 |
+| `GOOGLE_SYNC_FIXTURE=1` | Cron usa fixture quando não há contas vinculadas |
+
+Contas Google são vinculadas em **Configurações** (`/settings`), não via refresh token em env. Ver [como configurar Google](../README.md#google-calendar-api).
 
 Teste do device:
 
