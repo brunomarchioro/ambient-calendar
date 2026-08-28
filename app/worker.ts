@@ -1,4 +1,6 @@
 import handler from '@tanstack/react-start/server-entry'
+import { authorizeWebBasic } from '@/server/common/infra/authorize-web-basic'
+import { httpFetch } from '@/server/common/infra/http-fetch'
 import { listEnabledSyncTargets } from '@/server/google/repository/google-queries'
 import { readOAuthForSync } from '@/server/google/use-cases/google-connection'
 import { d1MirrorStore } from '@/server/sync/repository/d1-mirror-store'
@@ -8,7 +10,11 @@ import { runScheduledSyncUseCase } from '@/server/sync/use-cases/run-scheduled-s
 import { getOrSeedSettingsUseCase } from '@/server/settings/use-cases/put-settings'
 
 export default {
-  fetch: handler.fetch,
+  fetch(request: Request, env: Env, ctx: ExecutionContext) {
+    const denied = authorizeWebBasic(request, env.WEB_BASIC_AUTH_USER, env.WEB_BASIC_AUTH_PASSWORD)
+    if (denied) return denied
+    return handler.fetch(request, env, ctx)
+  },
   async scheduled(_controller: unknown, env: Env) {
     const settings = await getOrSeedSettingsUseCase(env.DB)
     const oauth = readOAuthForSync(env)
@@ -19,7 +25,7 @@ export default {
       settings,
       oauth,
       targets,
-      fetch,
+      fetch: httpFetch,
       store: d1MirrorStore(env.DB),
       db: env.DB,
       now: new Date(),

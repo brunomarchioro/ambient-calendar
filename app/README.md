@@ -43,6 +43,7 @@ Wrangler carrega `app/.dev.vars` em dev. **Não commite** esse arquivo.
 | Variável | Uso |
 | -------- | --- |
 | `DEVICE_API_TOKEN` | Bearer para `GET /api/device/schedule` (firmware/simulador) |
+| `WEB_BASIC_AUTH_USER`, `WEB_BASIC_AUTH_PASSWORD` | Basic Auth para UI e APIs de gestão (ver abaixo) |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | OAuth Google (bootstrap do projeto GCP) |
 | `ENCRYPTION_KEY` | Chave AES-256 (base64, 32 bytes) para refresh tokens no D1 |
 | `GOOGLE_SYNC_FIXTURE=1` | Cron usa fixture quando não há contas vinculadas |
@@ -57,6 +58,34 @@ curl -sS -D - -H "Authorization: Bearer $DEVICE_API_TOKEN" \
 ```
 
 Token ausente ou inválido → **401**. Token válido → envelope de schedule (spec §6).
+
+## Proteção web (Basic Auth)
+
+Com `WEB_BASIC_AUTH_USER` e `WEB_BASIC_AUTH_PASSWORD` definidos, a UI (`/events`, `/settings`) e as APIs de gestão exigem HTTP Basic Auth. O browser pede credenciais na primeira visita e reenvia em navegação e `fetch` same-origin.
+
+**Sem exigir auth** (allowlist):
+
+- `GET /api/health`
+- `GET /api/device/schedule` (Bearer próprio)
+- `GET /api/google/oauth/start` e `/api/google/oauth/callback`
+
+Se **qualquer** uma das duas vars estiver ausente, a proteção fica desligada (útil só para debug local).
+
+Dev local: copie os valores de `.dev.vars.example` para `.dev.vars`.
+
+Produção (Wrangler):
+
+```sh
+npx wrangler secret put WEB_BASIC_AUTH_USER
+npx wrangler secret put WEB_BASIC_AUTH_PASSWORD
+```
+
+Teste:
+
+```sh
+curl -sS -u "$WEB_BASIC_AUTH_USER:$WEB_BASIC_AUTH_PASSWORD" http://127.0.0.1:3000/api/settings
+curl -sS http://127.0.0.1:3000/api/settings   # → 401
+```
 
 ## Banco de dados (Cloudflare D1)
 
@@ -133,4 +162,4 @@ npx wrangler d1 execute alerts --local --command "SELECT * FROM Settings"
 
 ## Simulador de firmware
 
-O simulador HMI consome a mesma API local. Veja [`../firmware/simulator/README.md`](../firmware/simulator/README.md). Use a mesma URL (`http://127.0.0.1:3000`) e o mesmo token definido em `DEVICE_API_TOKEN` / `ALERTS_DEVICE_API_TOKEN`.
+O simulador HMI consome a mesma API local. Veja [`../firmware/simulator/README.md`](../firmware/simulator/README.md). Secrets do simulador ficam em `firmware/.dev.vars`; `ALERTS_DEVICE_API_TOKEN` deve coincidir com `DEVICE_API_TOKEN` deste Worker.

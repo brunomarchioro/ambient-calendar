@@ -2,12 +2,16 @@ CC ?= gcc
 LVGL_VERSION ?= v9.2.2
 LVGL_DIR ?= third_party/lvgl
 FW := ../../esp32-c6
+COMMON := ../../common
 
-BASE_CFLAGS ?= -std=c11 -Wall -Wextra -Werror
+BASE_CFLAGS ?= -std=c11 -Wall -Wextra -Werror -D_POSIX_C_SOURCE=200809L
 BASE_CFLAGS += -I. -Istubs \
 	-I$(FW)/ui -I$(FW)/ui/waveshare \
 	-I$(FW)/storage -I$(FW)/sync -I$(FW)/network \
+	-I$(COMMON)/dotenv -I$(COMMON) \
 	-DLV_CONF_INCLUDE_SIMPLE
+
+COMMON_SRCS := $(COMMON)/alerts_devvars.c $(COMMON)/dotenv/dotenv.c
 
 SDL_CFLAGS := $(shell pkg-config --cflags sdl2 2>/dev/null)
 SDL_LIBS := $(shell pkg-config --libs sdl2 2>/dev/null)
@@ -39,13 +43,13 @@ deps:
 
 alerts_hmi_sim: deps $(SIM_SRCS) $(LVGL_SRCS) lv_conf.h
 	@test -n "$(SDL_LIBS)" || (echo "sim: install libsdl2-dev" && exit 1)
-	$(CC) $(BASE_CFLAGS) -I$(LVGL_DIR) $(SDL_CFLAGS) -o $@ $(SIM_SRCS) $(LVGL_SRCS) $(SDL_LIBS) $(CURL_LIBS) -lm
+	$(CC) $(BASE_CFLAGS) -I$(LVGL_DIR) $(SDL_CFLAGS) -o $@ $(SIM_SRCS) $(COMMON_SRCS) $(LVGL_SRCS) $(SDL_LIBS) $(CURL_LIBS) -lm
 
 test: test_sim_config
 	./test_sim_config
 
-test_sim_config: test_sim_config.c sim_config.c
-	$(CC) $(BASE_CFLAGS) -o $@ test_sim_config.c sim_config.c
+test_sim_config: test_sim_config.c sim_config.c $(COMMON_SRCS)
+	$(CC) $(BASE_CFLAGS) -o $@ test_sim_config.c sim_config.c $(COMMON_SRCS)
 
 clean:
 	rm -f alerts_hmi_sim test_sim_config

@@ -1,6 +1,7 @@
 import { expect, test } from 'vitest'
+import { horizonEnd } from '@/shared/events/horizon'
 import { SETTINGS_DEFAULTS } from '@/shared/settings/types'
-import { horizonEnd, toDeviceSchedule } from '@/server/device/services/to-device-schedule'
+import { toDeviceSchedule } from '@/server/device/services/to-device-schedule'
 import type { DeviceEventRow } from '@/server/device/types'
 
 const now = new Date('2026-08-27T14:00:00-03:00')
@@ -9,7 +10,7 @@ const settings = { ...SETTINGS_DEFAULTS }
 function row(partial: Partial<DeviceEventRow> & Pick<DeviceEventRow, 'id' | 'startAt'>): DeviceEventRow {
   return {
     title: partial.id,
-    endAt: '2026-08-27T15:00:00-03:00',
+    endAt: partial.endAt !== undefined ? partial.endAt : '2026-08-27T15:00:00-03:00',
     allDay: false,
     ...partial,
   }
@@ -66,21 +67,22 @@ test('showNextEvents truncates events server-side', () => {
 })
 
 test('half-open horizon includes now and excludes the end instant', () => {
-  const atNow = row({ id: 'at-now', startAt: '2026-08-27T14:00:00-03:00' })
-  const atHorizon = row({
-    id: 'at-horizon',
-    startAt: '2026-09-03T14:00:00-03:00',
-    endAt: '2026-09-03T15:00:00-03:00',
-  })
-  const inside = row({
-    id: 'inside',
-    startAt: '2026-09-03T13:59:59-03:00',
-    endAt: '2026-09-03T15:00:00-03:00',
-  })
   const ids = toDeviceSchedule({
     now,
     settings,
-    rows: [atNow, atHorizon, inside],
+    rows: [
+      row({ id: 'at-now', startAt: '2026-08-27T14:00:00-03:00' }),
+      row({
+        id: 'at-horizon',
+        startAt: '2026-09-03T14:00:00-03:00',
+        endAt: '2026-09-03T15:00:00-03:00',
+      }),
+      row({
+        id: 'inside',
+        startAt: '2026-09-03T13:59:59-03:00',
+        endAt: '2026-09-03T15:00:00-03:00',
+      }),
+    ],
   }).events.map((event) => event.id)
   expect(ids).toEqual(['at-now', 'inside'])
   expect(horizonEnd(now, 7).toISOString()).toBe(new Date('2026-09-03T14:00:00-03:00').toISOString())

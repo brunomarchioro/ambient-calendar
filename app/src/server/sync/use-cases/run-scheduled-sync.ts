@@ -1,3 +1,4 @@
+import { httpFetch } from '@/server/common/infra/http-fetch'
 import type { Settings } from '@/shared/settings/types'
 import { decryptSecret } from '@/server/google/infra/token-crypto'
 import { fetchCalendarEvents } from '@/server/google/infra/google-calendar-api'
@@ -120,6 +121,7 @@ export async function runScheduledSyncUseCase(input: {
   newId?: () => string
 }): Promise<SyncOutcome> {
   const newId = input.newId ?? (() => crypto.randomUUID())
+  const fetchImpl = input.fetch ?? httpFetch
   const horizon = horizonFrom(input.now, input.settings.lookaheadDays, input.settings.timezone)
 
   if (input.items && input.fixtureScope) {
@@ -154,7 +156,7 @@ export async function runScheduledSyncUseCase(input: {
       horizon,
       store: input.store,
       now: input.now,
-      fetchImpl: input.fetch,
+      fetchImpl,
       log: input.log,
       db: input.db,
       newId,

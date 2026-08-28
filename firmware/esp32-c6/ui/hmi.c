@@ -10,40 +10,16 @@
 static const char *TAG = "hmi";
 
 #define HMI_LVGL_LOCK_MS UINT32_MAX
-#define HMI_OVERLAY_TIMEOUT_MS 15000
 
-typedef struct {
-	bool open;
-	int elapsed_ms;
-} hmi_overlay_t;
-
-static hmi_overlay_t s_overlay;
-
-static const alerts_schedule_t *resolve_schedule(void)
-{
-	if (!alerts_poll_has_schedule()) {
-		(void)alerts_poll_load_cache();
-	}
-	if (!alerts_poll_has_schedule()) {
-		return NULL;
-	}
-	return alerts_poll_schedule();
-}
+static alerts_hmi_present_t s_present;
 
 static esp_err_t hmi_paint(int elapsed_ms)
 {
-	if (s_overlay.open && elapsed_ms > 0) {
-		s_overlay.elapsed_ms += elapsed_ms;
-		if (s_overlay.elapsed_ms >= HMI_OVERLAY_TIMEOUT_MS) {
-			s_overlay.open = false;
-			s_overlay.elapsed_ms = 0;
-			ESP_LOGI(TAG, "overlay timeout 15s");
-		}
-	}
-
 	alerts_hmi_frame_t frame;
-	const alerts_schedule_t *schedule = resolve_schedule();
-	if (alerts_hmi_build_frame(alerts_time_now_unix(), schedule, s_overlay.open, &frame) != 0) {
+	const alerts_schedule_t *schedule = alerts_poll_current();
+
+	alerts_hmi_present_tick(&s_present, elapsed_ms);
+	if (alerts_hmi_build_frame(alerts_time_now_unix(), schedule, &s_present, &frame) != 0) {
 		return ESP_FAIL;
 	}
 
@@ -64,15 +40,18 @@ static esp_err_t hmi_paint(int elapsed_ms)
 
 esp_err_t alerts_hmi_init(void)
 {
+	alerts_hmi_present_init(&s_present);
 	if (!alerts_lvgl_lock(HMI_LVGL_LOCK_MS)) {
 		return ESP_FAIL;
 	}
 	esp_err_t err = alerts_hmi_lvgl_init();
 	alerts_lvgl_unlock();
-	if (err == ESP_OK) {
-		ESP_LOGI(TAG, "hmi init (lvgl screens wired in ui/hmi_lvgl.c on device)");
+	if (err != ESP_OK) {
+		return err;
 	}
-	return err;
+	alerts_hmi_lvgl_set_tap_cb(alerts_hmi_on_short_tap);
+	ESP_LOGI(TAG, "hmi init (lvgl screens wired in ui/hmi_lvgl.c on device)");
+	return ESP_OK;
 }
 
 esp_err_t alerts_hmi_loop_once(void)
@@ -82,14 +61,6 @@ esp_err_t alerts_hmi_loop_once(void)
 
 void alerts_hmi_on_short_tap(void)
 {
-	if (s_overlay.open) {
-		s_overlay.open = false;
-		s_overlay.elapsed_ms = 0;
-		ESP_LOGI(TAG, "overlay close tap");
-	} else {
-		s_overlay.open = true;
-		s_overlay.elapsed_ms = 0;
-		ESP_LOGI(TAG, "overlay open");
-	}
+	alerts_hmi_present_tap(&s_present);
 	(void)hmi_paint(0);
 }

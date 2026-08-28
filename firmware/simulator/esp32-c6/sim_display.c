@@ -86,6 +86,6 @@ uint32_t sim_display_timer_handler(void)
 	if (delay > 10) {
 		delay = 10;
 	}
-	lv_sdl_wait_ms(delay);
+	SDL_Delay(delay);
 	return delay;
 }

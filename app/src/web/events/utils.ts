@@ -20,16 +20,6 @@ export function canMutateEvent(event: EventPublic): event is ManualEvent {
   return event.source === 'manual'
 }
 
-export function upcomingEvents(events: EventPublic[], now: Date, lookaheadDays: number): EventPublic[] {
-  const start = now.getTime()
-  const horizon = start + lookaheadDays * 86_400_000
-  return events.filter((event) => {
-    const eventStart = Date.parse(event.startAt)
-    const eventEnd = event.endAt ? Date.parse(event.endAt) : eventStart
-    return eventEnd > start && eventStart < horizon
-  })
-}
-
 export function toDatetimeLocal(iso: string, allDay: boolean): string {
   return allDay ? iso.slice(0, 10) : iso.slice(0, 16)
 }

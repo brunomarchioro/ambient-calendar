@@ -8,7 +8,6 @@ import {
   lembreteFormToWrite,
   parseLembreteForm,
   toDatetimeLocal,
-  upcomingEvents,
 } from '@/web/events/utils'
 
 const tz = SETTINGS_DEFAULTS.timezone
@@ -50,18 +49,6 @@ test('instantFromWallClock formats in Settings timezone', () => {
 test('parseEventsJson keeps the google | manual union', () => {
   expect(parseEventsJson([google, lembrete])).toEqual([google, lembrete])
   expect(parseEventsJson([{ ...google, source: 'manual' }])).toBeNull()
-})
-
-test('upcomingEvents keeps overlap in the lookahead window', () => {
-  const now = new Date('2026-08-27T13:00:00-03:00')
-  expect(upcomingEvents([google, lembrete], now, 7).map((event) => event.id)).toEqual(['g1', 'm1'])
-  const later = new Date('2026-08-27T15:00:00-03:00')
-  expect(upcomingEvents([google, lembrete], later, 7).map((event) => event.id)).toEqual(['m1'])
-})
-
-test('upcomingEvents drops Events past the lookahead horizon', () => {
-  const now = new Date('2026-08-20T12:00:00-03:00')
-  expect(upcomingEvents([google], now, 1)).toEqual([])
 })
 
 test('canMutateEvent is only true for Lembretes', () => {

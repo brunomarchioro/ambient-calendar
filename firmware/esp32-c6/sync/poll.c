@@ -1,5 +1,8 @@
 #include "poll.h"
 
+#include <stdlib.h>
+#include <string.h>
+
 #include "esp_log.h"
 #include "http_schedule.h"
 #include "littlefs_cache.h"
@@ -12,17 +15,7 @@ static const char *TAG = "poll";
 static alerts_schedule_t s_schedule;
 static bool s_have_schedule;
 
-bool alerts_poll_has_schedule(void)
-{
-	return s_have_schedule;
-}
-
-const alerts_schedule_t *alerts_poll_schedule(void)
-{
-	return s_have_schedule ? &s_schedule : NULL;
-}
-
-esp_err_t alerts_poll_load_cache(void)
+static esp_err_t load_cache(void)
 {
 	char *json = NULL;
 	size_t len = 0;
@@ -42,7 +35,15 @@ esp_err_t alerts_poll_load_cache(void)
 	return ESP_OK;
 }
 
-esp_err_t alerts_poll_schedule_once(void)
+const alerts_schedule_t *alerts_poll_current(void)
+{
+	if (!s_have_schedule) {
+		(void)load_cache();
+	}
+	return s_have_schedule ? &s_schedule : NULL;
+}
+
+esp_err_t alerts_poll_refresh(void)
 {
 	alerts_http_body_t body = {0};
 	esp_err_t err = alerts_http_get_schedule(&body);
@@ -87,3 +88,11 @@ esp_err_t alerts_poll_schedule_once(void)
 	alerts_http_body_free(&body);
 	return ESP_FAIL;
 }
+
+#ifdef ALERTS_POLL_HOST_TEST
+void alerts_poll_reset(void)
+{
+	memset(&s_schedule, 0, sizeof(s_schedule));
+	s_have_schedule = false;
+}
+#endif

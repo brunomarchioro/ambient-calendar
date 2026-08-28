@@ -18,10 +18,13 @@ Requires [ESP-IDF](https://docs.espressif.com/projects/esp-idf/) ≥ 5.5 and tar
 
 ```bash
 cd firmware/esp32-c6
+make -C tools sync-devvars   # firmware/.dev.vars → sdkconfig.defaults.devvars
 idf.py set-target esp32c6
-idf.py menuconfig   # Alerts device: Wi-Fi, API URL, token
+idf.py menuconfig   # Alerts device: Wi-Fi (e demais se não veio do .dev.vars)
 idf.py build flash monitor
 ```
+
+`sync-devvars` lê `firmware/.dev.vars` (dotenv-c, ADR 0008) e gera `sdkconfig.defaults.devvars` (gitignored). Copie [`../.dev.vars.example`](../.dev.vars.example) antes. Sem esse passo, use menuconfig para URL/token.
 
 Set `CONFIG_ALERTS_API_BASE_URL` to the Worker origin (no trailing slash) and `CONFIG_ALERTS_DEVICE_API_TOKEN` to the same value as the Worker secret.
 

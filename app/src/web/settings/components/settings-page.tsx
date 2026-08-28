@@ -52,6 +52,8 @@ const GOOGLE_STATUS_MESSAGES: Record<string, string> = {
   error: 'Não foi possível conectar a conta Google.',
   no_refresh: 'Google não devolveu refresh token. Tente reconectar com consent.',
   limit: 'Limite de contas Google atingido.',
+  calendar_error:
+    'Conta conectada, mas não foi possível importar calendários. Conceda acesso ao Google Calendar e reconecte (contas corporativas podem exigir liberação do admin).',
 }
 
 export function SettingsPage() {
@@ -168,7 +170,9 @@ function SettingsForm({
           {(field) => <NumberInput field={field} label="Dias de horizonte" min={1} max={30} />}
         </form.Field>
         <form.Field name="showNextEvents">
-          {(field) => <NumberInput field={field} label="Próximos Events na HMI" min={1} max={5} />}
+          {(field) => (
+            <NumberInput field={field} label="Próximos Events (agenda e display)" min={1} max={5} />
+          )}
         </form.Field>
 
         {form.state.errors.length > 0 || error ? (
@@ -237,8 +241,12 @@ function GoogleAccountsSection({
         <GoogleAccountCard
           key={account.id}
           account={account}
-          disconnecting={disconnectMutation.isPending}
-          patching={patchMutation.isPending}
+          disconnecting={
+            disconnectMutation.isPending && disconnectMutation.variables === account.id
+          }
+          patchingCalendarId={
+            patchMutation.isPending ? (patchMutation.variables?.id ?? null) : null
+          }
           onDisconnect={() => disconnectMutation.mutate(account.id)}
           onReconnect={() => {
             window.location.href = `/api/google/oauth/start?mode=reconnect&accountId=${account.id}`
@@ -286,14 +294,14 @@ function GoogleAccountsSection({
 function GoogleAccountCard({
   account,
   disconnecting,
-  patching,
+  patchingCalendarId,
   onDisconnect,
   onReconnect,
   onToggleCalendar,
 }: {
   account: GoogleAccountPublic
   disconnecting: boolean
-  patching: boolean
+  patchingCalendarId: string | null
   onDisconnect: () => void
   onReconnect: () => void
   onToggleCalendar: (calendarRowId: string, enabled: boolean) => void
@@ -334,7 +342,7 @@ function GoogleAccountCard({
             <Checkbox.Root
               key={cal.id}
               checked={cal.enabled}
-              disabled={patching || needsReconnect}
+              disabled={needsReconnect || patchingCalendarId === cal.id}
               onCheckedChange={(details) => {
                 const enabled = details.checked === true
                 if (enabled !== cal.enabled) onToggleCalendar(cal.id, enabled)

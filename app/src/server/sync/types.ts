@@ -56,10 +56,12 @@ export type MirrorStore = {
   deleteGoogleNotIn(scope: GoogleMirrorScope, keepExternalIds: readonly string[]): Promise<number>
 }
 
+import { horizonEnd } from '@/shared/events/horizon'
+
 export function horizonFrom(now: Date, lookaheadDays: number, timeZone: string): Horizon {
   return {
     timeMin: now.toISOString(),
-    timeMax: new Date(now.getTime() + lookaheadDays * 24 * 60 * 60 * 1000).toISOString(),
+    timeMax: horizonEnd(now, lookaheadDays).toISOString(),
     timeZone,
   }
 }

@@ -5,12 +5,19 @@
 
 #include "schedule.h"
 
+#define ALERTS_HMI_OVERLAY_TIMEOUT_MS 15000
+
 typedef enum {
 	ALERTS_HMI_EMPTY = 0,
 	ALERTS_HMI_AMBIENT,
 	ALERTS_HMI_ALERT,
 	ALERTS_HMI_NOW,
 } alerts_hmi_state_t;
+
+typedef struct {
+	bool overlay_open;
+	int overlay_elapsed_ms;
+} alerts_hmi_present_t;
 
 typedef struct {
 	alerts_hmi_state_t state;
@@ -25,6 +32,10 @@ typedef struct {
 	char timezone[ALERTS_TZ_LEN];
 } alerts_hmi_frame_t;
 
-int alerts_hmi_build_frame(int64_t now_unix, const alerts_schedule_t *schedule, bool overlay_open,
+void alerts_hmi_present_init(alerts_hmi_present_t *present);
+void alerts_hmi_present_tap(alerts_hmi_present_t *present);
+void alerts_hmi_present_tick(alerts_hmi_present_t *present, int elapsed_ms);
+
+int alerts_hmi_build_frame(int64_t now_unix, const alerts_schedule_t *schedule, const alerts_hmi_present_t *present,
 			   alerts_hmi_frame_t *out);
 const char *alerts_hmi_state_name(alerts_hmi_state_t state);

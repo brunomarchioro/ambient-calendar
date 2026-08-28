@@ -1,3 +1,4 @@
+import { httpFetch } from '@/server/common/infra/http-fetch'
 import { GOOGLE_OAUTH_SCOPES } from '@/shared/google/types'
 
 export type OAuthClientConfig = {
@@ -49,7 +50,7 @@ export async function exchangeAuthorizationCode(input: {
   | { ok: true; accessToken: string; refreshToken: string | null }
   | { ok: false; kind: 'invalid_grant' | 'error'; message: string }
 > {
-  const fetchImpl = input.fetchImpl ?? fetch
+  const fetchImpl = input.fetchImpl ?? httpFetch
   let response: Response
   try {
     response = await fetchImpl(TOKEN_URL, {
@@ -93,7 +94,7 @@ export async function refreshAccessToken(input: {
   | { ok: true; accessToken: string }
   | { ok: false; kind: 'invalid_grant' | 'error'; message: string }
 > {
-  const fetchImpl = input.fetchImpl ?? fetch
+  const fetchImpl = input.fetchImpl ?? httpFetch
   let response: Response
   try {
     response = await fetchImpl(TOKEN_URL, {
@@ -127,7 +128,7 @@ export async function refreshAccessToken(input: {
 
 export async function fetchGoogleUserEmail(
   accessToken: string,
-  fetchImpl: typeof fetch = fetch,
+  fetchImpl: typeof fetch = httpFetch,
 ): Promise<string | null> {
   const response = await fetchImpl('https://www.googleapis.com/oauth2/v2/userinfo', {
     headers: { authorization: `Bearer ${accessToken}` },
@@ -142,7 +143,7 @@ export async function fetchGoogleUserEmail(
 
 export async function revokeRefreshToken(
   refreshToken: string,
-  fetchImpl: typeof fetch = fetch,
+  fetchImpl: typeof fetch = httpFetch,
 ): Promise<void> {
   try {
     await fetchImpl('https://oauth2.googleapis.com/revoke', {

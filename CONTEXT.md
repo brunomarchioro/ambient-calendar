@@ -25,7 +25,7 @@ Estado de apresentação no display na janela curta após o `startAt` de um Even
 _Avoid_: Now (como entidade), Live, in-progress
 
 **Settings**:
-Preferências singleton do Ambient Calendar Display: fuso, janela de Alerta, horizonte de sync e quantos próximos Events a HMI lista.
+Preferências singleton do Ambient Calendar Display: fuso, janela de Alerta, horizonte de sync e quantos próximos Events a HMI e a agenda web listam (`showNextEvents`).
 _Avoid_: Config, Preferences, AppConfig
 
 **Conta Google**:

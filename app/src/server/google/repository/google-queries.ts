@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray } from 'drizzle-orm'
+import { and, asc, count, eq, inArray } from 'drizzle-orm'
 import { createDb, type AppDb } from '@/server/common/infra/db'
 import { events } from '@/server/events/repository/schema'
 import {
@@ -52,6 +52,18 @@ export async function listGoogleAccountsWithCalendars(
       enabled: cal.enabled,
     })),
   }))
+}
+
+export async function countAccountCalendars(
+  db: D1Database | AppDb,
+  googleAccountId: string,
+): Promise<number> {
+  const drizzle = dbOrCreate(db)
+  const [row] = await drizzle
+    .select({ value: count() })
+    .from(googleCalendars)
+    .where(eq(googleCalendars.googleAccountId, googleAccountId))
+  return row?.value ?? 0
 }
 
 export async function getGoogleAccount(

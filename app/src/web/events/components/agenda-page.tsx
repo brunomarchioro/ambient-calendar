@@ -1,6 +1,6 @@
 import { Box, Card, Heading, Stack, Text } from '@chakra-ui/react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import type { EventWrite, ManualEvent } from '@/shared/events/types'
 import {
   createEventMutationOptions,
@@ -10,7 +10,8 @@ import {
 import { eventsQueryKey, eventsQueryOptions } from '@/web/events/api/events-query'
 import { EventCard } from '@/web/events/components/event-card'
 import { LembreteForm } from '@/web/events/components/lembrete-form'
-import { canMutateEvent, upcomingEvents } from '@/web/events/utils'
+import { selectEventsInHorizon } from '@/shared/events/horizon'
+import { canMutateEvent } from '@/web/events/utils'
 import { settingsQueryOptions } from '@/web/settings/api/settings-query'
 
 export function AgendaPage() {
@@ -41,9 +42,14 @@ export function AgendaPage() {
   })
 
   const settings = settingsQuery.data
-  const upcoming = eventsQuery.data && settings
-    ? upcomingEvents(eventsQuery.data, new Date(), settings.lookaheadDays)
-    : []
+  const upcoming = useMemo(() => {
+    if (!eventsQuery.data || !settings) return []
+    return selectEventsInHorizon(eventsQuery.data, {
+      now: new Date(),
+      lookaheadDays: settings.lookaheadDays,
+      showNextEvents: settings.showNextEvents,
+    })
+  }, [eventsQuery.data, settings])
 
   return (
     <Stack gap="8">

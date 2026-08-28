@@ -12,7 +12,7 @@ typedef struct {
 
 extern sim_config_t g_sim_config;
 
-/** Parse env (ALERTS_API_BASE_URL, ALERTS_DEVICE_API_TOKEN) and CLI (--url, --token). Returns 0 on ok. */
+/** Parse firmware/.dev.vars (dotenv), env, and CLI (--url, --token). Returns 0 on ok. */
 int sim_config_parse(int argc, char **argv, sim_config_t *out);
 
 /** Apply parsed config to g_sim_config. */

@@ -9,13 +9,16 @@ Unit tests without a window stay in [`../esp32-c6/host/`](../esp32-c6/host/).
 - `gcc`, `make`, `git`, `pkg-config`
 - `libsdl2-dev`, `libcurl4-openssl-dev`
 - Local Worker: `cd app && npm run dev` (porta **3000**)
-- Same `DEVICE_API_TOKEN` as the firmware (`ALERTS_DEVICE_API_TOKEN`)
+- `firmware/.dev.vars` (copie de [`../.dev.vars.example`](../.dev.vars.example); ADR 0008)
 
 ### Installation
 
 ```bash
 sudo apt install libsdl2-dev libcurl4-openssl-dev
+cp firmware/.dev.vars.example firmware/.dev.vars   # edite ALERTS_DEVICE_API_TOKEN
 ```
+
+`ALERTS_DEVICE_API_TOKEN` deve ser o **mesmo valor** que `DEVICE_API_TOKEN` em `app/.dev.vars` (Worker), mas o arquivo é do firmware.
 
 ## Build and run
 
@@ -23,12 +26,16 @@ sudo apt install libsdl2-dev libcurl4-openssl-dev
 cd firmware/simulator/esp32-c6
 make deps    # clones LVGL v9.2.2 once
 make
-export ALERTS_API_BASE_URL=http://127.0.0.1:3000
-export ALERTS_DEVICE_API_TOKEN=your-token
 ./alerts_hmi_sim
 ```
 
-CLI overrides: `./alerts_hmi_sim --url http://127.0.0.1:3000 --token your-token`
+O simulador carrega `firmware/.dev.vars` automaticamente. Overrides opcionais:
+
+```bash
+export ALERTS_API_BASE_URL=http://127.0.0.1:3000
+export ALERTS_DEVICE_API_TOKEN=override-token
+./alerts_hmi_sim --url http://127.0.0.1:3000 --token override-token
+```
 
 ## Controls
 

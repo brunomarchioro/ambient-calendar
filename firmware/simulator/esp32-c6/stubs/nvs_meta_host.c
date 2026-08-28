@@ -1,5 +1,7 @@
 #include "nvs_meta.h"
 
+#include <stdbool.h>
+
 #include "esp_log.h"
 
 static const char *TAG = "nvs";

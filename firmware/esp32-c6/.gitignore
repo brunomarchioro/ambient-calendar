@@ -2,7 +2,10 @@ build/
 managed_components/
 sdkconfig
 sdkconfig.old
+sdkconfig.defaults.devvars
+tools/devvars_to_sdkconfig
 dependencies.lock
 host/test_schedule_parse
 host/test_hmi_frame
+host/test_poll
 host/test_scheduler_eval

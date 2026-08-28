@@ -2,6 +2,41 @@
 
 #include <string.h>
 
+void alerts_hmi_present_init(alerts_hmi_present_t *present)
+{
+	if (present == NULL) {
+		return;
+	}
+	present->overlay_open = false;
+	present->overlay_elapsed_ms = 0;
+}
+
+void alerts_hmi_present_tap(alerts_hmi_present_t *present)
+{
+	if (present == NULL) {
+		return;
+	}
+	if (present->overlay_open) {
+		present->overlay_open = false;
+		present->overlay_elapsed_ms = 0;
+	} else {
+		present->overlay_open = true;
+		present->overlay_elapsed_ms = 0;
+	}
+}
+
+void alerts_hmi_present_tick(alerts_hmi_present_t *present, int elapsed_ms)
+{
+	if (present == NULL || !present->overlay_open || elapsed_ms <= 0) {
+		return;
+	}
+	present->overlay_elapsed_ms += elapsed_ms;
+	if (present->overlay_elapsed_ms >= ALERTS_HMI_OVERLAY_TIMEOUT_MS) {
+		present->overlay_open = false;
+		present->overlay_elapsed_ms = 0;
+	}
+}
+
 static int cmp_event(const alerts_event_t *a, const alerts_event_t *b)
 {
 	if (a->start_unix != b->start_unix) {
@@ -169,9 +204,11 @@ static int eval_background(int64_t now_unix, const alerts_schedule_t *schedule, 
 	return 0;
 }
 
-int alerts_hmi_build_frame(int64_t now_unix, const alerts_schedule_t *schedule, bool overlay_open,
+int alerts_hmi_build_frame(int64_t now_unix, const alerts_schedule_t *schedule, const alerts_hmi_present_t *present,
 			   alerts_hmi_frame_t *out)
 {
+	bool overlay_open = present != NULL && present->overlay_open;
+
 	if (out == NULL) {
 		return -1;
 	}

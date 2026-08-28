@@ -5,4 +5,6 @@ interface Env {
   ENCRYPTION_KEY?: string
   SYNC_FIXTURE?: string
   GOOGLE_SYNC_FIXTURE?: string
+  WEB_BASIC_AUTH_USER?: string
+  WEB_BASIC_AUTH_PASSWORD?: string
 }

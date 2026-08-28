@@ -1,5 +1,7 @@
 #include "sim_config.h"
 
+#include "alerts_devvars.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -23,13 +25,21 @@ static int copy_required(char *dst, size_t dst_len, const char *src, const char 
 
 static void apply_defaults(sim_config_t *cfg)
 {
-	const char *url = getenv("ALERTS_API_BASE_URL");
-	const char *token = getenv("ALERTS_DEVICE_API_TOKEN");
+	const char *url = getenv(ALERTS_DEVVARS_KEY_API_URL);
+	const char *token = getenv(ALERTS_DEVVARS_KEY_DEVICE_TOKEN);
+
 	if (url != NULL && url[0] != '\0') {
 		strncpy(cfg->api_base_url, url, sizeof(cfg->api_base_url) - 1);
 	}
 	if (token != NULL && token[0] != '\0') {
 		strncpy(cfg->device_token, token, sizeof(cfg->device_token) - 1);
+	}
+
+	(void)alerts_devvars_read_into(cfg->api_base_url, sizeof(cfg->api_base_url), cfg->device_token,
+				       sizeof(cfg->device_token));
+
+	if (cfg->api_base_url[0] == '\0') {
+		strncpy(cfg->api_base_url, ALERTS_DEVVARS_DEFAULT_API_URL, sizeof(cfg->api_base_url) - 1);
 	}
 }
 

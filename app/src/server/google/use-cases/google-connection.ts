@@ -1,3 +1,4 @@
+import { httpFetch } from '@/server/common/infra/http-fetch'
 import { MAX_GOOGLE_ACCOUNTS } from '@/shared/google/types'
 import {
   buildOAuthAuthorizeUrl,
@@ -12,6 +13,7 @@ import { fetchCalendarList } from '@/server/google/infra/google-calendar-api'
 import {
   consumeOAuthState,
   countGoogleAccounts,
+  countAccountCalendars,
   deleteGoogleAccount,
   getGoogleAccount,
   getGoogleAccountByEmail,
@@ -31,6 +33,46 @@ import type { Settings } from '@/shared/settings/types'
 
 export function oauthRedirectUri(origin: string): string {
   return `${origin}/api/google/oauth/callback`
+}
+
+async function importAccountCalendarsFromGoogle(input: {
+  db: D1Database
+  accountId: string
+  accessToken: string
+  fetchImpl: typeof fetch
+  nowIso: string
+}): Promise<'ok' | 'calendar_error'> {
+  try {
+    const calendars = await fetchCalendarList(input.accessToken, input.fetchImpl)
+    await replaceAccountCalendars(
+      input.db,
+      input.accountId,
+      calendars.map((cal) => ({
+        calendarId: cal.calendarId,
+        summary: cal.summary,
+        enabled: cal.selected,
+      })),
+      input.nowIso,
+      () => crypto.randomUUID(),
+    )
+    return 'ok'
+  } catch (error) {
+    console.error('importAccountCalendarsFromGoogle failed', error)
+    return 'calendar_error'
+  }
+}
+
+async function ensureAccountCalendarsImported(input: {
+  db: D1Database
+  accountId: string
+  accessToken: string
+  fetchImpl: typeof fetch
+  nowIso: string
+}): Promise<'ok' | 'calendar_error'> {
+  if ((await countAccountCalendars(input.db, input.accountId)) > 0) {
+    return 'ok'
+  }
+  return importAccountCalendarsFromGoogle(input)
 }
 
 export async function startGoogleOAuthUseCase(input: {
@@ -76,80 +118,91 @@ export async function handleGoogleOAuthCallbackUseCase(input: {
   state: string | null
   fetchImpl?: typeof fetch
 }): Promise<{ kind: 'redirect'; location: string } | { kind: 'error'; message: string }> {
-  const settingsPath = '/settings'
-  if (!input.code || !input.state) {
-    return { kind: 'redirect', location: `${settingsPath}?google=error` }
-  }
-  const oauth = readOAuthClientConfig(input.env)
-  if (!oauth) return { kind: 'redirect', location: `${settingsPath}?google=error` }
-  const pending = await consumeOAuthState(input.db, input.state)
-  if (!pending) return { kind: 'redirect', location: `${settingsPath}?google=error` }
-
-  const fetchImpl = input.fetchImpl ?? fetch
-  const exchanged = await exchangeAuthorizationCode({
-    clientId: oauth.clientId,
-    clientSecret: oauth.clientSecret,
-    code: input.code,
-    redirectUri: oauthRedirectUri(input.origin),
-    fetchImpl,
-  })
-  if (!exchanged.ok) {
-    return { kind: 'redirect', location: `${settingsPath}?google=error` }
-  }
-  if (!exchanged.refreshToken) {
-    return { kind: 'redirect', location: `${settingsPath}?google=no_refresh` }
-  }
-
-  const email = await fetchGoogleUserEmail(exchanged.accessToken, fetchImpl)
-  if (!email) return { kind: 'redirect', location: `${settingsPath}?google=error` }
-
-  const nowIso = new Date().toISOString()
-  const refreshTokenEnc = await encryptSecret(exchanged.refreshToken, oauth.encryptionKey)
-
-  if (pending.mode === 'reconnect') {
-    const accountId = pending.googleAccountId
-    if (!accountId) return { kind: 'redirect', location: `${settingsPath}?google=error` }
-    const account = await getGoogleAccount(input.db, accountId)
-    if (!account || account.email !== email) {
-      return { kind: 'redirect', location: `${settingsPath}?google=error` }
+  const settingsUrl = (query: string) => `${input.origin}/settings?${query}`
+  try {
+    if (!input.code || !input.state) {
+      return { kind: 'redirect', location: settingsUrl('google=error') }
     }
-    await updateGoogleAccountTokens(input.db, accountId, refreshTokenEnc, nowIso)
-    return { kind: 'redirect', location: `${settingsPath}?google=connected` }
-  }
+    const oauth = readOAuthClientConfig(input.env)
+    if (!oauth) return { kind: 'redirect', location: settingsUrl('google=error') }
+    const pending = await consumeOAuthState(input.db, input.state)
+    if (!pending) return { kind: 'redirect', location: settingsUrl('google=error') }
 
-  const existing = await getGoogleAccountByEmail(input.db, email)
-  if (!existing) {
-    const count = await countGoogleAccounts(input.db)
-    if (count >= MAX_GOOGLE_ACCOUNTS) {
-      return { kind: 'redirect', location: `${settingsPath}?google=limit` }
+    const fetchImpl = input.fetchImpl ?? httpFetch
+    const exchanged = await exchangeAuthorizationCode({
+      clientId: oauth.clientId,
+      clientSecret: oauth.clientSecret,
+      code: input.code,
+      redirectUri: oauthRedirectUri(input.origin),
+      fetchImpl,
+    })
+    if (!exchanged.ok) {
+      return { kind: 'redirect', location: settingsUrl('google=error') }
     }
-  }
+    if (!exchanged.refreshToken) {
+      return { kind: 'redirect', location: settingsUrl('google=no_refresh') }
+    }
 
-  const accountId = await saveGoogleAccountTokens(input.db, {
-    id: existing?.id ?? crypto.randomUUID(),
-    email,
-    refreshTokenEnc,
-    status: 'active',
-    connectedAt: existing?.connectedAt ?? nowIso,
-    updatedAt: nowIso,
-  })
+    const email = await fetchGoogleUserEmail(exchanged.accessToken, fetchImpl)
+    if (!email) return { kind: 'redirect', location: settingsUrl('google=error') }
 
-  if (!existing) {
-    const calendars = await fetchCalendarList(exchanged.accessToken, fetchImpl)
-    await replaceAccountCalendars(
-      input.db,
+    const nowIso = new Date().toISOString()
+    const refreshTokenEnc = await encryptSecret(exchanged.refreshToken, oauth.encryptionKey)
+
+    if (pending.mode === 'reconnect') {
+      const accountId = pending.googleAccountId
+      if (!accountId) return { kind: 'redirect', location: settingsUrl('google=error') }
+      const account = await getGoogleAccount(input.db, accountId)
+      if (!account || account.email !== email) {
+        return { kind: 'redirect', location: settingsUrl('google=error') }
+      }
+      await updateGoogleAccountTokens(input.db, accountId, refreshTokenEnc, nowIso)
+      const imported = await ensureAccountCalendarsImported({
+        db: input.db,
+        accountId,
+        accessToken: exchanged.accessToken,
+        fetchImpl,
+        nowIso,
+      })
+      if (imported === 'calendar_error') {
+        return { kind: 'redirect', location: settingsUrl('google=calendar_error') }
+      }
+      return { kind: 'redirect', location: settingsUrl('google=connected') }
+    }
+
+    const existing = await getGoogleAccountByEmail(input.db, email)
+    if (!existing) {
+      const count = await countGoogleAccounts(input.db)
+      if (count >= MAX_GOOGLE_ACCOUNTS) {
+        return { kind: 'redirect', location: settingsUrl('google=limit') }
+      }
+    }
+
+    const accountId = await saveGoogleAccountTokens(input.db, {
+      id: existing?.id ?? crypto.randomUUID(),
+      email,
+      refreshTokenEnc,
+      status: 'active',
+      connectedAt: existing?.connectedAt ?? nowIso,
+      updatedAt: nowIso,
+    })
+
+    const imported = await ensureAccountCalendarsImported({
+      db: input.db,
       accountId,
-      calendars.map((cal) => ({
-        calendarId: cal.calendarId,
-        summary: cal.summary,
-        enabled: cal.selected,
-      })),
+      accessToken: exchanged.accessToken,
+      fetchImpl,
       nowIso,
-      () => crypto.randomUUID(),
-    )
-  }
+    })
+    if (imported === 'calendar_error') {
+      return { kind: 'redirect', location: settingsUrl('google=calendar_error') }
+    }
 
-  return { kind: 'redirect', location: `${settingsPath}?google=connected` }
+    return { kind: 'redirect', location: settingsUrl('google=connected') }
+  } catch (error) {
+    console.error('handleGoogleOAuthCallback failed', error)
+    return { kind: 'redirect', location: settingsUrl('google=error') }
+  }
 }
 
 export async function listGoogleAccountsUseCase(db: D1Database) {
@@ -232,7 +285,7 @@ export async function runGoogleSyncUseCase(input: {
     settings: input.settings,
     oauth,
     targets,
-    fetch: input.fetchImpl ?? fetch,
+    fetch: input.fetchImpl ?? httpFetch,
     store: d1MirrorStore(input.db),
     db: input.db,
     now: input.now ?? new Date(),

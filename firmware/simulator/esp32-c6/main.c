@@ -36,16 +36,20 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	if (alerts_poll_load_cache() == ESP_OK) {
-		ESP_LOGI(TAG, "boot cache loaded");
-	} else {
-		ESP_LOGW(TAG, "boot cache miss");
-	}
+	(void)alerts_poll_current();
 
-	if (alerts_poll_schedule_once() != ESP_OK) {
-		ESP_LOGE(TAG, "initial poll failed — is wrangler dev running?");
-		curl_global_cleanup();
-		return 1;
+	(void)alerts_poll_current();
+
+	esp_err_t poll_err = alerts_poll_refresh();
+	if (poll_err != ESP_OK) {
+		if (poll_err == ESP_ERR_INVALID_STATE && alerts_poll_current() != NULL) {
+			ESP_LOGW(TAG, "initial poll unauthorized; using cache — check firmware/.dev.vars "
+				      "(ALERTS_DEVICE_API_TOKEN must match app DEVICE_API_TOKEN)");
+		} else {
+			ESP_LOGE(TAG, "initial poll failed — is wrangler dev running?");
+			curl_global_cleanup();
+			return 1;
+		}
 	}
 
 	ESP_LOGI(TAG, "controls: click=overlay ←/→=±15min r=poll q=quit");
@@ -57,7 +61,7 @@ int main(int argc, char **argv)
 		sim_display_pump();
 
 		if (sim_display_consume_repoll()) {
-			(void)alerts_poll_schedule_once();
+			(void)alerts_poll_refresh();
 			last_poll_ms = now;
 		}
 
@@ -69,7 +73,7 @@ int main(int argc, char **argv)
 		sim_display_timer_handler();
 
 		if (now - last_poll_ms >= 300000U) {
-			(void)alerts_poll_schedule_once();
+			(void)alerts_poll_refresh();
 			last_poll_ms = now;
 		}
 	}

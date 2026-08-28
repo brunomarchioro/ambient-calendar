@@ -32,7 +32,7 @@ void app_main(void)
 	ESP_ERROR_CHECK(alerts_hmi_init());
 	ESP_ERROR_CHECK(alerts_time_init());
 
-	if (alerts_poll_load_cache() == ESP_OK) {
+	if (alerts_poll_current() != NULL) {
 		ESP_LOGI(TAG, "boot cache loaded");
 	} else {
 		ESP_LOGW(TAG, "boot cache miss");
@@ -40,7 +40,7 @@ void app_main(void)
 	log_nvs_meta();
 
 	ESP_ERROR_CHECK(alerts_wifi_start());
-	(void)alerts_poll_schedule_once();
+	(void)alerts_poll_refresh();
 	alerts_bsp_log_heap("after first poll");
 
 	int poll_countdown = 0;
@@ -49,7 +49,7 @@ void app_main(void)
 		vTaskDelay(pdMS_TO_TICKS(1000));
 		if (++poll_countdown >= CONFIG_ALERTS_POLL_INTERVAL_S) {
 			poll_countdown = 0;
-			(void)alerts_poll_schedule_once();
+			(void)alerts_poll_refresh();
 		}
 	}
 }

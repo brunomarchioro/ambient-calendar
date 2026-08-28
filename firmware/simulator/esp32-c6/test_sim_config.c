@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "alerts_devvars.h"
 #include "sim_config.h"
 
 int main(void)
@@ -12,8 +13,10 @@ int main(void)
 	char *argv[] = {"alerts_hmi_sim", "--url", "http://127.0.0.1:8787", "--token", "test-token", NULL};
 	int argc = 5;
 
+	setenv(ALERTS_DEVVARS_SKIP_ENV, "1", 1);
 	unsetenv("ALERTS_API_BASE_URL");
 	unsetenv("ALERTS_DEVICE_API_TOKEN");
+	unsetenv("DEVICE_API_TOKEN");
 	assert(sim_config_parse(argc, argv, &cfg) == 0);
 	assert(strcmp(cfg.api_base_url, "http://127.0.0.1:8787") == 0);
 	assert(strcmp(cfg.device_token, "test-token") == 0);

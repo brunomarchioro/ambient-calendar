@@ -1,0 +1,7 @@
+# Firmware dev secrets (simulador + sync-devvars → ESP32). Não commite .dev.vars.
+# ALERTS_DEVICE_API_TOKEN must match app DEVICE_API_TOKEN (Worker secret) for poll to succeed.
+
+ALERTS_API_BASE_URL=http://127.0.0.1:3000
+ALERTS_DEVICE_API_TOKEN=local-firmware-token-change-me
+ALERTS_WIFI_SSID=
+ALERTS_WIFI_PASSWORD=

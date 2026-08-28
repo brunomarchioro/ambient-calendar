@@ -1,9 +1,9 @@
 #include "hmi_lvgl.h"
 
-#include "hmi.h"
 #include "waveshare/ws_pins.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <time.h>
 
@@ -38,6 +38,12 @@ typedef struct {
 } hmi_ui_t;
 
 static hmi_ui_t s_ui;
+static alerts_hmi_tap_cb_t s_tap_cb;
+
+void alerts_hmi_lvgl_set_tap_cb(alerts_hmi_tap_cb_t cb)
+{
+	s_tap_cb = cb;
+}
 
 static const char *weekday_pt(int wday)
 {
@@ -87,10 +93,10 @@ static void format_date_line(char *buf, size_t buflen, int64_t now_unix)
 	struct tm tm_local;
 	time_t t = (time_t)now_unix;
 	if (localtime_r(&t, &tm_local) == NULL) {
-		snprintf(buf, buflen, "--- · -- ---");
+		snprintf(buf, buflen, "--- - -- ---");
 		return;
 	}
-	snprintf(buf, buflen, "%s · %d %s", weekday_pt(tm_local.tm_wday), tm_local.tm_mday, month_pt(tm_local.tm_mon));
+	snprintf(buf, buflen, "%s - %d %s", weekday_pt(tm_local.tm_wday), tm_local.tm_mday, month_pt(tm_local.tm_mon));
 }
 
 static void format_event_time(char *buf, size_t buflen, int64_t start_unix)
@@ -114,7 +120,27 @@ static void format_countdown(char *buf, size_t buflen, int64_t now_unix, int64_t
 	if (mins < 1) {
 		mins = 1;
 	}
-	snprintf(buf, buflen, "em %lld min", (long long)mins);
+	if (mins < 60) {
+		snprintf(buf, buflen, "em %lld min", (long long)mins);
+		return;
+	}
+	if (mins < 1440) {
+		int64_t h = mins / 60;
+		int64_t m = mins % 60;
+		if (m == 0) {
+			snprintf(buf, buflen, "em %lld h", (long long)h);
+		} else {
+			snprintf(buf, buflen, "em %lld h %lld min", (long long)h, (long long)m);
+		}
+		return;
+	}
+	int64_t d = mins / 1440;
+	int64_t h = (mins % 1440) / 60;
+	if (h == 0) {
+		snprintf(buf, buflen, "em %lld %s", (long long)d, d == 1 ? "dia" : "dias");
+	} else {
+		snprintf(buf, buflen, "em %lld %s %lld h", (long long)d, d == 1 ? "dia" : "dias", (long long)h);
+	}
 }
 
 static void format_list_line(char *buf, size_t buflen, const alerts_event_t *e)
@@ -142,14 +168,14 @@ static void style_label(lv_obj_t *lbl, const lv_font_t *font, lv_color_t color, 
 	lv_obj_set_style_text_font(lbl, font, 0);
 	lv_obj_set_style_text_color(lbl, color, 0);
 	lv_obj_set_style_text_align(lbl, align, 0);
-	lv_label_set_long_mode(lbl, LV_LABEL_LONG_MODE_DOTS);
+	lv_label_set_long_mode(lbl, LV_LABEL_LONG_DOT);
 	lv_obj_set_width(lbl, WS_LCD_H_RES - 16);
 }
 
 static void root_click_cb(lv_event_t *e)
 {
-	if (lv_event_get_code(e) == LV_EVENT_CLICKED) {
-		alerts_hmi_on_short_tap();
+	if (lv_event_get_code(e) == LV_EVENT_CLICKED && s_tap_cb != NULL) {
+		s_tap_cb();
 	}
 }
 
