@@ -2,7 +2,7 @@
 
 ## Status
 
-Aceito (2026-08-27). Supersede [ADR 0002](./0002-app-workspace-package.md).
+Aceito (2026-08-27). Supersede [ADR 0002](./0002-app-workspace-package.md). Layout interno (`domain/`, `client/`, rotas flat) superseded por [ADR 0004](./0004-vanguarda-fullstack-layout.md).
 
 ## Contexto
 
@@ -12,9 +12,10 @@ ADR 0002 moveu o TanStack Start para `packages/app/` com npm workspaces e toolin
 
 Consolidar **todo** código e configuração Node em `app/` (`@app/alerts`):
 
-- camadas `domain/`, `server/`, `client/`, `routes/`, entry `worker.ts`
+- código TypeScript/React em `src/` (feature-sliced — ver [ADR 0004](./0004-vanguarda-fullstack-layout.md))
 - `db/migrations/` dentro de `app/db/`
-- `package.json`, Vite, Wrangler, Vitest, TypeScript na mesma pasta
+- `package.json`, Vite, Wrangler, Vitest, TypeScript, Drizzle na mesma pasta
+- entry `worker.ts` na raiz de `app/`
 
 Raiz do repo: `app/`, `firmware/`, `docs/`, `CONTEXT.md`, `README.md`. Sem npm workspaces.
 
@@ -30,4 +31,4 @@ Raiz do repo: `app/`, `firmware/`, `docs/`, `CONTEXT.md`, `README.md`. Sem npm w
 
 - Comandos de dev/test/build rodam de `app/` (`cd app && npm run dev`).
 - `wrangler.jsonc` e migrations D1 vivem em `app/`.
-- Imports internos continuam com alias `@app/*`.
+- Imports internos usam alias `@/` → `app/src/` (ver ADR 0004).

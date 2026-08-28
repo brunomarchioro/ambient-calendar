@@ -500,7 +500,7 @@ No throwaway prototype branch in this planning pass. Map ticket 07 already class
 
 Settled by decree for the build.
 
-- Monorepo path is `app/` (`@app/alerts`) per `docs/index.md` §11 and ADR 0003. All Node tooling lives under `app/`.
+- Monorepo path is `app/` (`@app/alerts`) per `docs/index.md` §11 and ADR 0003/0004. All Node tooling lives under `app/`; código em `app/src/` (vanguarda-fullstack).
 - Schedule and sync share half-open `[now, now+lookaheadDays)`.
 - Google list uses `eventTypes=default`.
 - OAuth scope prefers `calendar.events.readonly`.

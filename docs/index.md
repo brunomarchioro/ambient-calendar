@@ -284,12 +284,14 @@ Mínimo alinhado à research TanStack/Workers. Tooling CI fino fora do MVP.
 ```text
 alerts/
 ├── app/                    # @app/alerts — Node/Worker (UI, API, Cron, D1)
-│   ├── domain/
-│   ├── server/
-│   ├── client/
-│   ├── routes/
+│   ├── src/
+│   │   ├── shared/         # tipos/DTOs web ↔ server
+│   │   ├── server/         # use-cases, repository, services, infra
+│   │   ├── web/            # components, api (queryOptions)
+│   │   └── routes/         # TanStack Start (UI + API handlers)
 │   ├── db/migrations/
 │   ├── worker.ts
+│   ├── drizzle.config.ts
 │   ├── package.json
 │   ├── vite.config.ts
 │   ├── wrangler.jsonc
@@ -298,11 +300,11 @@ alerts/
 │   └── esp32-c6/
 │       ├── network/
 │       ├── sync/
-│       ├── scheduler/
 │       ├── storage/
 │       └── ui/
 ├── docs/
 │   ├── index.md            # esta spec
+│   ├── adr/
 │   └── research/
 └── CONTEXT.md
 ```

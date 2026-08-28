@@ -27,3 +27,7 @@ _Avoid_: Now (como entidade), Live, in-progress
 **Settings**:
 Preferências singleton do Ambient Calendar Display: fuso, janela de Alerta, horizonte de sync e quantos próximos Events a HMI lista.
 _Avoid_: Config, Preferences, AppConfig
+
+**Overlay**:
+Modo de apresentação temporário que mostra a lista de próximos Events por cima do estado atual do display (Empty, Ambient, Alerta ou Agora). Abre com toque curto; fecha com segundo toque ou após 15 s. O scheduler continua calculando o estado de fundo; o Overlay só altera o que é desenhado.
+_Avoid_: Modal, popup, tela
