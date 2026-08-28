@@ -1,5 +1,22 @@
 idf_component_register(
-	SRCS "bsp.c" "hmi.c" "touch.c"
-	INCLUDE_DIRS "."
-	REQUIRES esp_common heap scheduler sync
+	SRCS
+		"bsp.c"
+		"hmi.c"
+		"hmi_frame.c"
+		"hmi_lvgl.c"
+		"waveshare/jd9853_vendor_init.c"
+		"waveshare/ws_lcd.c"
+		"waveshare/ws_touch.c"
+		"waveshare/ws_lvgl.c"
+	INCLUDE_DIRS "." "waveshare"
+	REQUIRES
+		esp_common
+		heap
+		storage
+		sync
+		esp_lcd
+		driver
+		esp_timer
+		esp_lvgl_port
+		lvgl
 )

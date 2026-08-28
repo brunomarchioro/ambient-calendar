@@ -26,4 +26,9 @@ config ALERTS_HEAP_FLOOR_KB
 	default 40
 	range 40 256
 
+config ALERTS_LVGL_DRAW_LINES
+	int "LVGL partial draw buffer height in lines (H_RES * lines * 2 bytes per buffer)"
+	default 20
+	range 10 80
+
 endmenu

@@ -4,4 +4,5 @@ sdkconfig
 sdkconfig.old
 dependencies.lock
 host/test_schedule_parse
+host/test_hmi_frame
 host/test_scheduler_eval

@@ -1,8 +1,8 @@
 #pragma once
 
 #include "esp_err.h"
-#include "scheduler_eval.h"
+#include "hmi_frame.h"
 
 esp_err_t alerts_hmi_init(void);
-esp_err_t alerts_hmi_render(const alerts_hmi_view_t *view, bool overlay_open);
 esp_err_t alerts_hmi_loop_once(void);
+void alerts_hmi_on_short_tap(void);

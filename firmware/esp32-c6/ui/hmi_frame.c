@@ -1,4 +1,4 @@
-#include "scheduler_eval.h"
+#include "hmi_frame.h"
 
 #include <string.h>
 
@@ -75,7 +75,8 @@ static const alerts_event_t *pick_next_timed(int64_t now, const alerts_schedule_
 	return best;
 }
 
-static void fill_list(int64_t now, const alerts_schedule_t *s, const alerts_event_t *skip, alerts_hmi_view_t *out)
+static size_t collect_upcoming(int64_t now, const alerts_schedule_t *s, const alerts_event_t *skip, alerts_event_t *out,
+			       size_t max_out)
 {
 	alerts_event_t tmp[ALERTS_MAX_EVENTS];
 	size_t tmp_count = 0;
@@ -105,47 +106,94 @@ static void fill_list(int64_t now, const alerts_schedule_t *s, const alerts_even
 		}
 	}
 	n = 0;
-	for (i = 0; i < tmp_count && n < (size_t)s->show_next_events; i++) {
-		out->list[n++] = tmp[i];
+	for (i = 0; i < tmp_count && n < max_out; i++) {
+		out[n++] = tmp[i];
 	}
-	out->list_count = n;
+	return n;
 }
 
-int alerts_scheduler_eval(int64_t now_unix, const alerts_schedule_t *schedule, alerts_hmi_view_t *out)
+static void fill_ambient_list(int64_t now, const alerts_schedule_t *s, const alerts_event_t *skip,
+			      alerts_hmi_frame_t *out)
+{
+	size_t limit = (size_t)s->show_next_events;
+	if (limit > ALERTS_MAX_EVENTS) {
+		limit = ALERTS_MAX_EVENTS;
+	}
+	out->ambient_list_count = collect_upcoming(now, s, skip, out->ambient_list, limit);
+}
+
+static void fill_overlay_list(int64_t now, const alerts_schedule_t *s, alerts_hmi_frame_t *out)
+{
+	size_t limit = (size_t)s->show_next_events;
+	if (limit > ALERTS_MAX_EVENTS) {
+		limit = ALERTS_MAX_EVENTS;
+	}
+	out->overlay_list_count = collect_upcoming(now, s, NULL, out->overlay_list, limit);
+}
+
+static void set_focus(alerts_hmi_frame_t *out, const alerts_event_t *e)
+{
+	out->has_focus = true;
+	out->focus = *e;
+}
+
+static int eval_background(int64_t now_unix, const alerts_schedule_t *schedule, alerts_hmi_frame_t *out)
 {
 	const alerts_event_t *focus_now;
 	const alerts_event_t *focus_alert;
-
-	if (out == NULL || schedule == NULL) {
-		return -1;
-	}
-	memset(out, 0, sizeof(*out));
+	const alerts_event_t *next_timed;
 
 	focus_now = pick_focus(now_unix, schedule->reminder_minutes, schedule, true);
 	if (focus_now != NULL) {
 		out->state = ALERTS_HMI_NOW;
-		out->focus = focus_now;
-		out->next_timed = focus_now;
+		set_focus(out, focus_now);
 		return 0;
 	}
 
 	focus_alert = pick_focus(now_unix, schedule->reminder_minutes, schedule, false);
 	if (focus_alert != NULL) {
 		out->state = ALERTS_HMI_ALERT;
-		out->focus = focus_alert;
-		out->next_timed = focus_alert;
+		set_focus(out, focus_alert);
 		return 0;
 	}
 
-	out->next_timed = pick_next_timed(now_unix, schedule);
-	if (out->next_timed != NULL) {
+	next_timed = pick_next_timed(now_unix, schedule);
+	if (next_timed != NULL) {
 		out->state = ALERTS_HMI_AMBIENT;
-		out->focus = out->next_timed;
-		fill_list(now_unix, schedule, out->next_timed, out);
+		set_focus(out, next_timed);
+		fill_ambient_list(now_unix, schedule, next_timed, out);
 		return 0;
 	}
 
 	out->state = ALERTS_HMI_EMPTY;
+	return 0;
+}
+
+int alerts_hmi_build_frame(int64_t now_unix, const alerts_schedule_t *schedule, bool overlay_open,
+			   alerts_hmi_frame_t *out)
+{
+	if (out == NULL) {
+		return -1;
+	}
+	memset(out, 0, sizeof(*out));
+	out->now_unix = now_unix;
+	out->overlay_open = overlay_open;
+
+	if (schedule == NULL) {
+		out->state = ALERTS_HMI_EMPTY;
+		return 0;
+	}
+
+	strncpy(out->timezone, schedule->timezone, sizeof(out->timezone) - 1);
+	out->timezone[sizeof(out->timezone) - 1] = '\0';
+
+	if (eval_background(now_unix, schedule, out) != 0) {
+		return -1;
+	}
+
+	if (overlay_open) {
+		fill_overlay_list(now_unix, schedule, out);
+	}
 	return 0;
 }
 
