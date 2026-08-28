@@ -1,4 +1,4 @@
-/** Device schedule payload: unix seconds + server-side truncation to showNextEvents. */
+/** Device schedule payload: unix seconds; showNextEvents is for HMI list size only. */
 export type DeviceEvent = {
   id: string
   title: string

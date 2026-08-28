@@ -12,7 +12,6 @@ export function toDeviceSchedule(args: {
   const selected = selectParsedEventsInHorizon(args.rows, {
     now: args.now,
     lookaheadDays: args.settings.lookaheadDays,
-    showNextEvents: args.settings.showNextEvents,
   })
   const events: DeviceEvent[] = selected.map(({ event: row, start, end }) => ({
     id: row.id,

@@ -53,7 +53,7 @@ test('empty rows yield events []', () => {
   expect(toDeviceSchedule({ now, settings, rows: [] }).events).toEqual([])
 })
 
-test('showNextEvents truncates events server-side', () => {
+test('showNextEvents is echoed but does not truncate events', () => {
   const rows = ['a', 'b', 'c'].map((id, index) =>
     row({
       id,
@@ -63,7 +63,7 @@ test('showNextEvents truncates events server-side', () => {
   )
   const schedule = toDeviceSchedule({ now, settings, rows })
   expect(schedule.showNextEvents).toBe(2)
-  expect(schedule.events.map((event) => event.id)).toEqual(['a', 'b'])
+  expect(schedule.events.map((event) => event.id)).toEqual(['a', 'b', 'c'])
 })
 
 test('half-open horizon includes now and excludes the end instant', () => {
