@@ -160,3 +160,19 @@ test('unparseable instants throw for the 503 path', () => {
     }),
   ).toThrow('invalid instant')
 })
+
+test('device payload sanitizes event titles for display charset', () => {
+  const schedule = toDeviceSchedule({
+    now,
+    settings,
+    rows: [
+      row({
+        id: 'emoji',
+        title: 'Café ☕',
+        startAt: '2026-08-27T16:00:00-03:00',
+        endAt: '2026-08-27T17:00:00-03:00',
+      }),
+    ],
+  })
+  expect(schedule.events[0]?.title).toBe('Café')
+})

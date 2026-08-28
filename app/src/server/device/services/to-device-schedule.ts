@@ -2,6 +2,7 @@ import { selectParsedEventsInHorizon } from '@/shared/events/horizon'
 import { toUnixSeconds } from '@/shared/common/instant'
 import type { Settings } from '@/shared/settings/types'
 import type { DeviceEvent, DeviceEventRow, DeviceSchedule } from '@/server/device/types'
+import { sanitizeDeviceTitle } from '@/server/device/services/device-title'
 
 export function toDeviceSchedule(args: {
   now: Date
@@ -15,7 +16,7 @@ export function toDeviceSchedule(args: {
   })
   const events: DeviceEvent[] = selected.map(({ event: row, start, end }) => ({
     id: row.id,
-    title: row.title,
+    title: sanitizeDeviceTitle(row.title),
     startUnix: toUnixSeconds(start),
     endUnix: end ? toUnixSeconds(end) : null,
     allDay: row.allDay,
