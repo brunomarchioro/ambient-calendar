@@ -17,6 +17,7 @@ import { Route as ApiSettingsRouteImport } from './routes/api/settings'
 import { Route as EventsIndexRouteImport } from './routes/events/index'
 import { Route as ApiDeviceScheduleRouteImport } from './routes/api/device/schedule'
 import { Route as ApiEventsIdRouteImport } from './routes/api/events.$id'
+import { Route as ApiSettingsGoogleConnectionRouteImport } from './routes/api/settings.google-connection'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -58,26 +59,34 @@ const ApiEventsIdRoute = ApiEventsIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => ApiEventsRoute,
 } as any)
+const ApiSettingsGoogleConnectionRoute =
+  ApiSettingsGoogleConnectionRouteImport.update({
+    id: '/google-connection',
+    path: '/google-connection',
+    getParentRoute: () => ApiSettingsRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/settings': typeof SettingsRoute
   '/api/events': typeof ApiEventsRouteWithChildren
   '/api/health': typeof ApiHealthRoute
-  '/api/settings': typeof ApiSettingsRoute
+  '/api/settings': typeof ApiSettingsRouteWithChildren
   '/events/': typeof EventsIndexRoute
   '/api/device/schedule': typeof ApiDeviceScheduleRoute
   '/api/events/$id': typeof ApiEventsIdRoute
+  '/api/settings/google-connection': typeof ApiSettingsGoogleConnectionRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/settings': typeof SettingsRoute
   '/api/events': typeof ApiEventsRouteWithChildren
   '/api/health': typeof ApiHealthRoute
-  '/api/settings': typeof ApiSettingsRoute
+  '/api/settings': typeof ApiSettingsRouteWithChildren
   '/events': typeof EventsIndexRoute
   '/api/device/schedule': typeof ApiDeviceScheduleRoute
   '/api/events/$id': typeof ApiEventsIdRoute
+  '/api/settings/google-connection': typeof ApiSettingsGoogleConnectionRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -85,10 +94,11 @@ export interface FileRoutesById {
   '/settings': typeof SettingsRoute
   '/api/events': typeof ApiEventsRouteWithChildren
   '/api/health': typeof ApiHealthRoute
-  '/api/settings': typeof ApiSettingsRoute
+  '/api/settings': typeof ApiSettingsRouteWithChildren
   '/events/': typeof EventsIndexRoute
   '/api/device/schedule': typeof ApiDeviceScheduleRoute
   '/api/events/$id': typeof ApiEventsIdRoute
+  '/api/settings/google-connection': typeof ApiSettingsGoogleConnectionRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -101,6 +111,7 @@ export interface FileRouteTypes {
     | '/events/'
     | '/api/device/schedule'
     | '/api/events/$id'
+    | '/api/settings/google-connection'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -111,6 +122,7 @@ export interface FileRouteTypes {
     | '/events'
     | '/api/device/schedule'
     | '/api/events/$id'
+    | '/api/settings/google-connection'
   id:
     | '__root__'
     | '/'
@@ -121,6 +133,7 @@ export interface FileRouteTypes {
     | '/events/'
     | '/api/device/schedule'
     | '/api/events/$id'
+    | '/api/settings/google-connection'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -128,7 +141,7 @@ export interface RootRouteChildren {
   SettingsRoute: typeof SettingsRoute
   ApiEventsRoute: typeof ApiEventsRouteWithChildren
   ApiHealthRoute: typeof ApiHealthRoute
-  ApiSettingsRoute: typeof ApiSettingsRoute
+  ApiSettingsRoute: typeof ApiSettingsRouteWithChildren
   EventsIndexRoute: typeof EventsIndexRoute
   ApiDeviceScheduleRoute: typeof ApiDeviceScheduleRoute
 }
@@ -191,6 +204,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiEventsIdRouteImport
       parentRoute: typeof ApiEventsRoute
     }
+    '/api/settings/google-connection': {
+      id: '/api/settings/google-connection'
+      path: '/google-connection'
+      fullPath: '/api/settings/google-connection'
+      preLoaderRoute: typeof ApiSettingsGoogleConnectionRouteImport
+      parentRoute: typeof ApiSettingsRoute
+    }
   }
 }
 
@@ -206,12 +226,24 @@ const ApiEventsRouteWithChildren = ApiEventsRoute._addFileChildren(
   ApiEventsRouteChildren,
 )
 
+interface ApiSettingsRouteChildren {
+  ApiSettingsGoogleConnectionRoute: typeof ApiSettingsGoogleConnectionRoute
+}
+
+const ApiSettingsRouteChildren: ApiSettingsRouteChildren = {
+  ApiSettingsGoogleConnectionRoute: ApiSettingsGoogleConnectionRoute,
+}
+
+const ApiSettingsRouteWithChildren = ApiSettingsRoute._addFileChildren(
+  ApiSettingsRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SettingsRoute: SettingsRoute,
   ApiEventsRoute: ApiEventsRouteWithChildren,
   ApiHealthRoute: ApiHealthRoute,
-  ApiSettingsRoute: ApiSettingsRoute,
+  ApiSettingsRoute: ApiSettingsRouteWithChildren,
   EventsIndexRoute: EventsIndexRoute,
   ApiDeviceScheduleRoute: ApiDeviceScheduleRoute,
 }
