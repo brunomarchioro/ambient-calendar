@@ -1,0 +1,16 @@
+---
+description: Arquitetura Vanguarda — código fullstack TypeScript/React
+globs: app/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+# vanguarda-fullstack
+
+Ao criar ou modificar arquivos em `app/`, leia e siga `.agents/skills/vanguarda-fullstack/SKILL.md`.
+Para feature do zero (API → UI), leia `feature-walkthrough.md`; snippets por camada, `patterns.md`; colocação, `decision-tree.md` — na mesma pasta da skill.
+
+Skills complementares:
+
+- UI → `building-components`
+- React perf → `vercel-react-best-practices`
+- composição → `vercel-composition-patterns`

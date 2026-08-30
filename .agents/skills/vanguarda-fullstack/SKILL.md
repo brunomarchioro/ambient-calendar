@@ -41,12 +41,12 @@ Feature-sliced architecture for Vanguarda fullstack applications. Follow when cr
 | Framework     | TanStack Start                                 |
 | Routing       | TanStack Router — file routes in `src/routes/` |
 | Data fetching | TanStack Query                                 |
-| UI            | Chakra UI v3                                   |
+| UI            | shadcn/ui + Tailwind v4                        |
 | Database      | Drizzle ORM + Cloudflare D1                    |
 | Validation    | Zod                                            |
 | Deploy        | Cloudflare Workers                             |
 
-UI → `chakra-ui-builder`. React/SSR performance → `vercel-react-best-practices`.
+UI → `building-components`. React/SSR performance → `vercel-react-best-practices`.
 
 ## Path Aliases
 
@@ -189,7 +189,7 @@ Same domain word can be both: background collection or external client → `comm
 
 ## Related Skills
 
-- `chakra-ui-builder` — components and theming
+- `building-components` — shadcn/ui components and composition
 - `vercel-react-best-practices` — React/SSR performance
 - `vercel-composition-patterns` — component composition
 - `building-components` — component architecture

@@ -163,7 +163,6 @@ export const Route = createFileRoute('/events/')({
 
 ```tsx
 // src/web/events/components/event-list-page.tsx
-import { Stack, Heading } from '@chakra-ui/react'
 import { useSuspenseQuery } from '@tanstack/react-query'
 import { eventsQueryOptions } from '@/web/events/api/events-query'
 import { EventList } from '@/web/events/components/event-list'
@@ -171,17 +170,16 @@ import { EventList } from '@/web/events/components/event-list'
 export function EventListPage() {
   const { data: events } = useSuspenseQuery(eventsQueryOptions())
   return (
-    <Stack gap="6">
-      <Heading size="md">Events</Heading>
+    <div className="flex flex-col gap-6">
+      <h2 className="text-lg font-semibold">Events</h2>
       <EventList events={events} />
-    </Stack>
+    </div>
   )
 }
 ```
 
 ```tsx
 // src/web/events/components/event-list.tsx
-import { Stack, Text } from '@chakra-ui/react'
 import type { EventPublic } from '@/shared/events/types'
 
 type EventListProps = {
@@ -190,11 +188,11 @@ type EventListProps = {
 
 export function EventList({ events }: EventListProps) {
   return (
-    <Stack gap="2">
+    <div className="flex flex-col gap-2">
       {events.map((event) => (
-        <Text key={event.id}>{event.title}</Text>
+        <p key={event.id}>{event.title}</p>
       ))}
-    </Stack>
+    </div>
   )
 }
 ```

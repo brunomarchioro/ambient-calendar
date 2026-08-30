@@ -1,4 +1,5 @@
 import path from 'node:path'
+import tailwindcss from '@tailwindcss/vite'
 import { defineConfig } from 'vite'
 import { cloudflare } from '@cloudflare/vite-plugin'
 import { tanstackStart } from '@tanstack/react-start/plugin/vite'
@@ -20,6 +21,7 @@ export default defineConfig({
       srcDirectory: 'src',
       spa: { enabled: true },
     }),
+    tailwindcss(),
     viteReact(),
   ],
 })

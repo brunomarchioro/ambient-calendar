@@ -1,4 +1,3 @@
-import { Box, Card, Heading, Stack, Text } from '@chakra-ui/react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
 import type { EventWrite, ManualEvent } from '@/shared/events/types'
@@ -13,6 +12,7 @@ import { LembreteForm } from '@/web/events/components/lembrete-form'
 import { selectEventsInHorizon } from '@/shared/events/horizon'
 import { canMutateEvent } from '@/web/events/utils'
 import { settingsQueryOptions } from '@/web/settings/api/settings-query'
+import { Card, CardContent } from '@/web/common/components/ui/card'
 
 export function AgendaPage() {
   const queryClient = useQueryClient()
@@ -52,12 +52,12 @@ export function AgendaPage() {
   }, [eventsQuery.data, settings])
 
   return (
-    <Stack gap="8">
-      <Stack gap="4">
-        <Heading size="md">{editing ? 'Editar Lembrete' : 'Novo Lembrete'}</Heading>
+    <div className="flex flex-col gap-8">
+      <section className="flex flex-col gap-4">
+        <h2 className="text-lg font-semibold">{editing ? 'Editar Lembrete' : 'Novo Lembrete'}</h2>
         {settings ? (
-          <Card.Root>
-            <Card.Body>
+          <Card>
+            <CardContent className="pt-6">
               <LembreteForm
                 key={editing?.id ?? 'new'}
                 timeZone={settings.timezone}
@@ -70,27 +70,29 @@ export function AgendaPage() {
                 }}
                 onCancel={editing ? () => setEditing(null) : undefined}
               />
-            </Card.Body>
-          </Card.Root>
+            </CardContent>
+          </Card>
         ) : (
-          <Text>Carregando configurações…</Text>
+          <p className="text-sm text-muted-foreground">Carregando configurações…</p>
         )}
-      </Stack>
+      </section>
 
-      <Stack gap="4">
-        <Heading size="md">Próximos Events</Heading>
-        {eventsQuery.isPending || settingsQuery.isPending ? <Text>Carregando agenda…</Text> : null}
+      <section className="flex flex-col gap-4">
+        <h2 className="text-lg font-semibold">Próximos Events</h2>
+        {eventsQuery.isPending || settingsQuery.isPending ? (
+          <p className="text-sm text-muted-foreground">Carregando agenda…</p>
+        ) : null}
         {eventsQuery.error ? (
-          <Text color="fg.error" role="alert">
+          <p className="text-sm text-destructive" role="alert">
             {eventsQuery.error.message}
-          </Text>
+          </p>
         ) : null}
         {eventsQuery.data && settings && upcoming.length === 0 ? (
-          <Box role="status" py="8" px="4" borderWidth="1px" borderRadius="l2">
-            <Text>Nenhum Event próximo neste horizonte.</Text>
-          </Box>
+          <div className="rounded-lg border px-4 py-8 text-center text-sm" role="status">
+            Nenhum Event próximo neste horizonte.
+          </div>
         ) : null}
-        <Stack gap="3">
+        <div className="flex flex-col gap-3">
           {upcoming.map((event) => (
             <EventCard
               key={event.id}
@@ -105,9 +107,9 @@ export function AgendaPage() {
               }}
             />
           ))}
-        </Stack>
-      </Stack>
-    </Stack>
+        </div>
+      </section>
+    </div>
   )
 }
 

@@ -1,17 +1,3 @@
-import {
-  Badge,
-  Box,
-  Button,
-  Card,
-  Checkbox,
-  Field,
-  Heading,
-  HStack,
-  Input,
-  NativeSelect,
-  Stack,
-  Text,
-} from '@chakra-ui/react'
 import { useForm } from '@tanstack/react-form'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useSearch } from '@tanstack/react-router'
@@ -32,6 +18,14 @@ import {
   settingsQueryKey,
   settingsQueryOptions,
 } from '@/web/settings/api/settings-query'
+import { Badge } from '@/web/common/components/ui/badge'
+import { Button } from '@/web/common/components/ui/button'
+import { Card, CardContent } from '@/web/common/components/ui/card'
+import { Checkbox } from '@/web/common/components/ui/checkbox'
+import { Field, FieldError, FieldGroup, FieldLabel } from '@/web/common/components/ui/field'
+import { Input } from '@/web/common/components/ui/input'
+import { Label } from '@/web/common/components/ui/label'
+import { NativeSelect } from '@/web/common/components/ui/native-select'
 
 const TIMEZONES = [
   'America/Sao_Paulo',
@@ -67,17 +61,17 @@ export function SettingsPage() {
   })
 
   return (
-    <Stack gap="6">
-      <Heading size="md">Configurações</Heading>
-      {settingsQuery.isPending ? <Text>Carregando configurações…</Text> : null}
+    <div className="flex flex-col gap-6">
+      <h2 className="text-lg font-semibold">Configurações</h2>
+      {settingsQuery.isPending ? <p className="text-sm text-muted-foreground">Carregando configurações…</p> : null}
       {settingsQuery.error ? (
-        <Text color="fg.error" role="alert">
+        <p className="text-sm text-destructive" role="alert">
           {settingsQuery.error.message}
-        </Text>
+        </p>
       ) : null}
       {settingsQuery.data ? (
-        <Card.Root>
-          <Card.Body>
+        <Card>
+          <CardContent className="pt-6">
             <SettingsForm
               settings={settingsQuery.data}
               pending={saveMutation.isPending}
@@ -88,10 +82,10 @@ export function SettingsPage() {
                 void queryClient.invalidateQueries({ queryKey: eventsQueryKey })
               }}
             />
-          </Card.Body>
-        </Card.Root>
+          </CardContent>
+        </Card>
       ) : null}
-    </Stack>
+    </div>
   )
 }
 
@@ -137,27 +131,25 @@ function SettingsForm({
         void form.handleSubmit()
       }}
     >
-      <Stack gap="4">
+      <FieldGroup>
         <form.Field name="timezone">
           {(field) => (
-            <Field.Root required>
-              <Field.Label>Fuso horário</Field.Label>
-              <NativeSelect.Root>
-                <NativeSelect.Field
-                  name={field.name}
-                  value={field.state.value}
-                  onBlur={field.handleBlur}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                >
-                  {zones.map((zone) => (
-                    <option key={zone} value={zone}>
-                      {zone}
-                    </option>
-                  ))}
-                </NativeSelect.Field>
-                <NativeSelect.Indicator />
-              </NativeSelect.Root>
-            </Field.Root>
+            <Field>
+              <FieldLabel htmlFor={field.name}>Fuso horário</FieldLabel>
+              <NativeSelect
+                id={field.name}
+                name={field.name}
+                value={field.state.value}
+                onBlur={field.handleBlur}
+                onChange={(e) => field.handleChange(e.target.value)}
+              >
+                {zones.map((zone) => (
+                  <option key={zone} value={zone}>
+                    {zone}
+                  </option>
+                ))}
+              </NativeSelect>
+            </Field>
           )}
         </form.Field>
 
@@ -176,17 +168,17 @@ function SettingsForm({
         </form.Field>
 
         {form.state.errors.length > 0 || error ? (
-          <Text color="fg.error" role="alert">
+          <p className="text-sm text-destructive" role="alert">
             {error ?? 'Valores fora dos limites da API.'}
-          </Text>
+          </p>
         ) : null}
 
-        <Button type="submit" loading={pending} alignSelf="flex-start">
+        <Button type="submit" loading={pending} className="w-fit">
           Salvar
         </Button>
 
         <GoogleAccountsSection oauthBanner={oauthBanner} onChange={onGoogleChange} />
-      </Stack>
+      </FieldGroup>
     </form>
   )
 }
@@ -224,18 +216,18 @@ function GoogleAccountsSection({
   const hasAccounts = accounts.length > 0
 
   return (
-    <Stack gap="3" pt="2" borderTopWidth="1px">
-      <Heading size="sm">Contas Google</Heading>
+    <div className="flex flex-col gap-3 border-t pt-4">
+      <h3 className="text-base font-semibold">Contas Google</h3>
       {oauthBanner ? (
-        <Text fontSize="sm" color="fg.muted" role="status">
+        <p className="text-sm text-muted-foreground" role="status">
           {oauthBanner}
-        </Text>
+        </p>
       ) : null}
-      {accountsQuery.isPending ? <Text fontSize="sm">Carregando contas…</Text> : null}
+      {accountsQuery.isPending ? <p className="text-sm text-muted-foreground">Carregando contas…</p> : null}
       {accountsQuery.error ? (
-        <Text color="fg.error" role="alert">
+        <p className="text-sm text-destructive" role="alert">
           {accountsQuery.error.message}
-        </Text>
+        </p>
       ) : null}
       {accounts.map((account) => (
         <GoogleAccountCard
@@ -254,11 +246,11 @@ function GoogleAccountsSection({
           onToggleCalendar={(id, enabled) => patchMutation.mutate({ id, enabled })}
         />
       ))}
-      <HStack gap="3" flexWrap="wrap">
+      <div className="flex flex-wrap gap-3">
         <Button
           type="button"
           variant="outline"
-          alignSelf="flex-start"
+          className="w-fit"
           onClick={() => {
             window.location.href = '/api/google/oauth/start?mode=connect'
           }}
@@ -270,24 +262,27 @@ function GoogleAccountsSection({
             type="button"
             variant="outline"
             loading={syncMutation.isPending}
-            alignSelf="flex-start"
+            className="w-fit"
             onClick={() => syncMutation.mutate()}
           >
             Sincronizar agora
           </Button>
         ) : null}
-      </HStack>
+      </div>
       {syncMutation.data ? (
-        <Text color={syncMutation.data.ok ? 'fg.muted' : 'fg.error'} role="status">
+        <p
+          className={syncMutation.data.ok ? 'text-sm text-muted-foreground' : 'text-sm text-destructive'}
+          role="status"
+        >
           {syncMutation.data.message}
-        </Text>
+        </p>
       ) : null}
       {syncMutation.error ? (
-        <Text color="fg.error" role="alert">
+        <p className="text-sm text-destructive" role="alert">
           {syncMutation.error.message}
-        </Text>
+        </p>
       ) : null}
-    </Stack>
+    </div>
   )
 }
 
@@ -308,59 +303,51 @@ function GoogleAccountCard({
 }) {
   const needsReconnect = account.status === 'needs_reconnect'
   return (
-    <Box borderWidth="1px" borderRadius="md" p="3">
-      <Stack gap="3">
-        <HStack justify="space-between" flexWrap="wrap" gap="2">
-          <Stack gap="0">
-            <Text fontWeight="medium">{account.email}</Text>
+    <div className="rounded-md border p-3">
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div className="space-y-1">
+            <p className="font-medium">{account.email}</p>
             {needsReconnect ? (
-              <Badge colorPalette="orange" alignSelf="flex-start">
+              <Badge variant="secondary" className="bg-orange-100 text-orange-900 dark:bg-orange-950 dark:text-orange-100">
                 Reconectar
               </Badge>
             ) : null}
-          </Stack>
-          <HStack gap="2">
+          </div>
+          <div className="flex gap-2">
             {needsReconnect ? (
               <Button type="button" size="sm" variant="outline" onClick={onReconnect}>
                 Reconectar
               </Button>
             ) : null}
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              colorPalette="red"
-              loading={disconnecting}
-              onClick={onDisconnect}
-            >
+            <Button type="button" size="sm" variant="destructive" loading={disconnecting} onClick={onDisconnect}>
               Desconectar
             </Button>
-          </HStack>
-        </HStack>
-        <Stack gap="2" pl="1">
+          </div>
+        </div>
+        <div className="flex flex-col gap-2 pl-1">
           {account.calendars.map((cal) => (
-            <Checkbox.Root
-              key={cal.id}
-              checked={cal.enabled}
-              disabled={needsReconnect || patchingCalendarId === cal.id}
-              onCheckedChange={(details) => {
-                const enabled = details.checked === true
-                if (enabled !== cal.enabled) onToggleCalendar(cal.id, enabled)
-              }}
-            >
-              <Checkbox.HiddenInput />
-              <Checkbox.Control />
-              <Checkbox.Label>{cal.summary}</Checkbox.Label>
-            </Checkbox.Root>
+            <div key={cal.id} className="flex items-center gap-2">
+              <Checkbox
+                id={`cal-${cal.id}`}
+                checked={cal.enabled}
+                disabled={needsReconnect || patchingCalendarId === cal.id}
+                onCheckedChange={(checked) => {
+                  const enabled = checked === true
+                  if (enabled !== cal.enabled) onToggleCalendar(cal.id, enabled)
+                }}
+              />
+              <Label htmlFor={`cal-${cal.id}`} className="font-normal">
+                {cal.summary}
+              </Label>
+            </div>
           ))}
           {account.calendars.length === 0 ? (
-            <Text fontSize="sm" color="fg.muted">
-              Nenhum calendário importado.
-            </Text>
+            <p className="text-sm text-muted-foreground">Nenhum calendário importado.</p>
           ) : null}
-        </Stack>
-      </Stack>
-    </Box>
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -372,7 +359,7 @@ function NumberInput({
 }: {
   field: {
     name: string
-    state: { value: number; meta: { errors: unknown[] } }
+    state: { value: number; meta: { isTouched: boolean; isValid: boolean; errors: unknown[] } }
     handleBlur: () => void
     handleChange: (value: number) => void
   }
@@ -380,19 +367,12 @@ function NumberInput({
   min: number
   max: number
 }) {
-  const message = field.state.meta.errors
-    .map((err) =>
-      typeof err === 'string'
-        ? err
-        : err && typeof err === 'object' && 'message' in err
-          ? String(err.message)
-          : '',
-    )
-    .find(Boolean)
+  const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
   return (
-    <Field.Root invalid={field.state.meta.errors.length > 0} required>
-      <Field.Label>{label}</Field.Label>
+    <Field data-invalid={isInvalid}>
+      <FieldLabel htmlFor={field.name}>{label}</FieldLabel>
       <Input
+        id={field.name}
         type="number"
         name={field.name}
         min={min}
@@ -401,8 +381,9 @@ function NumberInput({
         value={Number.isNaN(field.state.value) ? '' : field.state.value}
         onBlur={field.handleBlur}
         onChange={(e) => field.handleChange(e.target.valueAsNumber)}
+        aria-invalid={isInvalid}
       />
-      <Field.ErrorText>{message}</Field.ErrorText>
-    </Field.Root>
+      {isInvalid ? <FieldError errors={field.state.meta.errors as Array<string | { message?: string }>} /> : null}
+    </Field>
   )
 }

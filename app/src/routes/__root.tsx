@@ -1,8 +1,8 @@
+import '@/styles/globals.css'
 import { useState, type ReactNode } from 'react'
-import { ChakraProvider, Container, Flex, Heading, HStack, Text } from '@chakra-ui/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { HeadContent, Link, Outlet, Scripts, createRootRoute, useRouterState } from '@tanstack/react-router'
-import { system } from '@/web/common/infra/theme'
+import { cn } from '@/web/common/utils/cn'
 
 export const Route = createRootRoute({
   ssr: false,
@@ -20,11 +20,9 @@ function RootComponent() {
   const [queryClient] = useState(() => new QueryClient())
   return (
     <RootDocument>
-      <ChakraProvider value={system}>
-        <QueryClientProvider client={queryClient}>
-          <Shell />
-        </QueryClientProvider>
-      </ChakraProvider>
+      <QueryClientProvider client={queryClient}>
+        <Shell />
+      </QueryClientProvider>
     </RootDocument>
   )
 }
@@ -32,27 +30,20 @@ function RootComponent() {
 function Shell() {
   const pathname = useRouterState({ select: (state) => state.location.pathname })
   return (
-    <Container maxW="3xl" py="6" px="4">
-      <Flex
-        as="header"
-        gap="4"
-        align={{ base: 'flex-start', sm: 'center' }}
-        justify="space-between"
-        direction={{ base: 'column', sm: 'row' }}
-        pb="6"
-      >
-        <Heading size="lg">Ambient Calendar Display</Heading>
-        <HStack as="nav" gap="4" flexWrap="wrap">
+    <div className="mx-auto max-w-3xl px-4 py-6">
+      <header className="flex flex-col gap-4 pb-6 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-2xl font-semibold tracking-tight">Ambient Calendar Display</h1>
+        <nav className="flex flex-wrap gap-4">
           <NavLink to="/events" current={pathname === '/events'}>
             Agenda
           </NavLink>
           <NavLink to="/settings" current={pathname === '/settings'}>
             Configurações
           </NavLink>
-        </HStack>
-      </Flex>
+        </nav>
+      </header>
       <Outlet />
-    </Container>
+    </div>
   )
 }
 
@@ -67,9 +58,14 @@ function NavLink({
 }) {
   return (
     <Link to={to} aria-current={current ? 'page' : undefined}>
-      <Text fontWeight={current ? 'semibold' : 'medium'} textDecoration={current ? 'underline' : 'none'}>
+      <span
+        className={cn(
+          'text-sm',
+          current ? 'font-semibold underline underline-offset-4' : 'font-medium hover:underline',
+        )}
+      >
         {children}
-      </Text>
+      </span>
     </Link>
   )
 }

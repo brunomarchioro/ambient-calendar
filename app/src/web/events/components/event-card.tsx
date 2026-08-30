@@ -1,6 +1,8 @@
-import { Badge, Button, Card, Heading, HStack, Stack, Text } from '@chakra-ui/react'
 import type { EventPublic } from '@/shared/events/types'
 import { canMutateEvent } from '@/web/events/utils'
+import { Badge } from '@/web/common/components/ui/badge'
+import { Button } from '@/web/common/components/ui/button'
+import { Card, CardContent } from '@/web/common/components/ui/card'
 
 function eventWhen(event: EventPublic): string {
   if (event.allDay) {
@@ -26,39 +28,35 @@ export function EventCard({
 }) {
   const manual = canMutateEvent(event)
   return (
-    <Card.Root>
-      <Card.Body>
-        <Stack gap="3">
-          <HStack justify="space-between" align="flex-start" gap="3" flexWrap="wrap">
-            <Stack gap="1" minW="0">
-              <Heading size="sm">{event.title}</Heading>
-              <Text color="fg.muted">{eventWhen(event)}</Text>
-            </Stack>
-            <HStack gap="2" flexWrap="wrap">
+    <Card>
+      <CardContent className="pt-6">
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0 space-y-1">
+              <h3 className="font-semibold leading-none">{event.title}</h3>
+              <p className="text-sm text-muted-foreground">{eventWhen(event)}</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
               {!manual && event.calendarSummary ? (
-                <Badge colorPalette="purple" variant="subtle">
-                  {event.calendarSummary}
-                </Badge>
+                <Badge variant="secondary">{event.calendarSummary}</Badge>
               ) : null}
-              <Badge colorPalette={manual ? 'blue' : 'gray'}>{manual ? 'Lembrete' : 'Google'}</Badge>
-            </HStack>
-          </HStack>
+              <Badge variant={manual ? 'default' : 'outline'}>{manual ? 'Lembrete' : 'Google'}</Badge>
+            </div>
+          </div>
           {manual ? (
-            <HStack gap="3" flexWrap="wrap">
+            <div className="flex flex-wrap gap-3">
               <Button type="button" size="sm" variant="outline" onClick={onEdit}>
                 Editar
               </Button>
-              <Button type="button" size="sm" variant="outline" colorPalette="red" loading={deleting} onClick={onDelete}>
+              <Button type="button" size="sm" variant="destructive" loading={deleting} onClick={onDelete}>
                 Excluir
               </Button>
-            </HStack>
+            </div>
           ) : (
-            <Text fontSize="sm" color="fg.muted">
-              Somente leitura
-            </Text>
+            <p className="text-sm text-muted-foreground">Somente leitura</p>
           )}
-        </Stack>
-      </Card.Body>
-    </Card.Root>
+        </div>
+      </CardContent>
+    </Card>
   )
 }
