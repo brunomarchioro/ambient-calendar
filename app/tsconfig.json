@@ -1,5 +1,12 @@
 {
-  "include": ["src/**/*.ts", "src/**/*.tsx", "worker.ts", "drizzle.config.ts"],
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "worker.ts",
+    "drizzle.config.ts",
+    "env.d.ts",
+    "worker-configuration.d.ts"
+  ],
   "compilerOptions": {
     "paths": {
       "@/*": ["./src/*"]

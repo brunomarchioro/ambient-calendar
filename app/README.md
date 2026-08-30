@@ -189,6 +189,7 @@ npx wrangler d1 execute ambient_calendar --local --command "SELECT * FROM Settin
 | ------ | --------- |
 | `npm run dev` | Dev server (Vite + Worker) em `:3000` |
 | `npm test` | Vitest |
+| `npm run typecheck` | Checagem TypeScript (`tsc --noEmit`) |
 | `npm run build` | Build de produção |
 | `npm run db:migrate:remote` | Aplica migrations no D1 remoto |
 | `npm run deploy` | Build + migrations remotas + `wrangler deploy` |

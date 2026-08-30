@@ -11,15 +11,22 @@ import { FIXTURE_GOOGLE_ITEMS } from '@/server/sync/sync.fixtures'
 import { runScheduledSyncUseCase } from '@/server/sync/use-cases/run-scheduled-sync'
 import { getOrSeedSettingsUseCase } from '@/server/settings/use-cases/put-settings'
 
+type McpAuthorizeEnv = Parameters<typeof handleMcpAuthorize>[1]
+type TanStackWorkerFetch = (
+  request: Request,
+  env: Env,
+  ctx: ExecutionContext,
+) => Response | Promise<Response>
+
 const defaultHandler = {
   fetch(request: Request, env: Env, ctx: ExecutionContext) {
     const url = new URL(request.url)
     if (url.pathname === '/authorize') {
-      return handleMcpAuthorize(request, env)
+      return handleMcpAuthorize(request, env as unknown as McpAuthorizeEnv)
     }
     const denied = authorizeWebBasic(request, env.WEB_BASIC_AUTH_USER, env.WEB_BASIC_AUTH_PASSWORD)
     if (denied) return denied
-    return handler.fetch(request, env, ctx)
+    return (handler.fetch as TanStackWorkerFetch)(request, env, ctx)
   },
 }
 

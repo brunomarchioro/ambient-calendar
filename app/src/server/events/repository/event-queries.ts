@@ -9,7 +9,7 @@ export async function listEvents(db: D1Database | AppDb): Promise<EventPublic[]>
   const drizzle = typeof db === 'object' && 'select' in db ? db : createDb(db)
   const rows = await drizzle.select().from(events).orderBy(asc(events.startAt))
   const summaries = await calendarSummaryByEventKeys(db)
-  return rows.flatMap((row) => {
+  return rows.flatMap((row): EventPublic[] => {
     const event = parseEventRow(row)
     if (!event) return []
     if (event.source === 'google') {
