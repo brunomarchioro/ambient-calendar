@@ -5,6 +5,7 @@ import {
   createEventUseCase,
   listEventsUseCase,
 } from '@/server/events/use-cases/event-mutations'
+import { getOrSeedSettingsUseCase } from '@/server/settings/use-cases/put-settings'
 
 export const Route = createFileRoute('/api/events')({
   server: {
@@ -21,7 +22,8 @@ export const Route = createFileRoute('/api/events')({
         if (!parsed.success) {
           return Response.json({ error: 'invalid event' }, { status: 400 })
         }
-        const created = await createEventUseCase(env.DB, parsed.data)
+        const settings = await getOrSeedSettingsUseCase(env.DB)
+        const created = await createEventUseCase(env.DB, parsed.data, settings)
         if (!created.ok) return Response.json({ error: 'invalid event' }, { status: 400 })
         return Response.json(created.event, { status: 201 })
       },

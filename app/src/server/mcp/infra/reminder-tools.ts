@@ -11,7 +11,12 @@ import {
   mcpScopeDenied,
   mcpTextResult,
 } from '@/server/mcp/services/reminder-tool-actions'
-import { hasMcpScope, MCP_SCOPE_READ, MCP_SCOPE_WRITE, assertDeleteConfirmed } from '@/server/mcp/services/mcp-scopes'
+import {
+  assertDeleteConfirmed,
+  hasMcpScope,
+  MCP_SCOPE_READ,
+  MCP_SCOPE_WRITE,
+} from '@/server/mcp/services/mcp-scopes'
 import { getOrSeedSettingsUseCase } from '@/server/settings/use-cases/put-settings'
 
 export async function listRemindersAction(
@@ -49,7 +54,8 @@ export async function createReminderAction(
   write: EventWrite,
 ) {
   if (!hasMcpScope(scopes, MCP_SCOPE_WRITE)) return mcpScopeDenied(MCP_SCOPE_WRITE)
-  const created = await createEventUseCase(db, write)
+  const settings = await getOrSeedSettingsUseCase(db)
+  const created = await createEventUseCase(db, write, settings)
   if (!created.ok) return mcpTextResult({ error: 'invalid event' }, true)
   return mcpTextResult(created.event)
 }
@@ -61,7 +67,8 @@ export async function updateReminderAction(
   write: EventWrite,
 ) {
   if (!hasMcpScope(scopes, MCP_SCOPE_WRITE)) return mcpScopeDenied(MCP_SCOPE_WRITE)
-  const updated = await updateEventUseCase(db, id, write)
+  const settings = await getOrSeedSettingsUseCase(db)
+  const updated = await updateEventUseCase(db, id, write, settings)
   if (!updated.ok) {
     const error =
       updated.status === 404 ? 'not found' : updated.status === 409 ? 'not manual' : 'invalid event'

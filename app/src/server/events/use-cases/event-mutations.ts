@@ -8,7 +8,6 @@ import {
   updateManualEventRow,
 } from '@/server/events/repository/event-queries'
 import { manualMutation } from '@/server/events/services/parse-event-row'
-import { getOrSeedSettingsUseCase } from '@/server/settings/use-cases/put-settings'
 import {
   normalizeWrite,
   toStoredIso,
@@ -16,6 +15,7 @@ import {
   type EventWrite,
   type ManualEvent,
 } from '@/shared/events/types'
+import type { Settings } from '@/shared/settings/types'
 
 function toManualPublic(row: {
   id: string
@@ -48,9 +48,9 @@ export async function listEventsUseCase(db: D1Database): Promise<EventPublic[]> 
 export async function createEventUseCase(
   db: D1Database,
   write: EventWrite,
+  settings: Settings,
 ): Promise<{ ok: true; event: ManualEvent } | { ok: false }> {
   const drizzle = createDb(db)
-  const settings = await getOrSeedSettingsUseCase(drizzle)
   const normalized = normalizeWrite(write, settings.timezone)
   if (!normalized.ok) return { ok: false }
   const now = new Date().toISOString()
@@ -84,11 +84,11 @@ export async function updateEventUseCase(
   db: D1Database,
   id: string,
   write: EventWrite,
+  settings: Settings,
 ): Promise<{ ok: true; event: ManualEvent } | { ok: false; status: 400 | 404 | 409 }> {
   const drizzle = createDb(db)
   const existing = manualMutation(await getEvent(drizzle, id))
   if (!existing.ok) return existing
-  const settings = await getOrSeedSettingsUseCase(drizzle)
   const normalized = normalizeWrite(write, settings.timezone)
   if (!normalized.ok) return { ok: false, status: 400 }
   const updatedAt = new Date().toISOString()

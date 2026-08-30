@@ -19,17 +19,12 @@ import {
   getGoogleAccountByEmail,
   getGoogleCalendar,
   insertOAuthState,
-  listEnabledSyncTargets,
   listGoogleAccountsWithCalendars,
   replaceAccountCalendars,
   saveGoogleAccountTokens,
   setGoogleCalendarEnabled,
   updateGoogleAccountTokens,
 } from '@/server/google/repository/google-queries'
-import { d1MirrorStore } from '@/server/sync/repository/d1-mirror-store'
-import { runScheduledSyncUseCase } from '@/server/sync/use-cases/run-scheduled-sync'
-import type { GoogleSyncResult } from '@/shared/google/types'
-import type { Settings } from '@/shared/settings/types'
 
 export function oauthRedirectUri(origin: string): string {
   return `${origin}/api/google/oauth/callback`
@@ -238,60 +233,6 @@ export async function patchGoogleCalendarUseCase(input: {
   if (!cal) return { ok: false, status: 404 }
   await setGoogleCalendarEnabled(input.db, input.calendarRowId, input.enabled, new Date().toISOString())
   return { ok: true }
-}
-
-function syncResultFromOutcome(
-  outcome: Awaited<ReturnType<typeof runScheduledSyncUseCase>>,
-): GoogleSyncResult {
-  switch (outcome.kind) {
-    case 'ok':
-      return {
-        ok: true,
-        message:
-          outcome.upserted === 0
-            ? 'Sincronização OK, mas nenhum Event no horizonte. Confira os calendários habilitados ou aumente os dias de horizonte.'
-            : `Sincronização OK. ${outcome.upserted} Events no horizonte.`,
-        eventCount: outcome.upserted,
-      }
-    case 'partial':
-      return {
-        ok: true,
-        message: `${outcome.upserted} Events sincronizados; avisos: ${outcome.errors.join('; ')}`,
-        eventCount: outcome.upserted,
-      }
-    case 'skipped':
-      return {
-        ok: false,
-        message:
-          outcome.reason === 'no_accounts'
-            ? 'Nenhuma conta Google conectada.'
-            : 'OAuth não configurado (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, ENCRYPTION_KEY).',
-      }
-    case 'error':
-      return { ok: false, message: `Erro de sincronização: ${outcome.message}.` }
-  }
-}
-
-export async function runGoogleSyncUseCase(input: {
-  db: D1Database
-  settings: Settings
-  env: { GOOGLE_CLIENT_ID?: string; GOOGLE_CLIENT_SECRET?: string; ENCRYPTION_KEY?: string }
-  fetchImpl?: typeof fetch
-  now?: Date
-}): Promise<GoogleSyncResult> {
-  const oauth = readOAuthClientConfig(input.env)
-  const targets = await listEnabledSyncTargets(input.db)
-  const outcome = await runScheduledSyncUseCase({
-    settings: input.settings,
-    oauth,
-    targets,
-    fetch: input.fetchImpl ?? httpFetch,
-    store: d1MirrorStore(input.db),
-    db: input.db,
-    now: input.now ?? new Date(),
-    log: { error: () => {} },
-  })
-  return syncResultFromOutcome(outcome)
 }
 
 export function readOAuthForSync(env: {
