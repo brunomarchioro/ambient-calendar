@@ -1,345 +1,370 @@
-# HMI — design de telas (ASCII + tabela de estados)
+# HMI — design 8-bit retro (ASCII + tabela de estados)
 
-Handoff humano → agente para layout LVGL no ESP32-C6 (172×320). Comportamento de scheduler, touch e overlay: [`index.md`](index.md) §8. Implementação: `firmware/esp32-c6/ui/hmi_lvgl.c`.
+Handoff humano → agente para layout LVGL no ESP32-C6 (172×320). Comportamento de scheduler, touch e overlay: [`index.md`](index.md) §8. Implementação alvo: `firmware/esp32-c6/ui/hmi_lvgl.c`.
+
+**Origem:** mockup Figma (dashboard cyber/terminal) adaptado para **estética 8-bit retro** — paleta limitada, bordas retas 1 px, grade 16 px, sem cantos arredondados, sem sombras, sem gradientes.
 
 ## Canvas
 
-| Propriedade | Valor                           |
-| ----------- | ------------------------------- |
-| Resolução   | 172 × 320 px                    |
-| Orientação  | portrait (como Waveshare 1.47") |
-| Fundo       | `#000000`                       |
-| Fonte       | Montserrat (LVGL built-in)      |
+| Propriedade | Valor                                                                                        |
+| ----------- | -------------------------------------------------------------------------------------------- |
+| Resolução   | 172 × 320 px                                                                                 |
+| Orientação  | portrait (Waveshare 1.47")                                                                   |
+| Fundo       | `#000000`                                                                                    |
+| Grade       | 16 px (vertical e horizontal)                                                                |
+| Fonte       | **VT323** Regular (OFL) — `lv_font_alerts_22` (corpo) + `lv_font_alerts_28` (relógio/faixas) |
+| Regeneração | `firmware/esp32-c6/ui/fonts/README.md`                                                       |
+
+## Estilo 8-bit (regras)
+
+| Regra                    | Valor                                                                     |
+| ------------------------ | ------------------------------------------------------------------------- |
+| Bordas                   | 1 px, retas (`radius = 0`)                                                |
+| Sombras / blur           | **proibido**                                                              |
+| Gradientes               | **proibido**                                                              |
+| Anti-aliasing em ícones  | mínimo; sprites 1-bit ou paleta fixa                                      |
+| Alinhamento              | coordenadas múltiplas de **8 px** (ideal) ou **16 px** (obrigatório em Y) |
+| Texto em faixa de estado | preto `#000000` sobre laranja/verde sólido                                |
+| Texto longo              | scroll horizontal dentro de clip — ver **Rotação de texto**               |
+| Ícones                   | sprites 8×8 ou 16×16 em flash (`img_*`), não SVG                          |
 
 ## Tokens visuais
 
-| Token         | Hex       | Uso                                          |
-| ------------- | --------- | -------------------------------------------- |
-| `COLOR_BG`    | `#000000` | fundo da tela                                |
-| `COLOR_TEXT`  | `#F2F2F2` | relógio, título foco, countdown, overlay     |
-| `COLOR_MUTED` | `#A8A8B0` | data, hora do foco, linhas da lista, divisor |
-| `COLOR_ALERT` | `#FF8C42` | faixa Alert (piscante)                       |
-| `COLOR_NOW`   | `#4CD98F` | faixa Now                                    |
+Paleta inspirada em terminal CRT + NES (6 cores + preto).
+
+| Token           | Hex       | Uso                                                            |
+| --------------- | --------- | -------------------------------------------------------------- |
+| `COLOR_BG`      | `#000000` | fundo                                                          |
+| `COLOR_CYAN`    | `#00E5FF` | relógio, horários de lista/overlay, título foco, borda overlay |
+| `COLOR_DATE`    | `#FF4444` | data no header (esquerda)                                      |
+| `COLOR_MUTED`   | `#808080` | subtítulos, títulos de lista                                   |
+| `COLOR_ALERT`   | `#FF8C00` | card Alert, faixa `ALERTA` (piscante)                          |
+| `COLOR_NOW`     | `#00FF41` | card Now, faixa `AGORA`                                        |
+| `COLOR_LIVE`    | `#00FF41` | texto `LIVE`                                                   |
+| `COLOR_ON_BAND` | `#000000` | palavra `ALERTA` / `AGORA` sobre faixa                         |
+| `COLOR_BORDER`  | `#404040` | borda de card                                                  |
+| `COLOR_PILL_BG` | `#000000` | fundo pill countdown (borda laranja/verde)                     |
+| `COLOR_PILL_FG` | `#FF8C00` | texto pill (Ambient/Alert) ou `#00FF41` (Now)                  |
+
+## Layout por zonas (Y)
+
+| Zona                              | Y   | H (px) | Linhas 16 px |
+| --------------------------------- | --- | ------ | ------------ |
+| Header                            | 0   | 16     | #1           |
+| Relógio                           | 16  | 32     | #2–#3        |
+| Gap                               | 48  | 16     | #4           |
+| Card foco                         | 64  | 96     | #5–#10       |
+| Lista Ambient / faixa estado      | 160 | 160    | #11–#20      |
+| Faixa Alert/Now (substitui lista) | 160 | 160    | #11–#20      |
+
+Margens horizontais: **8 px** (`HMI_PAD_X`). Largura útil: **156 px** (`172 − 16`).
 
 ## Widgets (IDs lógicos)
 
-Uma única tela LVGL; estados alternam visibilidade e texto. Nomes alinhados a `hmi_lvgl.c`.
+Uma única tela LVGL; estados alternam visibilidade, cores de card e rótulos. Nomes alinhados ao alvo em `hmi_lvgl.c` (implementação pode divergir até migração).
 
-| ID                    | Tipo                 | Fonte | Alinhamento | Y (top)                | Conteúdo                                       |
-| --------------------- | -------------------- | ----- | ----------- | ---------------------- | ---------------------------------------------- |
-| `date_lbl`            | label                | 14    | center      | 12                     | `SEG · 24 AGO` (dia semana · dia · mês abrev.) |
-| `clock_lbl`           | label                | 28    | center      | 28                     | `HH:MM` (hora local, TZ do schedule)           |
-| `focus_title_lbl`     | label                | 20    | center      | 76                     | título do evento em foco ou `SEM EVENTOS`      |
-| `focus_time_lbl`      | label                | 16    | center      | 98                     | `HH:MM` do evento em foco                      |
-| `countdown_lbl`       | label                | 16    | center      | 118                    | countdown até o foco (`em N min`, …)           |
-| `alert_band`          | painel full-width    | —     | top         | 160                    | faixa laranja (#11–20), opacidade piscante     |
-| `alert_letter_lbl[*]` | label ×6             | 20    | center      | 192 + i×16             | letras `A L E R T A` (linhas 13–18)            |
-| `now_band`            | painel full-width    | —     | top         | 144                    | faixa verde (#10–20)                           |
-| `now_letter_lbl[*]`   | label ×5             | 20    | center      | 192 + i×16             | letras `A G O R A` (linhas 13–17)              |
-| `list_lbl[*]`         | label ×10            | 14    | left        | 160 + i×16             | `HH:MM título` (lista Ambient)                 |
-| `overlay`             | container fullscreen | —     | —           | 0                      | sem fundo; só agrupa título + lista            |
-| `overlay_title`       | label                | 16    | center      | 0 (no overlay)           | `PRÓXIMOS`                                     |
-| `overlay_list[*]`     | label ×17            | 14    | left/center | 48 + i×16 (no overlay)   | cabeçalho de dia ou `HH:MM título`             |
+| ID                  | Tipo      | Fonte | X / align        | Y        | Conteúdo                                |
+| ------------------- | --------- | ----- | ---------------- | -------- | --------------------------------------- |
+| `date_lbl`          | label     | 22    | left, x=8        | 0        | `SEG 30 AGO` (sem ponto médio)          |
+| `live_lbl`          | label     | 22    | right            | 0        | `LIVE` (cor `COLOR_LIVE`)               |
+| `clock_lbl`         | label     | 28    | left, x=8        | 16       | `HH:MM`                                 |
+| `focus_card`        | panel     | —     | x=8, w=156, h=96 | 64       | borda 1 px; cor da borda = estado       |
+| `focus_caption_lbl` | label     | 22    | left, pad 8      | 72       | ver tabela de rótulos                   |
+| `focus_title_lbl`   | label     | 22    | left, pad 8      | 96       | título (`COLOR_CYAN`); clip **32 px**   |
+| `focus_time_lbl`    | label     | 22    | left, pad 8      | 128      | ver regras por estado                   |
+| `list_time_lbl[i]`  | label     | 22    | x=8              | 160+i×32 | hora (`COLOR_CYAN`)                     |
+| `list_title_lbl[i]` | label     | 22    | x=56             | 160+i×32 | título (`COLOR_MUTED`); linha **32 px** |
+| `alert_band`        | panel     | —     | full width       | 160      | h=160, fill laranja, opacidade piscante |
+| `alert_word_lbl`    | label     | 20    | center           | 224      | `A L E R T A` (`COLOR_ON_BAND`)         |
+| `now_band`          | panel     | —     | full width       | 160      | h=160, fill verde                       |
+| `now_word_lbl`      | label     | 20    | center           | 224      | `A G O R A`                             |
+| `empty_title_lbl`   | label     | 16    | center           | 144      | `SEM EVENTOS`                           |
+| `empty_sub_lbl`     | label     | 14    | center           | 160      | `agenda livre hoje`                     |
+| `overlay`           | container | —     | fullscreen       | 0        | borda 1 px ciano; fundo `#000000` opaco |
+| `overlay_title`     | label     | 16    | left, x=8        | 8        | `PRÓXIMOS`                              |
+| `overlay_count_lbl` | label     | 14    | right            | 8        | `(N)` — N = eventos na lista            |
+| `overlay_list[i]`   | label ×17 | 14    | ver regras       | 40+i×16  | cabeçalho dia ou evento                 |
 
-Largura útil dos labels: resolução − 16 px. Título do foco e linhas de lista: **scroll circular** (`LV_LABEL_LONG_SCROLL_CIRCULAR`) quando o texto não cabe; altura da linha = **16 px** (lista) ou **24 px** (foco).
+Slots de lista: `HMI_AMBIENT_LIST_SLOTS` = **4** (linhas de **32 px**, y 160–287; linhas #19–#20 livres); `HMI_OVERLAY_LIST_SLOTS` = **17** (y 40–311). Constantes em `hmi_layout.h`.
+
+### Rótulos do card (`focus_caption_lbl`)
+
+| Estado  | Texto           | Cor borda card |
+| ------- | --------------- | -------------- |
+| Ambient | `PROX. EVENTO`  | `#404040`      |
+| Alert   | `EM SEGUIDA`    | `#FF8C00`      |
+| Now     | `OCUPADO AGORA` | `#00FF41`      |
+| Empty   | _(card oculto)_ | —              |
+
+### Predicado `LIVE`
+
+| Condição                                                      | Exibição       |
+| ------------------------------------------------------------- | -------------- |
+| Relógio válido **e** schedule carregado nos últimos **5 min** | `LIVE` visível |
+| Caso contrário                                                | ocultos        |
+
+_(5 min = `ponytail:` heurística; upgrade path: usar timestamp real do último sync em `schedule`.)_
+
+## Rotação de texto
+
+Nos wireframes, **“rotaciona horizontalmente para direita”** significa **scroll horizontal em loop** dentro de um retângulo de clip — **não** rotação geométrica (`lv_obj_set_style_transform_angle` permanece **0°** em todos os labels).
+
+### Comportamento
+
+| Regra               | Valor                                                                    |
+| ------------------- | ------------------------------------------------------------------------ |
+| Gatilho             | largura do texto > largura útil do clip                                  |
+| Direção             | deslocamento **→ direita** (texto entra pela esquerda, sai pela direita) |
+| Loop                | infinito com pausa entre ciclos                                          |
+| Alinhamento inicial | texto ancorado à **esquerda** do clip (`LV_TEXT_ALIGN_LEFT`)             |
+| Modo LVGL           | `LV_LABEL_LONG_CLIP` no label; animação em `x` do label dentro do clip   |
+
+### Widgets com rotação
+
+| ID                         | Estado / contexto               | Largura do clip (px)       | Stagger                 |
+| -------------------------- | ------------------------------- | -------------------------- | ----------------------- |
+| `focus_title_lbl`          | Ambient, Alert, Now (card foco) | `140` (`HMI_CARD_INNER_W`) | `0`                     |
+| `list_title_lbl[i]`        | Ambient (lista)                 | `108` (`HMI_LIST_TITLE_W`) | índice da linha (`0…3`) |
+| `overlay_list[i]` (título) | Overlay (eventos)               | `108` (`HMI_LIST_TITLE_W`) | índice do slot          |
+
+### Widgets sem rotação
+
+Texto estático ou truncado com reticências (`LV_LABEL_LONG_DOT`): `date_lbl`, `clock_lbl`, `live_lbl`, `focus_caption_lbl`, `focus_time_lbl`, horários de lista/overlay (`list_time_lbl`, `overlay_time_lbl`), cabeçalhos de dia no overlay, `alert_word_lbl`, `now_word_lbl`, Empty, título/contador do overlay.
+
+### Temporização (implementação)
+
+Constantes em `hmi_lvgl.c`:
+
+| Constante                | Valor  | Efeito                                                                |
+| ------------------------ | ------ | --------------------------------------------------------------------- |
+| `HMI_SCROLL_DURATION_MS` | `8000` | duração de um ciclo completo                                          |
+| `HMI_SCROLL_PAUSE_MS`    | `2500` | pausa após cada ciclo                                                 |
+| `HMI_SCROLL_STAGGER_MS`  | `700`  | atraso extra por índice de linha (evita scroll sincronizado na lista) |
+
+Fórmula do atraso por linha: `HMI_SCROLL_PAUSE_MS + índice × HMI_SCROLL_STAGGER_MS`.
+
+### Notas de handoff
+
+- Ao mudar fonte ou copy, revalidar se o título ainda cabe; scroll só aparece quando o texto **ultrapassa** o clip.
+- Não usar `LV_LABEL_LONG_SCROLL_CIRCULAR` — o clip explícito + animação manual mantém alinhamento 8-bit (sem easing).
+- Título do foco no card (`Reuniao>` no wireframe) é o caso principal documentado; lista e overlay seguem a mesma mecânica.
 
 ## Correlação ASCII ↔ pixels
 
-Cada wireframe mostra a **tela inteira** (320 px de altura). Faixas de **18 colunas** (`│ … │`); bordas (`┌`, `└`, `─`) são moldura — **não contam**.
+Wireframes usam **18 colunas** × **20 linhas** (largura útil 156 px; ~9 px/coluna; 1 linha = 16 px de altura). Linhas vazias marcam gaps. Moldura (`┌`, `└`) fora das 18 colunas.
 
-### Grade fixa (tela completa)
+| Wireframe        | Tela real                |
+| ---------------- | ------------------------ |
+| 1 coluna ASCII   | ~8,7 px (156 px ÷ 18)    |
+| 1 linha ASCII    | 16 px de altura (grade)  |
+| `#N` nos coments | linha da grade 16 px (y) |
 
-| Regra                          | Valor                                                                  |
-| ------------------------------ | ---------------------------------------------------------------------- |
-| Linhas internas por wireframe  | **20** (sempre)                                                        |
-| Pixels por linha               | **16** (`320 ÷ 20`)                                                    |
-| Linha `N` (1-based)            | cobre **y = (N−1)×16 … N×16−1**                                        |
-| Colunas internas por wireframe | **18** (sempre)                                                        |
-| Pixels por coluna              | **9 ou 10 px** (`172 mod 18 = 10`; ver tabela)                         |
-| Coluna `C` (1-based)           | **x = ⌊(C−1)×172÷18⌋ … ⌊C×172÷18⌋ − 1**                                |
-| Colocar widget na linha        | `N = ⌊Y ÷ 16⌋ + 1` (Y = topo do widget)                                |
-| Colocar glyph no wireframe     | conteúdo centrado: `C = ⌊(18 − len)÷2⌋ + 1 …`; lista: **c2** em diante |
+### Legenda ASCII
 
-Linha em branco = faixa de 16 px sem texto. Coluna em branco = faixa de ~9–10 px sem glyph.
+| Símbolo | Significado                     |
+| ------- | ------------------------------- |
+| `┌─┐│└` | borda de card ou overlay (1 px) |
+| `▒`     | faixa sólida Alert/Now          |
+| `>`     | texto com scroll horizontal     |
+| `#N`    | linha / faixa y (grade 16 px)   |
 
-### Coluna ↔ pixel (x)
+### Constantes verticais → linha (grade 16 px)
 
-| C   | x (px) | C   | x (px)  |
-| --- | ------ | --- | ------- |
-| 1   | 0–8    | 10  | 86–94   |
-| 2   | 9–18   | 11  | 95–104  |
-| 3   | 19–27  | 12  | 105–113 |
-| 4   | 28–37  | 13  | 114–123 |
-| 5   | 38–46  | 14  | 124–132 |
-| 6   | 47–56  | 15  | 133–142 |
-| 7   | 57–65  | 16  | 143–151 |
-| 8   | 66–75  | 17  | 152–161 |
-| 9   | 76–85  | 18  | 162–171 |
-
-Bloco útil dos labels (`WS_LCD_H_RES − 16`): **c2–17** ≈ **x 8–163** (objeto centrado; texto lista alinhado à esquerda dentro dele).
-
-### Convenções
-
-| Regra           | Significado                                                                 |
-| --------------- | --------------------------------------------------------------------------- |
-| Linha com texto | Widget ou divisor ancorado nessa faixa (topo em `Y`)                        |
-| Linha em branco | **16 px** de gap ou margem inferior                                         |
-| `Y`             | Coordenada **superior** do objeto (`TOP_MID`), origem no topo da tela       |
-| `state_lbl`     | _(removido)_ — substituído por `alert_band` / `now_band` + letras verticais |
-
-### Altura de faixa por fonte (Montserrat LVGL, ~px)
-
-Widgets podem **vazar** para a linha seguinte (ex.: relógio fonte 28, h~32 px, ocupa linhas 1–2).
-
-| Fonte | Altura ~px | Onde                                               |
-| ----- | ---------- | -------------------------------------------------- |
-| 28    | 32         | `clock_lbl` (linha 2–3)                            |
-| 14    | 16         | `date_lbl` (linha 1), `list_lbl`, `overlay_list`   |
-| 20    | 24         | `focus_title_lbl`, letras Alert/Now                |
-| 16    | 19         | `focus_time_lbl`, `countdown_lbl`, `overlay_title` |
-
-### Constantes verticais → linha ASCII
-
-| Widget                | Y top (px) | Linha     | Nota                      |
-| --------------------- | ---------- | --------- | ------------------------- |
-| `date_lbl`            | 12         | **1**     | todos os estados base     |
-| `clock_lbl`           | 28         | **2**     | vaza até ~y60 (linha 3)   |
-| `focus_title_lbl`     | 76         | **5**     |                           |
-| `focus_time_lbl`      | 98         | **7**     |                           |
-| `countdown_lbl`       | 118        | **8**     | Ambient / Alert           |
-| `now_band`            | 144        | **10**    | Now                       |
-| `list_lbl[0]`         | 160        | **11**    | Ambient                   |
-| `list_lbl[1]`         | 176        | **12**    | Ambient                   |
-| `list_lbl[9]`         | 304        | **20**    | Ambient (último slot)     |
-| `alert_band`          | 160        | **11**    | Alert                     |
-| `alert_letter_lbl[0]` | 192        | **13**    | Alert                     |
-| `now_letter_lbl[0]`   | 192        | **13**    | Now                       |
-| _(margem inferior)_   | 240–319    | **16–20** | Empty / Ambient em branco |
-| `overlay_title`       | 0          | **1**     | no overlay                |
-| `overlay_list[0]`     | 48         | **4**     | 1ª linha de conteúdo      |
-| `overlay_list[16]`    | 304        | **20**    | overlay (último slot)     |
-
-### Linhas em branco ↔ pixels
-
-Cada linha vazia no wireframe = **16 px**. Várias linhas vazias consecutivas somam (ex.: linhas 16–20 = **80 px** de rodapé vazio).
-
-| Wireframe | Linhas vazias       | Pixels            | Entre                                      |
-| --------- | ------------------- | ----------------- | ------------------------------------------ |
-| Ambient   | 3–4, 6, 9–10        | 32, 16, 32        | relógio↔foco; foco↔countdown; lista #11–20 |
-| Alert     | 2–4, 6, 9–12, 14–20 | 48–64, 16, 64, 32 | sem data; foco↔estado; rodapé              |
-| Now       | 2–4, 6–12, 14–20    | 48–64, 112, 32    | sem data; foco↔`AGORA`; rodapé             |
-| Empty     | 3–4, 6–20           | 32, 240           | relógio↔mensagem; rodapé                   |
-| Overlay   | 20                  | 16                | rodapé; fundo = estado atual visível       |
-
-### Como usar no handoff
-
-1. **Wireframe = 20 linhas × 18 colunas** — tela inteira (320×172 px); linhas 16–20 = rodapé vazio.
-2. **Mover widget** → conte a linha/coluna pela régua e consulte as tabelas de correlação (`Y`, `c`, `x`).
-3. **Régua** `123456789012345678` acima de cada caixa alinha colunas 1–18 ao conteúdo entre `│ … │`.
-4. **Validar** → simulador 172×320; aceite PNG em `mvp-build-plan.md`.
+| Widget                            | Y   | Linha     |
+| --------------------------------- | --- | --------- |
+| `date_lbl`, `live_lbl`            | 0   | **1**     |
+| `clock_lbl`                       | 16  | **2–3**   |
+| `focus_card`                      | 64  | **5–10**  |
+| `list_*[0]`                       | 160 | **11–12** |
+| `list_*[3]`                       | 256 | **17–18** |
+| `alert_band` / `now_band`         | 160 | **11–20** |
+| `alert_word_lbl` / `now_word_lbl` | 224 | **15–16** |
+| `empty_title_lbl`                 | 144 | **10**    |
+| `empty_sub_lbl`                   | 160 | **11**    |
+| `overlay_title`                   | 8   | **1**     |
+| `overlay_list[0]`                 | 40  | **3**     |
 
 ## Wireframes ASCII
-
-Cada bloco: **20 linhas × 16 px** (altura) e **18 colunas** (largura). **`#N`** = linha (faixa **y**); régua = colunas. Detalhes em **Correlação ASCII ↔ pixels**.
 
 ### Ambient
 
 ```text
- 123456789012345678
 ┌──────────────────┐
-│   SEG · 24 AGO   │  #1
-│      14:32       │  #2
-│                  │  #3
-│                  │  #4
-│     REUNIÃO      │  #5
-│                  │  #6
-│      15:00       │  #7
-│    em 28 min     │  #8
-│                  │  #9
-│                  │  #10
-│ 18:30 Academia   │  #11
-│ 20:00 Jantar     │  #12
-│ 21:00 Comprompro │  #13
-│ 22:00 Comprompro │  #14
-│ 23:00 Comprompro │  #15
-│ 00:00 Comprompro │  #16
-│ 01:00 Reunião    │  #17
-│ 02:00 Comprompro │  #18
-│ 03:00 Cinema     │  #19
-│ 04:00 Comprompro │  #20
+│SEG 30 AGO    LIVE│ data a esquerda e live a direita
+│14:37             │ hora a esquerda, fonte grande
+│                  │ gap
+│┌────────────────┐│ card com borda e fundo verde
+││PROX. EVENTO    ││ texto a esquerda
+││Reuniao design  ││ título do evento a esquerda com scroll horizontal
+││em 15m - 16:30  ││ tempo até início do evento e hora de início do evento a esquerda
+│└────────────────┘│
+│                  │ gap
+│16:30 Daily Stand │
+│TER 09            │ cabeçalho dia a esquerda, fonte pequena e cor azul
+│17:00 Code Review │ evento a esquerda, fonte pequena, scroll horizontal apenas do título, hora fica estática
+│18:00 Sync Cliente│ evento a esquerda, fonte pequena, scroll horizontal apenas do título, hora fica estática
+│19:00 Academia    │ evento a esquerda, fonte pequena, scroll horizontal apenas do título, hora fica estática
+│                  │ gap
 └──────────────────┘
 ```
 
 ### Alert
 
-`▒` = faixa amarela piscante
+`▒` = faixa laranja piscante.
 
 ```text
- 123456789012345678
 ┌──────────────────┐
-│   SEG · 24 AGO   │  #1
-│      14:45       │  #2
-│                  │  #3
-│                  │  #4
-│     REUNIÃO      │  #5
-│                  │  #6
-│      15:00       │  #7
-│    em 15 min     │  #8
-│                  │  #9
-│                  │  #10
-│▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒│  #11
-│▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒│  #12
-│▒▒▒▒▒▒▒ A ▒▒▒▒▒▒▒▒│  #13
-│▒▒▒▒▒▒▒ L ▒▒▒▒▒▒▒▒│  #14
-│▒▒▒▒▒▒▒ E ▒▒▒▒▒▒▒▒│  #15
-│▒▒▒▒▒▒▒ R ▒▒▒▒▒▒▒▒│  #16
-│▒▒▒▒▒▒▒ T ▒▒▒▒▒▒▒▒│  #17
-│▒▒▒▒▒▒▒ A ▒▒▒▒▒▒▒▒│  #18
-│▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒│  #19
-│▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒│  #20
+│SEG 30 AGO    LIVE│ data a esquerda e live a direita
+│14:37             │ hora a esquerda, fonte grande
+│                  │ gap
+│┌────────────────┐│ card com borda e fundo laranja
+││EM SEGUIDA      ││ texto a esquerda
+││Reuniao design  ││ título do evento a esquerda com scroll horizontal
+││em 15m - 15:00  ││ tempo até início do evento e hora de início do evento a esquerda
+│└────────────────┘│
+│                  │ gap
+│▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒│ fundo laranja até final da tela
+│▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒│
+│▒▒ A L E R T A ▒▒▒│ texto centralizado horizontalmente e verticalmente dentro do fundo laranja
+│▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒│ fonte grande, caixa alta e espaço entre as letras
+│▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒│
 └──────────────────┘
 ```
 
 ### Now
 
-`▒` = faixa verde
-
 ```text
- 123456789012345678
 ┌──────────────────┐
-│   SEG · 24 AGO   │  #1
-│      14:45       │  #2
-│                  │  #3
-│                  │  #4
-│     REUNIÃO      │  #5
-│                  │  #6
-│      15:00       │  #7
-│                  │  #8
-│                  │  #9
-│▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒│  #10
-│▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒│  #11
-│▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒│  #12
-│▒▒▒▒▒▒▒ A ▒▒▒▒▒▒▒▒│  #13
-│▒▒▒▒▒▒▒ G ▒▒▒▒▒▒▒▒│  #14
-│▒▒▒▒▒▒▒ O ▒▒▒▒▒▒▒▒│  #15
-│▒▒▒▒▒▒▒ R ▒▒▒▒▒▒▒▒│  #16
-│▒▒▒▒▒▒▒ A ▒▒▒▒▒▒▒▒│  #17
-│▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒│  #18
-│▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒│  #19
-│▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒│  #20
+│SEG 30 AGO    LIVE│ data a esquerda e live a direita
+│14:37             │ hora a esquerda, fonte grande
+│                  │ gap
+│┌────────────────┐│ card com borda e fundo azul
+││OCUPADO AGORA   ││ texto a esquerda
+││Reuniao design  ││ título do evento a esquerda com scroll horizontal
+││Ate 16:30       ││ tempo até final do evento a esquerda
+│└────────────────┘│
+│                  │ gap
+│▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒│ fundo azul até final da tela
+│▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒│
+│▒▒▒ A G O R A  ▒▒▒│ texto centralizado horizontalmente e verticalmente dentro do fundo azul
+│▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒│ fonte grande, caixa alta e espaço entre as letras
+│▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒│
 └──────────────────┘
 ```
 
 ### Empty
 
 ```text
- 123456789012345678
 ┌──────────────────┐
-│   SEG · 24 AGO   │  #1
-│      14:45       │  #2
-│                  │  #3
-│                  │  #4
-│   SEM EVENTOS    │  #5
-│                  │  #6
-│                  │  #7
-│                  │  #8
-│                  │  #9
-│                  │  #10
-│                  │  #11
-│                  │  #12
-│                  │  #13
-│                  │  #14
-│                  │  #15
-│                  │  #16
-│                  │  #17
-│                  │  #18
-│                  │  #19
-│                  │  #20
+│SEG 30 AGO    LIVE│ data a esquerda e live a direita
+│14:37             │ hora a esquerda, fonte grande
+│                  │
+│   SEM EVENTOS    │ texto centralizado horizontalmente e verticalmente na tela
+│                  │
+│                  │
 └──────────────────┘
 ```
 
 ### Overlay (toque curto, qualquer estado de fundo)
 
-Camada sobre o estado de fundo (sem dim). Timeout 15 s. Agrupa eventos por dia local (`SEG · 24 AGO`); linha em branco antes de cada novo dia (exceto o primeiro), entre cabeçalho e eventos, e entre dias.
+Fundo opaco preto + moldura ciano. Timeout 15 s. Agrupa eventos por dia.
 
 ```text
- 123456789012345678
 ┌──────────────────┐
-│    PRÓXIMOS      │  #1
-│                  │  #2
-│                  │  #3
-│   QUI · 24 AGO   │  #4
-│                  │  #5
-│ 18:00 Jantar     │  #6
-│ 19:30 Cinema     │  #7
-│ 20:00 Comprom... │  #8
-│ 21:00 Comprom... │  #9
-│ 22:00 Comprom... │  #10
-│ 23:00 Comprom... │  #11
-│ 00:00 Comprom... │  #12
-│ 01:00 Reunião    │  #13
-│                  │  #14
-│   SEX · 25 AGO   │  #15
-│                  │  #16
-│ 05:00 Comprom... │  #17
-│ 06:00 Comprom... │  #18
-│ 07:00 Comprom... │  #19
-│ 08:00 Comprom... │  #20
+│PRÓXIMOS      (11)│  texto a esquerda e count a direita
+│                  │  gap
+│TER 09            │  cabeçalho dia a esquerda, fonte pequena e cor azul
+│18:00 Jantar      │  evento a esquerda, fonte pequena, scroll horizontal apenas do título, hora fica estática
+│19:30 Cinema      │  evento a esquerda, fonte pequena, scroll horizontal apenas do título, hora fica estática
+│20:00 Comprom     │  evento a esquerda, fonte pequena, scroll horizontal apenas do título, hora fica estática
+│QUA 10            │  cabeçalho dia a esquerda, fonte pequena e cor azul
+│18:00 Jantar      │  evento a esquerda, fonte pequena, scroll horizontal apenas do título, hora fica estática
+│19:30 Cinema      │  evento a esquerda, fonte pequena, scroll horizontal apenas do título, hora fica estática
+│                  │  gap
 └──────────────────┘
+(moldura 1 px COLOR_CYAN)
 ```
-
-Quantidade visível = **quantos couberem na tela** (`HMI_AMBIENT_LIST_SLOTS` = 10 eventos; `HMI_OVERLAY_LIST_SLOTS` = 17 linhas incluindo cabeçalhos de dia e espaços). Constantes em `hmi_layout.h`.
 
 ## Tabela de estados (visibilidade)
 
-Legenda: **●** visível com conteúdo · **○** oculto · **—** visível, texto fixo ou derivado do frame.
+Legenda: **●** visível · **○** oculto · **—** texto fixo ou derivado do frame.
 
-| Widget                | Empty         | Ambient      | Alert      | Now    | Overlay aberto       |
-| --------------------- | ------------- | ------------ | ---------- | ------ | -------------------- |
-| `clock_lbl`           | ●             | ●            | ●          | ●      | ● (atrás do overlay) |
-| `date_lbl`            | ●             | ●            | ●          | ●      | como estado de fundo |
-| `focus_title_lbl`     | `SEM EVENTOS` | ● foco       | ● foco     | ● foco | como estado de fundo |
-| `focus_time_lbl`      | ○             | ●            | ●          | ●      | como estado de fundo |
-| `countdown_lbl`       | ○             | ●            | ●          | ○      | como estado de fundo |
-| `alert_band`          | ○             | ○            | ● piscante | ○      | como estado de fundo |
-| `alert_letter_lbl[*]` | ○             | ○            | ●          | ○      | como estado de fundo |
-| `now_band`            | ○             | ○            | ○          | ●      | como estado de fundo |
-| `now_letter_lbl[*]`   | ○             | ○            | ○          | ●      | como estado de fundo |
-| `list_lbl[*]`         | ○             | ● até couber | ○          | ○      | ○                    |
-| `overlay`             | ○             | ○            | ○          | ○      | ● (transparente)     |
-| `overlay_title`       | ○             | ○            | ○          | ○      | `PRÓXIMOS`           |
-| `overlay_list[*]`     | ○             | ○            | ○          | ○      | ● até couber         |
+| Widget                               | Empty     | Ambient   | Alert      | Now | Overlay |
+| ------------------------------------ | --------- | --------- | ---------- | --- | ------- |
+| `date_lbl`                           | ●         | ●         | ●          | ●   | ●       |
+| `live_lbl`                           | ● se LIVE | ● se LIVE | ●          | ●   | ●       |
+| `clock_lbl`                          | ●         | ●         | ●          | ●   | ●       |
+| `focus_card`                         | ○         | ●         | ●          | ●   | ○       |
+| `focus_caption_lbl`                  | ○         | ●         | ●          | ●   | ○       |
+| `focus_title_lbl`                    | ○         | ●         | ●          | ●   | ○       |
+| `focus_time_lbl`                     | ○         | ●         | ●          | ●   | ○       |
+| `list_*`                             | ○         | ●         | ○          | ○   | ○       |
+| `alert_band`, `alert_word_lbl`       | ○         | ○         | ● piscante | ○   | ○       |
+| `now_band`, `now_word_lbl`           | ○         | ○         | ○          | ●   | ○       |
+| `empty_title_lbl`, `empty_sub_lbl`   | ●         | ○         | ○          | ○   | ○       |
+| `overlay`                            | ○         | ○         | ○          | ○   | ●       |
+| `overlay_title`, `overlay_count_lbl` | ○         | ○         | ○          | ○   | ●       |
+| `overlay_list[*]`                    | ○         | ○         | ○          | ○   | ●       |
 
-### Regras de conteúdo dinâmico
+## Regras de conteúdo dinâmico
 
-| Campo         | Regra                                                            |
-| ------------- | ---------------------------------------------------------------- |
-| Foco          | Próximo timed relevante; ver predicados em `index.md` §8         |
-| Countdown     | `em N min` / `em N h` / `em N dias …`; mínimo 1 min se futuro    |
-| Lista Ambient | Próximos timed **depois** do foco; até **10** linhas (y 160–319) |
-| Lista Overlay | Próximos timed a partir de `now`; agrupados por dia; até **17** linhas (y 48–319) |
-| Cabeçalho dia | `SEG · 24 AGO` centrado; repete ao mudar o dia civil (TZ do schedule)               |
-| Texto longo   | Scroll circular no título foco e nas linhas de lista             |
-| Data          | Formato PT: `DOM`…`SAB`, mês `JAN`…`DEZ`                         |
+| Campo           | Regra                                                                                       |
+| --------------- | ------------------------------------------------------------------------------------------- |
+| Foco            | Próximo timed relevante; predicados em `index.md` §8                                        |
+| Horário foco    | Ambient: `HH:MM - HH:MM` se `has_end`; senão `HH:MM`                                        |
+| Alert — horário | `em Nm - HH:MM` (countdown compacto + início) na linha #8                                   |
+| Now — fim       | `Ate HH:MM` se `has_end`; senão omitir linha                                                |
+| Lista Ambient   | Timed **depois** do foco; até **4** linhas (32 px cada)                                     |
+| Lista Overlay   | Timed a partir de `now`; agrupado por dia; até **17** linhas                                |
+| Cabeçalho dia   | `SEG 30 AGO` centrado na linha; cor `COLOR_CYAN`                                            |
+| Evento overlay  | hora `COLOR_CYAN`, título `COLOR_MUTED`                                                     |
+| `overlay_count` | `(N)` onde N = eventos timed na lista (exclui cabeçalhos/espaços)                           |
+| Texto longo     | scroll horizontal — ver **Rotação de texto** (`focus_title_lbl`, `list_title_lbl`, overlay) |
+| Data header     | `DOM`…`SAB` + dia + mês `JAN`…`DEZ`; cor `COLOR_DATE`                                       |
+| Alert blink     | opacidade faixa alterna ~500 ms (como hoje)                                                 |
 
 ## Interação
 
-| Gesto                   | Efeito                               |
-| ----------------------- | ------------------------------------ |
-| Toque curto na tela     | Abre overlay (`overlay_open = true`) |
-| 15 s com overlay aberto | Fecha overlay; recalcula estado      |
-| Swipe                   | **não suportado**                    |
+| Gesto            | Efeito                               |
+| ---------------- | ------------------------------------ |
+| Toque curto      | Abre overlay (`overlay_open = true`) |
+| 15 s com overlay | Fecha overlay; recalcula estado      |
+| Swipe            | **não suportado**                    |
+
+## Migração desde layout anterior
+
+| Removido                               | Substituído por                     |
+| -------------------------------------- | ----------------------------------- |
+| `alert_letter_lbl[*]` vertical         | `alert_word_lbl` horizontal         |
+| `now_letter_lbl[*]` vertical           | `now_word_lbl` horizontal           |
+| labels foco soltas (centradas)         | `focus_card` + caption + pill       |
+| overlay transparente                   | overlay opaco + borda ciano         |
+| data centrada muted                    | data esquerda vermelha              |
+| relógio branco                         | relógio ciano                       |
+| `HMI_LIST_Y = 160`                     | `HMI_LIST_Y = 160`                  |
+| `HMI_AMBIENT_LIST_SLOTS = 4`           | **4** (32 px/linha, #19–#20 livres) |
+| divisores entre linhas (lista Ambient) | _(removido)_                        |
+
+Implementado em `hmi_lvgl.c` + `hmi_layout.h`.
 
 ## Handoff para implementação
 
-1. Alterar layout/cores/fontes **neste arquivo** (wireframes + tabela).
-2. Agent implementa em `firmware/esp32-c6/ui/hmi_lvgl.c` — não mover lógica de scheduler para o LVGL.
-3. Validar pixels na board ESP32-C6 (flash + inspeção visual); evidência PNG da tela física quando **este arquivo** muda no PR (lanes `hmi-*.png` em `docs/mvp-build-plan.md`).
-4. Comportamento (`alerts_hmi_build_frame`) permanece em `hmi_frame.c` salvo mudança explícita de produto.
+1. Layout/cores/fontes **neste arquivo** primeiro.
+2. Atualizar `hmi_layout.h` (`HMI_LIST_Y`, slots) e `hmi_lvgl.c` — sem mover scheduler para LVGL.
+3. Fontes: `lv_font_alerts_22` + `lv_font_alerts_28` (VT323, ver `ui/fonts/README.md`).
+4. Validar na board ESP32-C6; PNG quando este arquivo mudar (ADR 0010, lanes `hmi-*.png`).
+
+### Fases sugeridas
+
+| Fase  | Escopo                                                                           |
+| ----- | -------------------------------------------------------------------------------- |
+| **A** | Tokens, relógio ciano, data vermelha, `ALERTA`/`AGORA` horizontal, faixa horária |
+| **B** | Cards, pill countdown, overlay com borda + count                                 |
+| **C** | blink refinado (fonte pixel ✓)                                                   |
 
 ## Referências
 
-- Política de handoff (formato, camadas, o que não usar): [`adr/0009-hmi-screen-design-handoff.md`](adr/0009-hmi-screen-design-handoff.md)
-- Predicados Empty / Ambient / Alert / Now: [`index.md` §8](index.md#8-scheduler--hmi--touch)
-- Validação HMI no hardware: [`adr/0010-hmi-validation-on-hardware.md`](adr/0010-hmi-validation-on-hardware.md)
-- Aceite visual (lanes): [`mvp-build-plan.md`](mvp-build-plan.md) — seção _Ship HMI states and touch_
+- Política de handoff: [`adr/0009-hmi-screen-design-handoff.md`](adr/0009-hmi-screen-design-handoff.md)
+- Predicados de estado: [`index.md` §8](index.md#8-scheduler--hmi--touch)
+- Validação hardware: [`adr/0010-hmi-validation-on-hardware.md`](adr/0010-hmi-validation-on-hardware.md)
+- Aceite visual: [`mvp-build-plan.md`](mvp-build-plan.md) — _Ship HMI states and touch_
