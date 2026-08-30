@@ -20,7 +20,7 @@ function toolScopes(context: { http?: { authInfo?: { scopes?: string[] } } }) {
 }
 
 export function buildAlertsMcpServer() {
-  const server = new McpServer({ name: 'alerts', version: '1.0.0' })
+  const server = new McpServer({ name: 'ambient-calendar', version: '1.0.0' })
 
   server.registerTool(
     'list_reminders',

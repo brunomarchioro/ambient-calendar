@@ -1,6 +1,6 @@
 # Ambient Calendar Display — `app/`
 
-Pacote `@app/alerts`: TanStack Start (UI + rotas HTTP) + Cloudflare Workers + D1 (SQLite).
+Pacote `@app/ambient-calendar`: TanStack Start (UI + rotas HTTP) + Cloudflare Workers + D1 (SQLite).
 
 Monorepo: firmware em `firmware/`, spec em `docs/`, visão geral em [`../README.md`](../README.md).
 
@@ -126,7 +126,7 @@ curl -sS http://127.0.0.1:3000/api/settings   # → 401
 
 ORM: **Drizzle**. Schemas em `src/server/*/repository/schema.ts`. SQL versionado em `db/migrations/`.
 
-Configuração Wrangler: binding `DB`, database name `alerts`, pasta `db/migrations/` (`wrangler.jsonc`).
+Configuração Wrangler: binding `DB`, database name `ambient_calendar`, pasta `db/migrations/` (`wrangler.jsonc`).
 
 ### Inicializar e aplicar migrations (local)
 
@@ -139,7 +139,7 @@ npm run db:migrate:local
 Equivalente a:
 
 ```sh
-npx wrangler d1 migrations apply alerts --local
+npx wrangler d1 migrations apply ambient_calendar --local
 ```
 
 Isso cria/atualiza o SQLite local do D1 (estado em `.wrangler/state/`) e registra migrations aplicadas na tabela `d1_migrations`.
@@ -153,7 +153,7 @@ A migration inicial (`0000_oval_iron_man.sql`) cria as tabelas `Event` e `Settin
 Com Wrangler autenticado na conta Cloudflare:
 
 ```sh
-npx wrangler d1 migrations apply alerts --remote
+npx wrangler d1 migrations apply ambient_calendar --remote
 ```
 
 ### Criar uma nova migration
@@ -180,7 +180,7 @@ Abre Drizzle Studio contra o schema definido em `drizzle.config.ts`.
 ### Consulta SQL direta (local)
 
 ```sh
-npx wrangler d1 execute alerts --local --command "SELECT * FROM Settings"
+npx wrangler d1 execute ambient_calendar --local --command "SELECT * FROM Settings"
 ```
 
 ## Scripts úteis
@@ -190,6 +190,8 @@ npx wrangler d1 execute alerts --local --command "SELECT * FROM Settings"
 | `npm run dev` | Dev server (Vite + Worker) em `:3000` |
 | `npm test` | Vitest |
 | `npm run build` | Build de produção |
+| `npm run db:migrate:remote` | Aplica migrations no D1 remoto |
+| `npm run deploy` | Build + migrations remotas + `wrangler deploy` |
 | `npm run db:migrate:local` | Aplica migrations no D1 local |
 | `npm run db:generate` | Gera migration a partir dos schemas Drizzle |
 | `npm run db:studio` | Drizzle Studio |
