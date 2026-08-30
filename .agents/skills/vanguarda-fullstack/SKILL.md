@@ -192,4 +192,3 @@ Same domain word can be both: background collection or external client → `comm
 - `building-components` — shadcn/ui components and composition
 - `vercel-react-best-practices` — React/SSR performance
 - `vercel-composition-patterns` — component composition
-- `building-components` — component architecture
