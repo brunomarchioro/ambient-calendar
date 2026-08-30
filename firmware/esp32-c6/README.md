@@ -10,9 +10,7 @@ cd firmware/esp32-c6/host && make test
 
 Runs JSON parse tests and HMI frame tests (Empty, Ambient, Alerta, Agora, all-day exclusion, focus ties, Overlay list).
 
-## HMI simulator (host)
-
-LVGL/SDL interactive build for dev review without hardware. See [`../simulator/README.md`](../simulator/README.md) and ADR 0005.
+## Device build and flash
 
 Requires [ESP-IDF](https://docs.espressif.com/projects/esp-idf/) ≥ 5.5 and target `esp32c6`.
 
@@ -30,7 +28,7 @@ Set `CONFIG_ALERTS_API_BASE_URL` to the Worker origin (no trailing slash) and `C
 
 ## Waveshare BSP + LVGL
 
-Display/touch/LVGL live under `ui/waveshare/` (JD9853 init, AXS5106L I2C touch, `esp_lvgl_port`). `alerts_hmi_build_frame()` monta o frame de apresentação (Empty, Ambient, Alerta, Agora, Overlay); `alerts_hmi_lvgl_render()` só pinta.
+Display/touch/LVGL live under `ui/waveshare/` (JD9853 init, AXS5106L I2C touch, `esp_lvgl_port`). `alerts_hmi_build_frame()` monta o frame de apresentação (Empty, Ambient, Alerta, Agora, Overlay); `alerts_hmi_lvgl_render()` só pinta. Layout e visibilidade por estado: [`docs/hmi-screen-design.md`](../../docs/hmi-screen-design.md). Validação visual na board (ADR 0010).
 
 `CONFIG_ALERTS_LVGL_DRAW_LINES` (default 20) sets partial buffer height. See `docs/adr/0001-waveshare-bsp-vendoring.md`.
 

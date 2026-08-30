@@ -1,6 +1,6 @@
 CC ?= gcc
 CFLAGS ?= -std=c11 -Wall -Wextra -Werror -I../storage -I../ui
-STUB_INC = -I../../simulator/esp32-c6/stubs -I../network -I../storage -I../sync
+STUB_INC = -I./stubs -I../network -I../storage -I../sync
 HOST_POLL_CFLAGS = $(CFLAGS) -DALERTS_POLL_HOST_TEST $(STUB_INC)
 
 .PHONY: test clean

@@ -39,7 +39,3 @@ _Avoid_: Agenda Google (colide com a página Agenda), calendar (sem qualificador
 **Overlay**:
 Modo de apresentação temporário que mostra a lista de próximos Events por cima do estado atual do display (Empty, Ambient, Alerta ou Agora). Abre com toque curto; fecha com segundo toque ou após 15 s. O scheduler continua calculando o estado de fundo; o Overlay só altera o que é desenhado.
 _Avoid_: Modal, popup, tela
-
-**Simulador**:
-Ferramenta de desenvolvimento que executa a HMI do firmware no host (LVGL + SDL), alimentada por HTTP live contra o Worker. Valida o contrato de apresentação e a stack poll/cache/tempo; não substitui o ESP32 em produção, onde **Alerta** e **Agora** são calculados no device.
-_Avoid_: Emulador (QEMU), preview web, mock

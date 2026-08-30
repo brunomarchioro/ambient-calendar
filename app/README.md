@@ -160,6 +160,6 @@ npx wrangler d1 execute alerts --local --command "SELECT * FROM Settings"
 | `npm run db:studio` | Drizzle Studio |
 | `npm run cf-typegen` | Tipos TypeScript do binding Cloudflare |
 
-## Simulador de firmware
+## Firmware local
 
-O simulador HMI consome a mesma API local. Veja [`../firmware/simulator/README.md`](../firmware/simulator/README.md). Secrets do simulador ficam em `firmware/.dev.vars`; `ALERTS_DEVICE_API_TOKEN` deve coincidir com `DEVICE_API_TOKEN` deste Worker.
+O ESP32-C6 consome `GET /api/device/schedule` deste Worker. Secrets de flash local ficam em `firmware/.dev.vars`; `ALERTS_DEVICE_API_TOKEN` deve coincidir com `DEVICE_API_TOKEN` deste Worker. Veja [`../firmware/esp32-c6/README.md`](../firmware/esp32-c6/README.md) e ADR 0008.

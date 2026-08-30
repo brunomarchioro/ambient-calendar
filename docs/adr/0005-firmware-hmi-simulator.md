@@ -2,7 +2,7 @@
 
 ## Status
 
-Aceito (2026-08-28)
+Superseded by [ADR 0010](0010-hmi-validation-on-hardware.md) (2026-08-30)
 
 ## Contexto
 

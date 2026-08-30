@@ -10,7 +10,7 @@ cd app && npm install && npm run db:migrate:local && npm run dev
 
 Detalhes (secrets, D1, migrations, scripts): **[`app/README.md`](app/README.md)**.
 
-Simulador HMI (firmware): [`firmware/simulator/README.md`](firmware/simulator/README.md) — secrets em `firmware/.dev.vars` (template: [`firmware/.dev.vars.example`](firmware/.dev.vars.example)).
+Firmware dev secrets: [`firmware/.dev.vars.example`](firmware/.dev.vars.example) → `firmware/.dev.vars` (gitignored; ADR 0008).
 
 ## Google Calendar API
 
