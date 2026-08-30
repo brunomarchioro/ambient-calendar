@@ -39,3 +39,11 @@ _Avoid_: Agenda Google (colide com a página Agenda), calendar (sem qualificador
 **Overlay**:
 Modo de apresentação temporário que mostra a lista de próximos Events por cima do estado atual do display (Empty, Ambient, Alerta ou Agora). Abre com toque curto; fecha com segundo toque ou após 15 s. O scheduler continua calculando o estado de fundo; o Overlay só altera o que é desenhado.
 _Avoid_: Modal, popup, tela
+
+**Cliente MCP**:
+Assistente de IA externo (ex.: ChatGPT, Claude) que se conecta ao Ambient Calendar Display via Model Context Protocol para listar ou administrar Lembretes. Um deploy pessoal reconhece um único humano autorizado; vários Clientes MCP podem registrar-se, mas compartilham o mesmo conjunto de Events.
+_Avoid_: MCP user, bot, agent (genérico)
+
+**Autorização MCP**:
+Fluxo OAuth que concede a um Cliente MCP permissão para invocar tools no Worker. Distinto de **Conta Google** (espelho de calendário) e de HTTP Basic Auth da UI web.
+_Avoid_: MCP auth (genérico), API key
