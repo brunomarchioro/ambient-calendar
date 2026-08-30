@@ -129,19 +129,6 @@ static void format_event_time(char *buf, size_t buflen, int64_t start_unix)
 	strftime(buf, buflen, "%H:%M", &tm_local);
 }
 
-static void format_event_range(char *buf, size_t buflen, const alerts_event_t *e)
-{
-	if (e->has_end && e->end_unix > e->start_unix) {
-		char start[8];
-		char end[8];
-		format_event_time(start, sizeof(start), e->start_unix);
-		format_event_time(end, sizeof(end), e->end_unix);
-		snprintf(buf, buflen, "%s - %s", start, end);
-		return;
-	}
-	format_event_time(buf, buflen, e->start_unix);
-}
-
 static void format_now_until(char *buf, size_t buflen, const alerts_event_t *e)
 {
 	if (e->has_end && e->end_unix > e->start_unix) {
@@ -363,15 +350,6 @@ static void layout_overlay_clip(lv_obj_t *lbl, int y, int x, int width)
 	lv_obj_set_size(clip, width, HMI_GRID_ROW);
 	lv_obj_set_pos(lbl, 0, 0);
 	set_visible(clip, true);
-}
-
-static void render_overlay_blank(int slot, lv_obj_t *lbl)
-{
-	const int y = HMI_OVERLAY_LIST_Y + slot * HMI_GRID_ROW;
-	set_label(s_ui.overlay_time_lbl[slot], "", false);
-	layout_overlay_clip(lbl, y, HMI_PAD_X, WS_LCD_H_RES - HMI_PAD_X * 2);
-	style_overlay_row(lbl, &lv_font_alerts_22, COLOR_MUTED, LV_TEXT_ALIGN_LEFT, false, WS_LCD_H_RES - 16);
-	set_label(lbl, "", true);
 }
 
 static void render_overlay_date(int slot, lv_obj_t *lbl, int64_t day_unix)
@@ -603,14 +581,12 @@ esp_err_t alerts_hmi_lvgl_init(void)
 	lv_obj_set_width(s_ui.alert_word_lbl, WS_LCD_H_RES);
 	style_label_raw(s_ui.alert_word_lbl, &lv_font_alerts_28, COLOR_ON_BAND, LV_TEXT_ALIGN_CENTER);
 	lv_obj_center(s_ui.alert_word_lbl);
-	lv_obj_add_flag(s_ui.alert_band, LV_OBJ_FLAG_HIDDEN);
 
 	s_ui.now_word_lbl = lv_label_create(s_ui.now_band);
 	lv_label_set_text(s_ui.now_word_lbl, "A G O R A");
 	lv_obj_set_width(s_ui.now_word_lbl, WS_LCD_H_RES);
 	style_label_raw(s_ui.now_word_lbl, &lv_font_alerts_28, COLOR_ON_BAND, LV_TEXT_ALIGN_CENTER);
 	lv_obj_center(s_ui.now_word_lbl);
-	lv_obj_add_flag(s_ui.now_band, LV_OBJ_FLAG_HIDDEN);
 
 	s_ui.empty_title_lbl = lv_label_create(s_ui.root);
 	lv_obj_set_width(s_ui.empty_title_lbl, WS_LCD_H_RES);

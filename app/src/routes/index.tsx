@@ -1,10 +1,8 @@
-import { createFileRoute, Navigate } from '@tanstack/react-router'
+import { createFileRoute, redirect } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/')({
-  ssr: false,
-  component: IndexRedirect,
+  beforeLoad: () => {
+    throw redirect({ to: '/events' })
+  },
+  component: () => null,
 })
-
-function IndexRedirect() {
-  return <Navigate to="/events" replace />
-}

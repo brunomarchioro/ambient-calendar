@@ -5,7 +5,6 @@ import { HeadContent, Link, Outlet, Scripts, createRootRoute, useRouterState } f
 import { cn } from '@/web/common/utils/cn'
 
 export const Route = createRootRoute({
-  ssr: false,
   head: () => ({
     meta: [
       { charSet: 'utf-8' },
