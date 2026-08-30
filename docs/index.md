@@ -34,7 +34,7 @@ Google Calendar ──► Cloudflare Worker (TanStack Start)
 | API | Só **server routes** HTTP. Sem `createServerFn`, sem RSC. |
 | Web | SPA / `ssr: false`; dados via `fetch` + TanStack Query. |
 | DB | Cloudflare D1 (binding/`env`). Uma query por vez por DB — ok para uso pessoal. |
-| Auth web | Cloudflare Access na borda. Sem sessão própria no app. |
+| Auth web | HTTP Basic no Worker ([ADR 0012](./adr/0012-web-basic-auth.md)). Sem sessão própria no app. |
 | Plano | **Workers Paid** para Cron + sync Google. Não prometer Free. |
 | Cron | Intervalo em Wrangler (UTC). Padrão MVP: **a cada 15 min**. Wall ≤ 15 min; CPU de Cron &lt;1h → teto 30 s no Paid. |
 
@@ -85,14 +85,14 @@ Seed com defaults se a linha não existir. Quiet hours **não existem**.
 
 ## 5. Sync Google
 
-Conta única via secrets OAuth (refresh token). Calendário `primary`.
+**Contas Google** (até 5) via OAuth web na Settings; refresh tokens no D1 criptografados (`ENCRYPTION_KEY`). Por conta: **Calendários Google** importados de `calendarList`; usuário habilita/desabilita cada um. Ver [ADR 0006](./adr/0006-google-multi-account-oauth.md).
 
-A cada Cron:
+A cada Cron (e sync manual `POST /api/google/sync`), **por par (conta, calendário habilitado)**:
 
-1. Refresh do access token.
+1. Refresh do access token da conta.
 2. `events.list` com `singleEvents=true`, `orderBy=startTime`, `timeMin`/`timeMax` = horizonte `[now, now+lookaheadDays)`, `timeZone` = Settings, paginar até acabar.
-3. Upsert D1 por `externalId = items[].id`.
-4. Delete `source=google` ausentes do set ou fora do horizonte.
+3. Upsert D1 por `(googleAccountId, googleCalendarId, externalId)`.
+4. Delete `source=google` desse escopo ausentes do set ou fora do horizonte.
 5. Linhas `manual` intocadas.
 
 **Sem `syncToken`** — incompatível com filtro de tempo. Recorrentes só como instâncias expandidas; sem RRULE no D1.
@@ -143,9 +143,20 @@ GET    /api/settings
 PUT    /api/settings
 
 GET    /api/health
+
+GET    /api/google/accounts
+GET    /api/google/oauth/start
+GET    /api/google/oauth/callback
+PATCH  /api/google/calendars/:id
+POST   /api/google/sync
+DELETE /api/google/accounts/:id/disconnect
 ```
 
-Google na web: **read-only** (listar). Sem criar/editar Events Google pelo app.
+Google na web: **read-only** (listar). Sem criar/editar Events Google pelo app. Vincular **Contas Google** e escolher **Calendários Google** na Settings.
+
+### Cliente MCP (extensão entregue)
+
+Rota `/mcp` + **Autorização MCP** (OAuth 2.1, KV `OAUTH_KV`). **Cliente MCP** externo (ChatGPT, Claude) administra **Lembretes** via tools — distinto de Conta Google e de Basic Auth web. Ver [ADR 0010](./adr/0010-mcp-reminders-oauth.md) e `CONTEXT.md` (vocabulário).
 
 ## 7. Firmware constraints
 
@@ -242,9 +253,9 @@ Pixels fora desta spec — só estados/ASCII.
 
 Não é admin completo.
 
-**Agenda:** próximos Events; Google read-only; CRUD de Lembretes (título, data/hora, duração opcional).
+**Settings:** os quatro campos do §4; **Contas Google** (conectar/desconectar, calendários habilitados, sync manual).
 
-**Settings:** os quatro campos do §4 (sem quiet hours).
+**Agenda:** próximos Events; Google read-only; CRUD de Lembretes (título, data/hora, duração opcional).
 
 ## 10. Secrets / bootstrap
 
@@ -253,21 +264,22 @@ Não é admin completo.
 ```text
 GOOGLE_CLIENT_ID
 GOOGLE_CLIENT_SECRET
-GOOGLE_REFRESH_TOKEN
+ENCRYPTION_KEY
 DEVICE_API_TOKEN
+WEB_BASIC_AUTH_USER
+WEB_BASIC_AUTH_PASSWORD
 ```
 
-Mais binding D1 e `triggers.crons` no Wrangler. Nada de secret em `VITE_*`.
+Binding KV `OAUTH_KV` (Autorização MCP). Mais binding D1 e `triggers.crons` no Wrangler. Nada de secret em `VITE_*`.
 
-### `GOOGLE_REFRESH_TOKEN` (ops)
+### Contas Google (OAuth web)
 
-Checklist humana (uma vez por conta):
+1. Projeto Google Cloud com Calendar API + OAuth client (redirect para `/api/google/oauth/callback`).
+2. Secrets `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `ENCRYPTION_KEY` no Worker.
+3. Operador conecta contas na Settings (até 5); refresh tokens ficam no D1.
+4. Reconexão via UI quando conta fica `needs_reconnect` ([ADR 0006](./adr/0006-google-multi-account-oauth.md)).
 
-1. Projeto Google Cloud com Calendar API ligada.
-2. OAuth client (tipo adequado a refresh offline / playground).
-3. Consent com scope de leitura do Calendar; obter refresh token de longa duração.
-4. Gravar como secret do Worker (`wrangler secret put`).
-5. Rotação: repetir o fluxo e atualizar o secret; sem OAuth interativo no app.
+Legacy `GOOGLE_REFRESH_TOKEN` em secret **não** é o modelo atual.
 
 ### `DEVICE_API_TOKEN` (ops)
 
@@ -275,7 +287,7 @@ Checklist humana (uma vez por conta):
 2. Mesmo valor no firmware (compile-time / NVS no flash).
 3. Rotação MVP: gerar novo secret, reflashear device, atualizar Worker — na mesma janela. Sem distribuição OTA de token.
 
-Setup Access (política, IdP) fica **fora** desta spec de app.
+Setup Cloudflare Access fica **fora** desta spec (auth atual: Basic no Worker, [ADR 0012](./adr/0012-web-basic-auth.md)).
 
 ## 11. Estrutura monorepo
 
@@ -329,7 +341,8 @@ Um Worker serve UI + API + Cron.
 - [ ] Lista de próximos Events
 - [ ] CRUD Lembrete
 - [ ] Settings (4 campos)
-- [ ] Protegido por Access (deploy)
+- [ ] Protegido por Basic Auth web ([ADR 0012](./adr/0012-web-basic-auth.md))
+- [ ] Contas Google + calendários na Settings
 
 ### Firmware
 
@@ -346,7 +359,6 @@ Um Worker serve UI + API + Cron.
 - Quiet hours
 - Calendário mensal no display
 - Criar/editar Events Google (web ou device)
-- OAuth interativo no app para trocar conta Google
 - Captive portal / provisioning touch
 - Auth de sessão própria na web
 - Multi-device / multi-usuário
@@ -354,3 +366,4 @@ Um Worker serve UI + API + Cron.
 - Swipe na HMI
 - CI/monorepo tooling além do mínimo para build/deploy Wrangler
 - Push Google (`events.watch`) em vez de Cron
+- Refresh token único em secret (`GOOGLE_REFRESH_TOKEN`) — ver OAuth web §10

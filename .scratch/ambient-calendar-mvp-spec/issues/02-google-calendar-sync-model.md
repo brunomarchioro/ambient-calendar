@@ -12,6 +12,6 @@ Restringir a primary sources oficiais. Entregar recomendações concretas para o
 
 ## Answer
 
-Cron faz refresh OAuth + `events.list` em `primary` com `singleEvents=true`, `timeMin`/`timeMax` = horizonte e `timeZone` da app; upsert por `id`→`externalId` e delete por ausência/fora do horizonte — sem `syncToken` (incompatível com filtro de tempo).
+Cron faz refresh OAuth **por Conta Google** + `events.list` **por Calendário Google habilitado** (`listEnabledSyncTargets`) com `singleEvents=true`, `timeMin`/`timeMax` = horizonte e `timeZone` da app; upsert por `(googleAccountId, googleCalendarId, externalId)` e delete-not-in **por par conta+calendário** — sem `syncToken`. Até 5 contas ([ADR 0006](../../../docs/adr/0006-google-multi-account-oauth.md)). OAuth web em `/api/google/oauth/*`; tokens no D1 criptografados.
 
 Findings: [docs/research/google-calendar-sync-model.md](../../../docs/research/google-calendar-sync-model.md)
