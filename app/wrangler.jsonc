@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "ambient_calendar",
+  "name": "web",
   "account_id": "afdf2c8fa804b0d929040ad1d2bdfe72",
   "compatibility_date": "2026-08-27",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
