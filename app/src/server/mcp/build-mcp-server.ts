@@ -7,7 +7,7 @@ import {
   listRemindersAction,
   listUpcomingEventsAction,
   updateReminderAction,
-} from '@/server/mcp/services/reminder-tool-actions'
+} from '@/server/mcp/use-cases/mcp-reminder-tools'
 import { eventWriteSchema } from '@/shared/events/types'
 
 const REMINDER_NOTE =
