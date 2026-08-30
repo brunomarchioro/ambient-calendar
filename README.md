@@ -10,6 +10,35 @@ cd app && npm install && npm run db:migrate:local && npm run dev
 
 Detalhes (secrets, D1, migrations, scripts): **[`app/README.md`](app/README.md)**.
 
+## CI/CD (GitHub Actions)
+
+Workflow em [`.github/workflows/ci.yml`](.github/workflows/ci.yml):
+
+| Gatilho | O que roda |
+| ------- | ---------- |
+| push / PR em `main` ou `develop` | testes do `app`, build, host tests do firmware |
+| push em `main` (após CI verde) | `npm run deploy` em `app/` (build + D1 remoto + Worker) |
+
+Secret necessário no repositório GitHub (**Settings → Secrets and variables → Actions**):
+
+| Secret | Uso |
+| ------ | --- |
+| `CLOUDFLARE_API_TOKEN` | Token com permissão de editar Workers e D1 |
+
+O `account_id` fica em [`app/wrangler.jsonc`](app/wrangler.jsonc) — não precisa de secret separado.
+
+Crie o token em [Cloudflare API Tokens](https://dash.cloudflare.com/profile/api-tokens) com template **Edit Cloudflare Workers** (Workers Scripts, KV, D1).
+
+Deploy manual (a partir de `app/`):
+
+```sh
+npm run deploy
+```
+
+### Alternativa: Cloudflare Workers Builds
+
+Para deploy nativo no push (sem job `deploy` no GitHub Actions), conecte o repo em **Workers & Pages → web → Settings → Builds**. Monorepo: **Root directory** `app`, **Build command** `npm run build`, **Deploy command** `npm run db:migrate:remote && npx wrangler deploy`, branch de produção `main`.
+
 Firmware dev secrets: [`firmware/.dev.vars.example`](firmware/.dev.vars.example) → `firmware/.dev.vars` (gitignored; ADR 0008).
 
 ## Google Calendar API
