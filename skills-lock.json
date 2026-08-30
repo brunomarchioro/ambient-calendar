@@ -13,13 +13,6 @@
       "skillPath": "skills/building-components/SKILL.md",
       "computedHash": "20889af7cb9b3abca1e38824f7fffaa873eb0cc4d45187967b97bd85462cf934"
     },
-    "chakra-ui-builder": {
-      "source": "chakra-ui/chakra-ui",
-      "ref": "main",
-      "sourceType": "github",
-      "skillPath": "skills/chakra-ui-builder/SKILL.md",
-      "computedHash": "b60b9f098afb4464df10f625bb8635e9567969d99f8b10012e1305ca988906bb"
-    },
     "claude-handoff": {
       "source": "mattpocock/skills",
       "sourceType": "github",
