@@ -101,7 +101,7 @@ Research: [google-calendar-sync-model.md](./research/google-calendar-sync-model.
 
 ## 6. API
 
-Auth web: Access na borda (rotas `/api/events`, `/api/settings`, etc.).  
+Auth web: HTTP Basic no Worker (`WEB_BASIC_AUTH_*`); ver [ADR 0012](./adr/0012-web-basic-auth.md). Cloudflare Access adiado.  
 Auth device: `Authorization: Bearer <DEVICE_API_TOKEN>` só em `/api/device/*`.
 
 ### `GET /api/device/schedule`

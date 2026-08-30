@@ -7,6 +7,7 @@ const PUBLIC_PATHS = new Set([
 ])
 
 const BASIC_REALM = 'Ambient Calendar Display'
+const TSS_SHELL_HEADER = 'X-TSS_SHELL'
 
 export function verifyWebBasicLogin(
   user: string,
@@ -51,6 +52,7 @@ export function authorizeWebBasic(
   password: string | undefined,
 ): Response | null {
   if (!user || !password) return null
+  if (request.headers.get(TSS_SHELL_HEADER) === 'true') return null
   const { pathname } = new URL(request.url)
   if (PUBLIC_PATHS.has(pathname)) return null
 

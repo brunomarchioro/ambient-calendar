@@ -26,6 +26,17 @@ test('public paths skip auth even when configured', () => {
   }
 })
 
+test('TanStack Start SPA shell prerender skips auth', () => {
+  const headers = { 'X-TSS_SHELL': 'true' }
+  expect(
+    authorizeWebBasic(
+      new Request('http://127.0.0.1:3000/', { headers }),
+      USER,
+      PASS,
+    ),
+  ).toBeNull()
+})
+
 test('missing Authorization is 401 with WWW-Authenticate', () => {
   const response = authorizeWebBasic(request('/events'), USER, PASS)
   expect(response?.status).toBe(401)

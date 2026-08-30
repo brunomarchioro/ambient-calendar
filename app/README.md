@@ -96,7 +96,11 @@ Esperado: metadata JSON e **401** em `/mcp` sem token.
 
 ## Proteção web (Basic Auth)
 
+Decisão e plano Access: [`docs/adr/0012-web-basic-auth.md`](../docs/adr/0012-web-basic-auth.md).
+
 Com `WEB_BASIC_AUTH_USER` e `WEB_BASIC_AUTH_PASSWORD` definidos, a UI (`/events`, `/settings`) e as APIs de gestão exigem HTTP Basic Auth. O browser pede credenciais na primeira visita e reenvia em navegação e `fetch` same-origin.
+
+TanStack Start envia `X-TSS_SHELL: true` no request do shell SPA; esse request único bypassa Basic (HTML/assets). Chamadas à API continuam protegidas.
 
 **Sem exigir auth** (allowlist):
 
