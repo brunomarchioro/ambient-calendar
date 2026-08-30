@@ -12,6 +12,6 @@ Saída: restrições e defaults recomendados que a spec de firmware possa copiar
 
 ## Answer
 
-Freeze: JD9853 (SPI 172×320) + AXS5106L (I2C) via Waveshare ESP-IDF BSP/LVGL demos (IDF ≥ 5.5); 512 KB HP SRAM / 8 MB flash / sem PSRAM — cache de agenda em LittleFS, NVS só para meta; SNTP primário + `serverTime` como seed/fallback; HTTPS com `esp_http_client` + certificate bundle.
+Freeze: JD9853 (SPI 172×320) + AXS5106L (I2C) via Waveshare ESP-IDF BSP/LVGL demos (IDF ≥ 5.5); 512 KB HP SRAM / 8 MB flash / sem PSRAM — cache de agenda em LittleFS, NVS só para meta; SNTP primário + `serverUnix` como seed/fallback; HTTPS com `esp_http_client` + certificate bundle.
 
 Findings: [docs/research/esp32-c6-waveshare-constraints.md](../../../docs/research/esp32-c6-waveshare-constraints.md)

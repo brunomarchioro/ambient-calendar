@@ -8,7 +8,7 @@ Fechar gaps do code review de `app/` (eixos Standards + Spec) em tickets tracer-
 
 ## Frontier (unblocked)
 
-Tickets prontos para agente: **05** (após decisão A/B), **06**, **08**, **09**. **01**–**04** done.
+Tickets prontos para agente: **06**, **08**, **09**. **01**–**05** done.
 
 Sequência sugerida: 03 → 04; 06 → 07.
 

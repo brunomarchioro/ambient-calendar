@@ -253,7 +253,7 @@ Each live lane runs on its own cloud VM at the PR head. Drive web and HTTP throu
 - [ ] Lane 7. Confirm `showNextEvents` is present and does not truncate `events`. Save `device-no-cut.png`. Pass when array length can exceed `showNextEvents`.
 - [ ] Lane 8. Seed an Event past the horizon. Save `device-horizon.png`. Pass when it is absent.
 - [ ] Lane 9. Force a mapper failure path. Save `device-503.png`. Pass when status is 503 with a minimal body.
-- [ ] Lane 10. Confirm `serverTime` is ISO with offset. Save `device-server-time.png`. Pass when the string parses and carries an offset.
+- [ ] Lane 10. Confirm `serverUnix` is a positive integer (Unix seconds). Save `device-server-time.png`. Pass when firmware parses it and can seed SNTP.
 
 **Verify, perf.** Tests alone are not sufficient verification. A PR is verified only when its unit, live, and perf boxes are all checked.
 
@@ -387,7 +387,7 @@ Each live lane runs on its own cloud VM at the PR head. Drive web and HTTP throu
 - [ ] Create `firmware/esp32-c6/` ESP-IDF project on IDF ≥ 5.5 with Waveshare BSP init.
 - [ ] Create `network/` Wi-Fi and HTTPS poll of `/api/device/schedule` with cert bundle.
 - [ ] Create `storage/` NVS meta and LittleFS agenda cache.
-- [ ] Create `sync/` that writes the schedule JSON to LittleFS and seeds time from `serverTime` when SNTP is late.
+- [ ] Create `sync/` that writes the schedule JSON to LittleFS and seeds time from `serverUnix` when SNTP is late.
 - [ ] Edit compile-time or flash config for Wi-Fi, API URL, and token. No captive portal.
 
 **Build.**
@@ -410,7 +410,7 @@ Each live lane runs on its own cloud VM at the PR head. Drive web and HTTP throu
 - [ ] Lane 4. Poll with bad token. Save `fw-poll-401.png`. Pass when 401 is logged and cache is not wiped.
 - [ ] Lane 5. Write cache to LittleFS. Save `fw-littlefs.png`. Pass when readback matches.
 - [ ] Lane 6. Write meta to NVS. Save `fw-nvs.png`. Pass when meta survives reboot.
-- [ ] Lane 7. Seed clock from `serverTime` before SNTP. Save `fw-server-time.png`. Pass when TLS date checks can proceed.
+- [ ] Lane 7. Seed clock from `serverUnix` before SNTP. Save `fw-server-time.png`. Pass when TLS date checks can proceed.
 - [ ] Lane 8. Confirm SPIFFS is unused. Save `fw-no-spiffs.png`. Pass when partition table has no SPIFFS.
 - [ ] Lane 9. Measure free heap after first poll. Save `fw-heap.png`. Pass when free heap stays above the owner's documented floor.
 - [ ] Lane 10. Disconnect Wi-Fi and reboot. Save `fw-cache-boot.png`. Pass when cache still loads from LittleFS.
@@ -500,7 +500,7 @@ No throwaway prototype branch in this planning pass. Map ticket 07 already class
 
 Settled by decree for the build.
 
-- Monorepo path is `app/` (`@app/alerts`) per `docs/index.md` §11 and ADR 0003/0004. All Node tooling lives under `app/`; código em `app/src/` (vanguarda-fullstack).
+- Monorepo path is `app/` (`@app/ambient-calendar`) per `docs/index.md` §11 and ADR 0003/0004. All Node tooling lives under `app/`; código em `app/src/` (vanguarda-fullstack).
 - Schedule and sync share half-open `[now, now+lookaheadDays)`.
 - Google list uses `eventTypes=default`.
 - OAuth scope prefers `calendar.events.readonly`.
@@ -532,7 +532,7 @@ Still unproven until their PR live lanes.
 - OAuth apps in Testing expire refresh tokens ~7 days. Watched in pr-sync. `invalid_grant` is ops.
 - Cron 15 min versus 30 s Paid CPU. Watched in pr-sync perf rule.
 - 512 KB HP SRAM with TLS plus LVGL and no PSRAM. Watched in pr-fw-platform heap rule.
-- Power-on loses time without 32 kHz crystal. Watched in pr-fw-platform `serverTime` lane.
+- Power-on loses time without 32 kHz crystal. Watched in pr-fw-platform `serverUnix` lane.
 - Shared SPI with TF slot if CS floats. Watched in pr-fw-platform bring-up.
 - `DEVICE_API_TOKEN` rotation needs Worker secret and reflashed firmware in one window. Watched in ops notes, not a code PR.
 

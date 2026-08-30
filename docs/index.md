@@ -110,7 +110,7 @@ Auth device: `Authorization: Bearer <DEVICE_API_TOKEN>` só em `/api/device/*`.
 
 ```json
 {
-  "serverTime": "2026-08-27T11:00:00-03:00",
+  "serverUnix": 1756305600,
   "timezone": "America/Sao_Paulo",
   "reminderMinutes": 30,
   "showNextEvents": 2,
@@ -118,8 +118,8 @@ Auth device: `Authorization: Bearer <DEVICE_API_TOKEN>` só em `/api/device/*`.
     {
       "id": "evt_123",
       "title": "Reunião",
-      "startAt": "2026-08-27T14:00:00-03:00",
-      "endAt": "2026-08-27T15:00:00-03:00",
+      "startUnix": 1756316400,
+      "endUnix": 1756320000,
       "allDay": false
     }
   ]
@@ -127,8 +127,8 @@ Auth device: `Authorization: Bearer <DEVICE_API_TOKEN>` só em `/api/device/*`.
 ```
 
 - Sem `lookaheadDays`, `source`, `externalId`, timezone por Event, timestamps de auditoria.
-- Tempos: ISO-8601 **com offset** no fuso de Settings; all-day = `00:00` + `allDay: true`; `endAt` exclusivo; timed sem fim → `endAt: null`.
-- `events`: overlap em `[now, now+lookaheadDays]`, `startAt` asc; `[]` ok; `showNextEvents` não corta o array.
+- Tempos: **segundos Unix UTC** (`serverUnix`, `startUnix`, `endUnix`); all-day = meia-noite no fuso de Settings em Unix + `allDay: true`; `endUnix` exclusivo; timed sem fim → `endUnix: null`. Relógio no ESP32 via SNTP; `serverUnix` seed/fallback (ADR 0004).
+- `events`: overlap em `[now, now+lookaheadDays]`, `startUnix` asc; `[]` ok; `showNextEvents` não corta o array.
 - Erros: `401` token; `503` se não monta a resposta. Body mínimo.
 
 ### Outras rotas (MVP)
@@ -157,7 +157,7 @@ Google na web: **read-only** (listar). Sem criar/editar Events Google pelo app.
 | IDF | ≥ 5.5; BSP Waveshare + LVGL demos |
 | RAM / flash | 512 KB HP SRAM, 8 MB flash, **sem PSRAM** — cache de agenda em flash |
 | FS | NVS (meta) + LittleFS (agenda); **não** SPIFFS |
-| Relógio | SNTP primário; `serverTime` seed/fallback |
+| Relógio | SNTP primário; `serverUnix` seed/fallback |
 | HTTPS | `esp_http_client` + certificate bundle |
 | Bootstrap | Wi-Fi, URL da API e token em **compile-time / flash** — sem captive portal |
 
@@ -173,7 +173,7 @@ Um estado por frame. Prioridade: **`Now` > `Alert` > `Ambient` > `Empty`**. Só 
 
 | Estado | Predicado |
 | --- | --- |
-| `Now` (Agora) | timed com `now ∈ [startAt, min(startAt+2min, endAt))`; `endAt == null` → +2 min. Foco = menor `startAt`. |
+| `Now` (Agora) | timed com `now ∈ [startAt, endAt)`; `endAt == null` → +2 min. Foco = menor `startAt`. |
 | `Alert` (Alerta) | timed com `now ∈ [startAt - reminderMinutes, startAt)`. Foco = menor `startAt` (empate → `id`). |
 | `Ambient` | há timed com `startAt > now` e não está em Now/Alert |
 | `Empty` | nenhum timed com `startAt > now` |
@@ -283,7 +283,7 @@ Mínimo alinhado à research TanStack/Workers. Tooling CI fino fora do MVP.
 
 ```text
 alerts/
-├── app/                    # @app/alerts — Node/Worker (UI, API, Cron, D1)
+├── app/                    # @app/ambient-calendar — Node/Worker (UI, API, Cron, D1)
 │   ├── src/
 │   │   ├── shared/         # tipos/DTOs web ↔ server
 │   │   ├── server/         # use-cases, repository, services, infra
@@ -334,7 +334,7 @@ Um Worker serve UI + API + Cron.
 ### Firmware
 
 - [ ] Wi-Fi + HTTPS schedule poll
-- [ ] SNTP + fallback `serverTime`
+- [ ] SNTP + fallback `serverUnix`
 - [ ] LittleFS cache + NVS meta
 - [ ] Scheduler nos 4 estados
 - [ ] LVGL ASCII→UI (Ambient / Alert / Now / Empty)

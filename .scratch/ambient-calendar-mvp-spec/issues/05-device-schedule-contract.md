@@ -14,13 +14,13 @@ Deve refletir o princípio: backend entende calendário; device entende tempo e 
 
 `GET /api/device/schedule` com `Authorization: Bearer <DEVICE_API_TOKEN>`.
 
-**Envelope:** `serverTime`, `timezone`, `reminderMinutes`, `showNextEvents`, `events[]`. Sem `lookaheadDays`.
+**Envelope:** `serverUnix`, `timezone`, `reminderMinutes`, `showNextEvents`, `events[]`. Sem `lookaheadDays`.
 
-**Event no wire:** `id`, `title`, `startAt`, `endAt`, `allDay`. Omitir `source`, `externalId`, timezone do Event, `createdAt`, `updatedAt`.
+**Event no wire:** `id`, `title`, `startUnix`, `endUnix`, `allDay`. Omitir `source`, `externalId`, timezone do Event, `createdAt`, `updatedAt`.
 
-**Tempo:** ISO-8601 com offset no fuso de Settings; all-day = `00:00` nesse fuso + `allDay: true`; `endAt` exclusivo; timed sem fim → `endAt: null`.
+**Tempo:** segundos Unix UTC (`serverUnix`, `startUnix`, `endUnix`); `endUnix: null` = timed sem fim; all-day = instantes de meia-noite no fuso de Settings convertidos para Unix + `allDay: true`; `endUnix` exclusivo quando presente. SNTP no device; `serverUnix` só seed/fallback de relógio (ADR 0004).
 
-**Conjunto:** overlap em `[now, now+lookaheadDays]`, `startAt` asc; `[]` → `200`; `showNextEvents` não corta o array.
+**Conjunto:** overlap em `[now, now+lookaheadDays]`, ordenado por `startUnix` asc; `[]` → `200`; `showNextEvents` não corta o array.
 
 **Erros:** `401` token; `503` se não monta a resposta; body mínimo.
 
