@@ -2,8 +2,15 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "alerts",
   "compatibility_date": "2026-08-27",
-  "compatibility_flags": ["nodejs_compat"],
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "main": "worker.ts",
+  "kv_namespaces": [
+    {
+      "binding": "OAUTH_KV",
+      "id": "00000000000000000000000000000001",
+      "preview_id": "00000000000000000000000000000001",
+    },
+  ],
   "d1_databases": [
     {
       "binding": "DB",

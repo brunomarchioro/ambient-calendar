@@ -8,6 +8,16 @@ const PUBLIC_PATHS = new Set([
 
 const BASIC_REALM = 'Ambient Calendar Display'
 
+export function verifyWebBasicLogin(
+  user: string,
+  password: string,
+  expectedUser: string | undefined,
+  expectedPassword: string | undefined,
+): boolean {
+  if (!expectedUser || !expectedPassword) return false
+  return safeEqual(user, expectedUser) && safeEqual(password, expectedPassword)
+}
+
 function safeEqual(a: string, b: string): boolean {
   if (a.length !== b.length) return false
   let diff = 0

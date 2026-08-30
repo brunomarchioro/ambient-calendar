@@ -59,6 +59,41 @@ curl -sS -D - -H "Authorization: Bearer $DEVICE_API_TOKEN" \
 
 Token ausente ou inválido → **401**. Token válido → envelope de schedule (spec §6).
 
+## MCP (Lembretes via Cliente MCP)
+
+Rota `/mcp` expõe tools para ChatGPT/Claude listarem e administrarem **Lembretes** (Events `manual`). Protegido por **Autorização MCP** (OAuth 2.1); distinto do OAuth Google Calendar e do Basic Auth da UI.
+
+| Tool | Scope |
+| ---- | ----- |
+| `list_reminders` | `reminders:read` |
+| `list_upcoming_events` | `reminders:read` |
+| `create_reminder`, `update_reminder` | `reminders:write` |
+| `delete_reminder` (`confirm: true`) | `reminders:write` |
+
+Endpoints OAuth (sem Basic Auth): `/mcp`, `/authorize`, `/oauth/token`, `/oauth/register`, `/.well-known/*`.
+
+Login na tela `/authorize` usa as mesmas credenciais de `WEB_BASIC_AUTH_*`. Decisão: [`docs/adr/0010-mcp-reminders-oauth.md`](../docs/adr/0010-mcp-reminders-oauth.md).
+
+### KV (OAuth)
+
+Crie o namespace e substitua o id placeholder em `wrangler.jsonc`:
+
+```sh
+npx wrangler kv namespace create OAUTH_KV
+npx wrangler kv namespace create OAUTH_KV --preview
+```
+
+Em produção (HTTPS), o metadata OAuth usa a origem do request. ChatGPT/Claude conectam em `https://<seu-worker>/mcp`.
+
+Discovery local:
+
+```sh
+curl -sS http://127.0.0.1:3000/.well-known/oauth-authorization-server | head
+curl -sS -o /dev/null -w "%{http_code}\n" http://127.0.0.1:3000/mcp
+```
+
+Esperado: metadata JSON e **401** em `/mcp` sem token.
+
 ## Proteção web (Basic Auth)
 
 Com `WEB_BASIC_AUTH_USER` e `WEB_BASIC_AUTH_PASSWORD` definidos, a UI (`/events`, `/settings`) e as APIs de gestão exigem HTTP Basic Auth. O browser pede credenciais na primeira visita e reenvia em navegação e `fetch` same-origin.

@@ -3,17 +3,29 @@ import { authorizeWebBasic } from '@/server/common/infra/authorize-web-basic'
 import { httpFetch } from '@/server/common/infra/http-fetch'
 import { listEnabledSyncTargets } from '@/server/google/repository/google-queries'
 import { readOAuthForSync } from '@/server/google/use-cases/google-connection'
+import { handleMcpAuthorize } from '@/server/mcp/infra/mcp-auth-handler'
+import { getMcpOAuthProvider } from '@/server/mcp/infra/mcp-oauth-provider'
 import { d1MirrorStore } from '@/server/sync/repository/d1-mirror-store'
 import { fixtureScope } from '@/server/sync/services/memory-store'
 import { FIXTURE_GOOGLE_ITEMS } from '@/server/sync/sync.fixtures'
 import { runScheduledSyncUseCase } from '@/server/sync/use-cases/run-scheduled-sync'
 import { getOrSeedSettingsUseCase } from '@/server/settings/use-cases/put-settings'
 
-export default {
+const defaultHandler = {
   fetch(request: Request, env: Env, ctx: ExecutionContext) {
+    const url = new URL(request.url)
+    if (url.pathname === '/authorize') {
+      return handleMcpAuthorize(request, env)
+    }
     const denied = authorizeWebBasic(request, env.WEB_BASIC_AUTH_USER, env.WEB_BASIC_AUTH_PASSWORD)
     if (denied) return denied
     return handler.fetch(request, env, ctx)
+  },
+}
+
+export default {
+  fetch(request: Request, env: Env, ctx: ExecutionContext) {
+    return getMcpOAuthProvider(request, defaultHandler).fetch(request, env, ctx)
   },
   async scheduled(_controller: unknown, env: Env) {
     const settings = await getOrSeedSettingsUseCase(env.DB)

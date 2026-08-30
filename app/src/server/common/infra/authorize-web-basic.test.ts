@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { authorizeWebBasic } from '@/server/common/infra/authorize-web-basic'
+import { authorizeWebBasic, verifyWebBasicLogin } from '@/server/common/infra/authorize-web-basic'
 
 const USER = 'admin'
 const PASS = 'secret'
@@ -44,4 +44,10 @@ test('non-Basic scheme is 401', () => {
 
 test('matching Basic credentials are allowed', () => {
   expect(authorizeWebBasic(request('/api/events', creds), USER, PASS)).toBeNull()
+})
+
+test('verifyWebBasicLogin matches configured credentials', () => {
+  expect(verifyWebBasicLogin(USER, PASS, USER, PASS)).toBe(true)
+  expect(verifyWebBasicLogin(USER, 'wrong', USER, PASS)).toBe(false)
+  expect(verifyWebBasicLogin(USER, PASS, undefined, PASS)).toBe(false)
 })
