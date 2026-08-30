@@ -1,5 +1,7 @@
 #include "hmi_frame.h"
 
+#include "hmi_layout.h"
+
 #include <string.h>
 
 void alerts_hmi_present_init(alerts_hmi_present_t *present)
@@ -52,11 +54,11 @@ static bool is_timed(const alerts_event_t *e)
 
 static int64_t now_end(const alerts_event_t *e)
 {
-	if (!e->has_end) {
-		return e->start_unix + 120;
+	if (e->has_end && e->end_unix > e->start_unix) {
+		return e->end_unix;
 	}
-	int64_t cap = e->start_unix + 120;
-	return (e->end_unix < cap) ? e->end_unix : cap;
+	/* ponytail: sem endAt, pulso de 2 min; upgrade: heurística de duração default */
+	return e->start_unix + 120;
 }
 
 static bool in_now(int64_t now, const alerts_event_t *e)
@@ -113,7 +115,7 @@ static const alerts_event_t *pick_next_timed(int64_t now, const alerts_schedule_
 static size_t collect_upcoming(int64_t now, const alerts_schedule_t *s, const alerts_event_t *skip, alerts_event_t *out,
 			       size_t max_out)
 {
-	alerts_event_t tmp[ALERTS_MAX_EVENTS];
+	static alerts_event_t tmp[ALERTS_MAX_EVENTS];
 	size_t tmp_count = 0;
 	size_t i;
 	size_t n;
@@ -150,7 +152,7 @@ static size_t collect_upcoming(int64_t now, const alerts_schedule_t *s, const al
 static void fill_ambient_list(int64_t now, const alerts_schedule_t *s, const alerts_event_t *skip,
 			      alerts_hmi_frame_t *out)
 {
-	size_t limit = (size_t)s->show_next_events;
+	size_t limit = HMI_AMBIENT_FETCH_SLOTS;
 	if (limit > ALERTS_MAX_EVENTS) {
 		limit = ALERTS_MAX_EVENTS;
 	}
@@ -159,7 +161,7 @@ static void fill_ambient_list(int64_t now, const alerts_schedule_t *s, const ale
 
 static void fill_overlay_list(int64_t now, const alerts_schedule_t *s, alerts_hmi_frame_t *out)
 {
-	size_t limit = (size_t)s->show_next_events;
+	size_t limit = HMI_OVERLAY_LIST_SLOTS;
 	if (limit > ALERTS_MAX_EVENTS) {
 		limit = ALERTS_MAX_EVENTS;
 	}

@@ -73,6 +73,16 @@ int main(void)
 	assert(alerts_hmi_build_frame(1787853600, &s, &present, &frame) == 0);
 	assert(frame.state == ALERTS_HMI_NOW);
 
+	/* Now — ainda dentro do endAt (+30 min), não só os primeiros 2 min */
+	present_closed(&present);
+	assert(alerts_hmi_build_frame(1787855400, &s, &present, &frame) == 0);
+	assert(frame.state == ALERTS_HMI_NOW);
+
+	/* Now — após endAt */
+	present_closed(&present);
+	assert(alerts_hmi_build_frame(1787857200, &s, &present, &frame) == 0);
+	assert(frame.state == ALERTS_HMI_EMPTY);
+
 	/* All-day never Alert/Now */
 	present_closed(&present);
 	events[0] = ev("all", "Feriado", 1787936400, 1788022800, true, true);

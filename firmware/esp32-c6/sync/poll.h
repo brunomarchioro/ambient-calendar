@@ -5,6 +5,7 @@
 #include "esp_err.h"
 
 const alerts_schedule_t *alerts_poll_current(void);
+int64_t alerts_poll_loaded_at_unix(void);
 esp_err_t alerts_poll_refresh(void);
 
 #ifdef ALERTS_POLL_HOST_TEST

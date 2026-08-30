@@ -11,5 +11,8 @@ dist/
 .DS_Store
 firmware/esp32-c6/build/
 firmware/esp32-c6/managed_components/
-.vscode/
+.vscode/*
+!.vscode/settings.json
+firmware/esp32-c6/.vscode/*
+!firmware/esp32-c6/.vscode/settings.json
 .idea/

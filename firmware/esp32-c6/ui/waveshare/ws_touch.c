@@ -37,7 +37,7 @@ esp_err_t ws_touch_init(void)
 		.flags.enable_internal_pullup = true,
 	};
 	i2c_master_bus_handle_t bus = NULL;
-	ESP_RETURN_ON_ERROR(i2c_master_bus_initialize(&bus_cfg, &bus), TAG, "i2c bus");
+	ESP_RETURN_ON_ERROR(i2c_new_master_bus(&bus_cfg, &bus), TAG, "i2c bus");
 
 	const gpio_config_t rst_cfg = {
 		.pin_bit_mask = 1ULL << WS_TOUCH_PIN_RST,
@@ -52,9 +52,16 @@ esp_err_t ws_touch_init(void)
 	const i2c_device_config_t dev_cfg = {
 		.dev_addr_length = I2C_ADDR_BIT_LEN_7,
 		.device_address = WS_TOUCH_I2C_ADDR,
-		.sclk_speed_hz = WS_TOUCH_I2C_FREQ_HZ,
+		.scl_speed_hz = WS_TOUCH_I2C_FREQ_HZ,
 	};
 	ESP_RETURN_ON_ERROR(i2c_master_bus_add_device(bus, &dev_cfg, &s_dev), TAG, "i2c dev");
+
+	const gpio_config_t int_cfg = {
+		.pin_bit_mask = 1ULL << WS_TOUCH_PIN_INT,
+		.mode = GPIO_MODE_INPUT,
+		.pull_up_en = GPIO_PULLUP_ENABLE,
+	};
+	ESP_RETURN_ON_ERROR(gpio_config(&int_cfg), TAG, "int gpio");
 
 	s_ready = true;
 	ESP_LOGI(TAG, "touch init ok (AXS5106L, no swipe handlers)");
@@ -64,6 +71,10 @@ esp_err_t ws_touch_init(void)
 bool ws_touch_read_pressed(uint16_t *x, uint16_t *y)
 {
 	if (!s_ready) {
+		return false;
+	}
+
+	if (gpio_get_level(WS_TOUCH_PIN_INT) != 0) {
 		return false;
 	}
 

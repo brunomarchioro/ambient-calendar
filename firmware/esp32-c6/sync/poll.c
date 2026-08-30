@@ -14,6 +14,7 @@ static const char *TAG = "poll";
 
 static alerts_schedule_t s_schedule;
 static bool s_have_schedule;
+static int64_t s_loaded_at_unix;
 
 static esp_err_t load_cache(void)
 {
@@ -43,6 +44,11 @@ const alerts_schedule_t *alerts_poll_current(void)
 	return s_have_schedule ? &s_schedule : NULL;
 }
 
+int64_t alerts_poll_loaded_at_unix(void)
+{
+	return s_loaded_at_unix;
+}
+
 esp_err_t alerts_poll_refresh(void)
 {
 	alerts_http_body_t body = {0};
@@ -69,6 +75,11 @@ esp_err_t alerts_poll_refresh(void)
 		}
 		s_schedule = parsed;
 		s_have_schedule = true;
+		if (alerts_time_is_synced()) {
+			s_loaded_at_unix = alerts_time_now_unix();
+		} else if (parsed.server_unix > 0) {
+			s_loaded_at_unix = parsed.server_unix;
+		}
 		if (!alerts_time_is_synced() && parsed.server_unix > 0) {
 			(void)alerts_time_seed_from_unix(parsed.server_unix);
 		}
@@ -94,5 +105,6 @@ void alerts_poll_reset(void)
 {
 	memset(&s_schedule, 0, sizeof(s_schedule));
 	s_have_schedule = false;
+	s_loaded_at_unix = 0;
 }
 #endif

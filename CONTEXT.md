@@ -6,7 +6,7 @@ Ambient display pessoal que mostra agenda e alertas de próximos eventos, sincro
 
 **Ambient Calendar Display**:
 O sistema completo: display ESP32, backend e interface web de configuração.
-_Avoid_: Alerts (nome do repo apenas), calendar-display
+_Avoid_: alerts (prefixo legado no firmware), calendar-display
 
 **Event**:
 Ocorrência agendada com título e janela de tempo, independente da origem (`google` ou `manual`). Events `google` pertencem a uma **Conta Google** e a um **Calendário Google** (colunas de espelho; não expostas no device).

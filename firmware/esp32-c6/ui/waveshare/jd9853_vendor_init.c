@@ -1,6 +1,12 @@
 #include "jd9853_vendor_init.h"
 
-static const esp_lcd_panel_vendor_init_cmd_t s_jd9853_init[] = {
+#include "esp_check.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+
+static const char *TAG = "jd9853";
+
+static const ws_lcd_init_cmd_t s_jd9853_init[] = {
 	{0xDF, (uint8_t[]){0x98, 0x53}, 2, 0},
 	{0xB2, (uint8_t[]){0x23}, 1, 0},
 	{0xB7, (uint8_t[]){0x00, 0x47, 0x00, 0x6F}, 4, 0},
@@ -33,13 +39,13 @@ static const esp_lcd_panel_vendor_init_cmd_t s_jd9853_init[] = {
 	{0xDE, (uint8_t[]){0x02}, 1, 0},
 	{0xE5, (uint8_t[]){0x00, 0x02, 0x00}, 3, 0},
 	{0xDE, (uint8_t[]){0x00}, 1, 0},
-	{0x36, (uint8_t[]){0x00}, 1, 0},
+	{0x36, (uint8_t[]){0x08}, 1, 0},
 	{0x21, (uint8_t[]){0x00}, 0, 0},
 	{0x11, (uint8_t[]){0x00}, 0, 120},
 	{0x29, (uint8_t[]){0x00}, 0, 0},
 };
 
-const esp_lcd_panel_vendor_init_cmd_t *ws_jd9853_vendor_init_cmds(void)
+const ws_lcd_init_cmd_t *ws_jd9853_vendor_init_cmds(void)
 {
 	return s_jd9853_init;
 }
@@ -47,4 +53,18 @@ const esp_lcd_panel_vendor_init_cmd_t *ws_jd9853_vendor_init_cmds(void)
 size_t ws_jd9853_vendor_init_cmd_count(void)
 {
 	return sizeof(s_jd9853_init) / sizeof(s_jd9853_init[0]);
+}
+
+esp_err_t ws_jd9853_panel_init(esp_lcd_panel_io_handle_t io)
+{
+	const size_t count = ws_jd9853_vendor_init_cmd_count();
+	for (size_t i = 0; i < count; i++) {
+		const ws_lcd_init_cmd_t *cmd = &s_jd9853_init[i];
+		ESP_RETURN_ON_ERROR(esp_lcd_panel_io_tx_param(io, cmd->cmd, (const uint8_t *)cmd->data, cmd->data_bytes),
+				    TAG, "cmd 0x%02x", cmd->cmd);
+		if (cmd->delay_ms > 0) {
+			vTaskDelay(pdMS_TO_TICKS(cmd->delay_ms));
+		}
+	}
+	return ESP_OK;
 }

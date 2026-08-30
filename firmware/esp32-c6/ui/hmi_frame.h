@@ -3,6 +3,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "hmi_layout.h"
 #include "schedule.h"
 
 #define ALERTS_HMI_OVERLAY_TIMEOUT_MS 15000
@@ -23,12 +24,13 @@ typedef struct {
 	alerts_hmi_state_t state;
 	bool has_focus;
 	alerts_event_t focus;
-	alerts_event_t ambient_list[ALERTS_MAX_EVENTS];
+	alerts_event_t ambient_list[HMI_AMBIENT_FETCH_SLOTS];
 	size_t ambient_list_count;
 	bool overlay_open;
-	alerts_event_t overlay_list[ALERTS_MAX_EVENTS];
+	alerts_event_t overlay_list[HMI_OVERLAY_LIST_SLOTS];
 	size_t overlay_list_count;
 	int64_t now_unix;
+	int64_t schedule_loaded_at_unix;
 	char timezone[ALERTS_TZ_LEN];
 } alerts_hmi_frame_t;
 

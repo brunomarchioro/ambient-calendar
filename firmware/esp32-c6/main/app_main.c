@@ -30,6 +30,8 @@ void app_main(void)
 	ESP_ERROR_CHECK(alerts_bsp_init());
 	ESP_ERROR_CHECK(alerts_lvgl_init());
 	ESP_ERROR_CHECK(alerts_hmi_init());
+	(void)alerts_hmi_loop_once();
+	ESP_ERROR_CHECK(alerts_wifi_start());
 	ESP_ERROR_CHECK(alerts_time_init());
 
 	if (alerts_poll_current() != NULL) {
@@ -39,7 +41,6 @@ void app_main(void)
 	}
 	log_nvs_meta();
 
-	ESP_ERROR_CHECK(alerts_wifi_start());
 	(void)alerts_poll_refresh();
 	alerts_bsp_log_heap("after first poll");
 

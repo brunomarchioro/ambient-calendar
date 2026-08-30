@@ -4,6 +4,8 @@ idf_component_register(
 		"hmi.c"
 		"hmi_frame.c"
 		"hmi_lvgl.c"
+		"fonts/lv_font_alerts_22.c"
+		"fonts/lv_font_alerts_28.c"
 		"waveshare/jd9853_vendor_init.c"
 		"waveshare/ws_lcd.c"
 		"waveshare/ws_touch.c"

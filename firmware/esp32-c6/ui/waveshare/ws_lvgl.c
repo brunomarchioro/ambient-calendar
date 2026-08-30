@@ -39,6 +39,9 @@ esp_err_t ws_lvgl_start(esp_lcd_panel_io_handle_t io, esp_lcd_panel_handle_t pan
 		.hres = WS_LCD_H_RES,
 		.vres = WS_LCD_V_RES,
 		.monochrome = false,
+#if LVGL_VERSION_MAJOR >= 9
+		.color_format = LV_COLOR_FORMAT_RGB565,
+#endif
 		.rotation = {
 			.swap_xy = false,
 			.mirror_x = false,
@@ -47,6 +50,7 @@ esp_err_t ws_lvgl_start(esp_lcd_panel_io_handle_t io, esp_lcd_panel_handle_t pan
 		.flags = {
 			.buff_dma = true,
 			.buff_spiram = false,
+			.swap_bytes = true,
 		},
 	};
 	lv_display_t *disp = lvgl_port_add_disp(&disp_cfg);

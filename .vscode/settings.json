@@ -1,0 +1,9 @@
+{
+  "idf.extensionActivationMode": "never",
+  "clangd.path": "/home/ixcsoft/.espressif/tools/esp-clangd/esp-21.1.3_20260408/esp-clangd/bin/clangd",
+  "clangd.arguments": [
+    "--background-index",
+    "--query-driver=**",
+    "--compile-commands-dir=/home/ixcsoft/Pessoal/ambient-calendar/build"
+  ]
+}
