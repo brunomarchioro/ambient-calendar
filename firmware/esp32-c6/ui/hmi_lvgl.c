@@ -15,11 +15,15 @@
 
 static const char *TAG = "hmi_lvgl";
 
-#define HMI_SCROLL_DURATION_MS 8000
 #define HMI_SCROLL_START_DELAY_MS 4000
 #define HMI_SCROLL_PAUSE_MS 2500
 #define HMI_SCROLL_STAGGER_MS 700
+#define HMI_SCROLL_STYLE_SLOTS HMI_OVERLAY_LIST_SLOTS
 #define HMI_ROW_TEXT_DY ((HMI_LIST_ROW - HMI_FONT_BODY_LINE) / 2)
+
+static lv_style_t s_scroll_styles[HMI_SCROLL_STYLE_SLOTS];
+static lv_anim_t s_scroll_anims[HMI_SCROLL_STYLE_SLOTS];
+static bool s_scroll_styles_ready;
 
 static const lv_font_t *const FONT_BODY = &lv_font_montserrat_20;
 static const lv_font_t *const FONT_CLOCK = &lv_font_montserrat_28;
@@ -243,23 +247,26 @@ static void format_sync_label(char *buf, size_t buflen, const alerts_hmi_frame_t
 	buf[0] = '\0';
 }
 
-static void set_label(lv_obj_t *lbl, const char *text, bool visible)
+static bool set_label(lv_obj_t *lbl, const char *text, bool visible)
 {
 	if (lbl == NULL) {
-		return;
+		return false;
 	}
 	if (text == NULL) {
 		text = "";
 	}
+	bool changed = false;
 	const char *cur = lv_label_get_text(lbl);
 	if (cur == NULL || strcmp(cur, text) != 0) {
 		lv_label_set_text(lbl, text);
+		changed = true;
 	}
 	if (visible) {
 		lv_obj_remove_flag(lbl, LV_OBJ_FLAG_HIDDEN);
 	} else {
 		lv_obj_add_flag(lbl, LV_OBJ_FLAG_HIDDEN);
 	}
+	return changed;
 }
 
 static void set_visible(lv_obj_t *obj, bool visible)
@@ -323,48 +330,61 @@ static lv_obj_t *create_card_panel(lv_obj_t *parent, int x, int y, int w, int h,
 	return panel;
 }
 
-static void hmi_scroll_x_exec(void *obj, int32_t v)
+static void hmi_init_scroll_styles(void)
 {
-	lv_obj_set_x((lv_obj_t *)obj, v);
+	if (s_scroll_styles_ready) {
+		return;
+	}
+	for (int i = 0; i < HMI_SCROLL_STYLE_SLOTS; i++) {
+		lv_style_init(&s_scroll_styles[i]);
+		lv_anim_init(&s_scroll_anims[i]);
+		lv_anim_set_delay(&s_scroll_anims[i],
+				  HMI_SCROLL_START_DELAY_MS + (uint32_t)i * HMI_SCROLL_STAGGER_MS);
+		lv_anim_set_repeat_delay(&s_scroll_anims[i], HMI_SCROLL_PAUSE_MS);
+		lv_anim_set_repeat_count(&s_scroll_anims[i], LV_ANIM_REPEAT_INFINITE);
+		lv_style_set_anim(&s_scroll_styles[i], &s_scroll_anims[i]);
+	}
+	s_scroll_styles_ready = true;
 }
 
-static int32_t hmi_scroll_end_x(lv_obj_t *lbl, int32_t clip_w)
+static void hmi_attach_scroll_style(lv_obj_t *lbl, int style_slot)
+{
+	if (lbl == NULL || style_slot < 0 || style_slot >= HMI_SCROLL_STYLE_SLOTS) {
+		return;
+	}
+	hmi_init_scroll_styles();
+	lv_obj_add_style(lbl, &s_scroll_styles[style_slot], 0);
+}
+
+static bool hmi_text_overflows(lv_obj_t *lbl, int32_t clip_w)
 {
 	const char *text = lv_label_get_text(lbl);
 	const lv_font_t *font = lv_obj_get_style_text_font(lbl, LV_PART_MAIN);
 	if (text == NULL || font == NULL || text[0] == '\0') {
-		return 0;
+		return false;
 	}
 
 	lv_point_t size;
 	lv_text_get_size(&size, text, font, lv_obj_get_style_text_letter_space(lbl, LV_PART_MAIN),
 			 lv_obj_get_style_text_line_space(lbl, LV_PART_MAIN), LV_COORD_MAX, LV_TEXT_FLAG_EXPAND);
-	if (size.x <= clip_w) {
-		return 0;
-	}
-	return clip_w - size.x;
+	return size.x > clip_w;
 }
 
-static void hmi_start_horizontal_scroll(lv_obj_t *lbl, int stagger_index, int32_t clip_w)
+static void hmi_apply_scroll(lv_obj_t *lbl, int style_slot, int32_t clip_w, bool text_changed)
 {
-	lv_anim_delete(lbl, hmi_scroll_x_exec);
-	lv_obj_set_x(lbl, 0);
-
-	const int32_t end = hmi_scroll_end_x(lbl, clip_w);
-	if (end == 0) {
+	if (lbl == NULL || !text_changed) {
 		return;
 	}
+	if (style_slot < 0 || style_slot >= HMI_SCROLL_STYLE_SLOTS) {
+		style_slot = 0;
+	}
 
-	lv_anim_t anim;
-	lv_anim_init(&anim);
-	lv_anim_set_var(&anim, lbl);
-	lv_anim_set_exec_cb(&anim, hmi_scroll_x_exec);
-	lv_anim_set_values(&anim, 0, end);
-	lv_anim_set_duration(&anim, HMI_SCROLL_DURATION_MS);
-	lv_anim_set_delay(&anim, HMI_SCROLL_START_DELAY_MS + (uint32_t)stagger_index * HMI_SCROLL_STAGGER_MS);
-	lv_anim_set_repeat_count(&anim, LV_ANIM_REPEAT_INFINITE);
-	lv_anim_set_repeat_delay(&anim, HMI_SCROLL_PAUSE_MS);
-	lv_anim_start(&anim);
+	lv_obj_set_width(lbl, clip_w);
+	if (!hmi_text_overflows(lbl, clip_w)) {
+		lv_label_set_long_mode(lbl, LV_LABEL_LONG_CLIP);
+		return;
+	}
+	lv_label_set_long_mode(lbl, LV_LABEL_LONG_SCROLL_CIRCULAR);
 }
 
 static void style_label_raw(lv_obj_t *lbl, const lv_font_t *font, lv_color_t color, lv_text_align_t align)
@@ -403,7 +423,6 @@ static void style_overlay_row(lv_obj_t *lbl, const lv_font_t *font, lv_color_t c
 static void layout_overlay_clip(lv_obj_t *lbl, int y, int x, int width)
 {
 	lv_obj_t *clip = lv_obj_get_parent(lbl);
-	lv_anim_delete(lbl, hmi_scroll_x_exec);
 	lv_obj_set_pos(clip, x, y);
 	lv_obj_set_size(clip, width, HMI_LIST_ROW);
 	lv_obj_set_pos(lbl, 0, HMI_ROW_TEXT_DY);
@@ -432,9 +451,11 @@ static void render_overlay_event(int slot, lv_obj_t *title_lbl, const alerts_eve
 	lv_label_set_long_mode(s_ui.overlay_time_lbl[slot], LV_LABEL_LONG_CLIP);
 	set_label(s_ui.overlay_time_lbl[slot], timebuf, true);
 	layout_overlay_clip(title_lbl, y, HMI_LIST_TITLE_X, HMI_LIST_TITLE_W);
-	style_overlay_row(title_lbl, FONT_BODY, COLOR_MUTED, LV_TEXT_ALIGN_LEFT, true, HMI_LIST_TITLE_W);
-	set_label(title_lbl, e->title, true);
-	hmi_start_horizontal_scroll(title_lbl, slot, HMI_LIST_TITLE_W);
+	const bool title_changed = set_label(title_lbl, e->title, true);
+	if (title_changed) {
+		style_overlay_row(title_lbl, FONT_BODY, COLOR_MUTED, LV_TEXT_ALIGN_LEFT, true, HMI_LIST_TITLE_W);
+	}
+	hmi_apply_scroll(title_lbl, slot, HMI_LIST_TITLE_W, title_changed);
 }
 
 static size_t render_overlay_list(lv_obj_t **labels, int slot_count, const alerts_event_t *events, size_t count)
@@ -465,7 +486,6 @@ static size_t render_overlay_list(lv_obj_t **labels, int slot_count, const alert
 	for (; slot < slot_count; slot++) {
 		set_label(s_ui.overlay_time_lbl[slot], "", false);
 		set_label(labels[slot], "", false);
-		lv_anim_delete(labels[slot], hmi_scroll_x_exec);
 		set_visible(lv_obj_get_parent(labels[slot]), false);
 	}
 
@@ -559,6 +579,8 @@ static void build_list_row_labels(lv_obj_t **time_labels, lv_obj_t **title_label
 		lv_obj_t *clip = create_text_clip(parent, HMI_LIST_TITLE_X, y, HMI_LIST_TITLE_W, HMI_LIST_ROW);
 		title_labels[i] = lv_label_create(clip);
 		style_clip_text_label(title_labels[i], FONT_BODY, COLOR_MUTED, LV_TEXT_ALIGN_LEFT);
+		lv_obj_set_width(title_labels[i], HMI_LIST_TITLE_W);
+		hmi_attach_scroll_style(title_labels[i], i);
 		lv_obj_set_pos(title_labels[i], 0, HMI_ROW_TEXT_DY);
 		lv_obj_set_height(title_labels[i], HMI_FONT_BODY_LINE);
 		hmi_pass_touch(title_labels[i]);
@@ -583,6 +605,8 @@ static void build_overlay_row_labels(lv_obj_t **time_labels, lv_obj_t **title_la
 		lv_obj_t *clip = create_text_clip(parent, HMI_LIST_TITLE_X, y, HMI_LIST_TITLE_W, HMI_LIST_ROW);
 		title_labels[i] = lv_label_create(clip);
 		style_clip_text_label(title_labels[i], FONT_BODY, COLOR_MUTED, LV_TEXT_ALIGN_LEFT);
+		lv_obj_set_width(title_labels[i], HMI_LIST_TITLE_W);
+		hmi_attach_scroll_style(title_labels[i], i);
 		lv_obj_set_pos(title_labels[i], 0, HMI_ROW_TEXT_DY);
 		lv_obj_set_height(title_labels[i], HMI_FONT_BODY_LINE);
 		hmi_pass_touch(title_labels[i]);
@@ -611,6 +635,8 @@ static void wire_card_labels(lv_obj_t *card, lv_obj_t **caption, lv_obj_t **titl
 	lv_obj_t *clip = create_text_clip(card, HMI_CARD_PAD, title_y - card_y, HMI_CARD_INNER_W, HMI_FOCUS_TITLE_H);
 	*title = lv_label_create(clip);
 	style_clip_text_label(*title, FONT_BODY, COLOR_CYAN, LV_TEXT_ALIGN_LEFT);
+	lv_obj_set_width(*title, HMI_CARD_INNER_W);
+	hmi_attach_scroll_style(*title, 0);
 	lv_obj_set_height(*title, HMI_FOCUS_TITLE_H);
 	hmi_pass_touch(*title);
 
@@ -722,7 +748,6 @@ static void render_ambient_day_header(int slot, int64_t day_unix)
 	lv_obj_t *clip = lv_obj_get_parent(s_ui.list_title_lbl[slot]);
 
 	set_label(s_ui.list_time_lbl[slot], "", false);
-	lv_anim_delete(s_ui.list_title_lbl[slot], hmi_scroll_x_exec);
 	lv_obj_set_pos(clip, HMI_PAD_X, y);
 	lv_obj_set_size(clip, HMI_CARD_W, HMI_LIST_ROW);
 	lv_obj_set_pos(s_ui.list_title_lbl[slot], 0, HMI_ROW_TEXT_DY);
@@ -744,15 +769,16 @@ static void render_ambient_event(int slot, const alerts_event_t *e)
 	lv_obj_set_pos(s_ui.list_time_lbl[slot], HMI_PAD_X, y + HMI_ROW_TEXT_DY);
 	lv_obj_set_size(s_ui.list_time_lbl[slot], HMI_LIST_TIME_W, HMI_FONT_BODY_LINE);
 	set_label(s_ui.list_time_lbl[slot], timebuf, true);
-	lv_anim_delete(s_ui.list_title_lbl[slot], hmi_scroll_x_exec);
 	lv_obj_set_pos(clip, HMI_LIST_TITLE_X, y);
 	lv_obj_set_size(clip, HMI_LIST_TITLE_W, HMI_LIST_ROW);
 	lv_obj_set_pos(s_ui.list_title_lbl[slot], 0, HMI_ROW_TEXT_DY);
 	lv_obj_set_height(s_ui.list_title_lbl[slot], HMI_FONT_BODY_LINE);
-	style_clip_text_label(s_ui.list_title_lbl[slot], FONT_BODY, COLOR_MUTED, LV_TEXT_ALIGN_LEFT);
-	set_label(s_ui.list_title_lbl[slot], e->title, true);
+	const bool title_changed = set_label(s_ui.list_title_lbl[slot], e->title, true);
+	if (title_changed) {
+		style_clip_text_label(s_ui.list_title_lbl[slot], FONT_BODY, COLOR_MUTED, LV_TEXT_ALIGN_LEFT);
+	}
 	set_visible(clip, true);
-	hmi_start_horizontal_scroll(s_ui.list_title_lbl[slot], slot, HMI_LIST_TITLE_W);
+	hmi_apply_scroll(s_ui.list_title_lbl[slot], slot, HMI_LIST_TITLE_W, title_changed);
 }
 
 static void render_ambient_list(const alerts_event_t *events, size_t count, int64_t focus_day)
@@ -779,7 +805,6 @@ static void render_ambient_list(const alerts_event_t *events, size_t count, int6
 	for (; slot < HMI_AMBIENT_LIST_SLOTS; slot++) {
 		set_label(s_ui.list_time_lbl[slot], "", false);
 		set_label(s_ui.list_title_lbl[slot], "", false);
-		lv_anim_delete(s_ui.list_title_lbl[slot], hmi_scroll_x_exec);
 		set_title_row_visible(s_ui.list_title_lbl[slot], false);
 	}
 }
@@ -791,9 +816,9 @@ static void render_card_content(lv_obj_t *card, lv_obj_t *caption, lv_obj_t *tit
 	set_visible(card, true);
 	set_card_style(card, caption, title, time_lbl, fill, text_on_fill);
 	set_label(caption, caption_text, true);
-	set_label(title, event->title, true);
+	const bool title_changed = set_label(title, event->title, true);
 	set_title_row_visible(title, true);
-	hmi_start_horizontal_scroll(title, 0, HMI_CARD_INNER_W);
+	hmi_apply_scroll(title, 0, HMI_CARD_INNER_W, title_changed);
 
 	char buf[96];
 	if (is_now) {

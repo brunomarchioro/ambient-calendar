@@ -25,7 +25,7 @@ Handoff humano → agente para layout LVGL no ESP32-C6 (172×320). Comportamento
 | Gradientes     | **proibido**                                                              |
 | Alinhamento    | coordenadas múltiplas de **8 px** (ideal) ou **16 px** (obrigatório em Y) |
 | Texto em card  | ver **Rótulos do card** (preto em Alerta/Agora; ciano/muted em Ambient)   |
-| Texto longo    | scroll horizontal dentro de clip — ver **Rotação de texto**               |
+| Texto longo    | scroll horizontal circular dentro de clip — ver **Scroll de texto**       |
 | Alerta         | fill laranja **piscando** (`bg_opa`, sem faixa full-screen)               |
 
 ## Tokens visuais
@@ -112,18 +112,17 @@ Slots: `HMI_AMBIENT_LIST_SLOTS` = **4**; overlay derivado de `HMI_OVERLAY_LIST_S
 
 Slot direito do header: **24 px** (`HMI_SYNC_W`). Data usa o restante (`HMI_CARD_W - HMI_SYNC_W`).
 
-## Rotação de texto
+## Scroll de texto
 
-Scroll horizontal em loop dentro de clip (`LV_LABEL_LONG_CLIP` + animação em `x`). Widgets: `focus_title_lbl`, `list_title_lbl[i]`, títulos no overlay.
+Marquee horizontal contínuo (`LV_LABEL_LONG_SCROLL_CIRCULAR` + template `lv_style_set_anim`). Widgets: `focus_title_lbl`, `list_title_lbl[i]`, títulos no overlay. Texto curto (cabe no clip) permanece estático (`LV_LABEL_LONG_CLIP`).
 
-| Constante                    | Valor  |
-| ---------------------------- | ------ |
-| `HMI_SCROLL_DURATION_MS`     | `8000` |
-| `HMI_SCROLL_START_DELAY_MS`  | `4000` |
-| `HMI_SCROLL_PAUSE_MS`        | `2500` |
-| `HMI_SCROLL_STAGGER_MS`      | `700`  |
+| Constante                   | Valor  | Campo anim (`lv_style_set_anim`)     |
+| --------------------------- | ------ | ------------------------------------ |
+| `HMI_SCROLL_START_DELAY_MS` | `4000` | `lv_anim_set_delay` (base)           |
+| `HMI_SCROLL_STAGGER_MS`     | `700`  | somado ao delay por slot (`× slot`)  |
+| `HMI_SCROLL_PAUSE_MS`       | `2500` | `lv_anim_set_repeat_delay`           |
 
-Texto longo fica **4 s** parado em x=0 antes do primeiro scroll; entre ciclos, pausa de **2,5 s** no fim.
+Velocidade do deslocamento: calculada pelo LVGL (ajustar na board se necessário). Reconfigurar scroll só quando o título muda (`strcmp` no render).
 
 ## Wireframes ASCII
 
