@@ -32,7 +32,8 @@ static const lv_color_t COLOR_MUTED = LV_COLOR_MAKE(0x80, 0x80, 0x80);
 static const lv_color_t COLOR_ALERT = LV_COLOR_MAKE(0xFF, 0x8C, 0x00);
 static const lv_color_t COLOR_NOW = LV_COLOR_MAKE(0x00, 0xFF, 0x41);
 static const lv_color_t COLOR_SYNC = LV_COLOR_MAKE(0x00, 0xFF, 0x41);
-static const lv_color_t COLOR_BORDER = LV_COLOR_MAKE(0x40, 0x40, 0x40);
+static const lv_color_t COLOR_CARD_AMBIENT = LV_COLOR_MAKE(0x40, 0x40, 0x40);
+static const lv_color_t COLOR_TEXT_ON_FILL = LV_COLOR_MAKE(0x00, 0x00, 0x00);
 
 typedef struct {
 	lv_obj_t *root;
@@ -290,6 +291,15 @@ static void hmi_pass_touch(lv_obj_t *obj)
 	lv_obj_add_flag(obj, LV_OBJ_FLAG_EVENT_BUBBLE);
 }
 
+static void style_filled_panel(lv_obj_t *obj, lv_color_t bg)
+{
+	lv_obj_set_style_bg_color(obj, bg, 0);
+	lv_obj_set_style_bg_opa(obj, LV_OPA_COVER, 0);
+	lv_obj_set_style_border_width(obj, 0, 0);
+	lv_obj_set_style_radius(obj, 0, 0);
+	lv_obj_set_style_pad_all(obj, 0, 0);
+}
+
 static void style_flat_panel(lv_obj_t *obj, lv_color_t bg, lv_color_t border, int border_w)
 {
 	lv_obj_set_style_bg_color(obj, bg, 0);
@@ -301,13 +311,13 @@ static void style_flat_panel(lv_obj_t *obj, lv_color_t bg, lv_color_t border, in
 	lv_obj_set_style_pad_all(obj, 0, 0);
 }
 
-static lv_obj_t *create_bordered_panel(lv_obj_t *parent, int x, int y, int w, int h, lv_color_t border)
+static lv_obj_t *create_card_panel(lv_obj_t *parent, int x, int y, int w, int h, lv_color_t fill)
 {
 	lv_obj_t *panel = lv_obj_create(parent);
 	lv_obj_remove_style_all(panel);
 	lv_obj_set_pos(panel, x, y);
 	lv_obj_set_size(panel, w, h);
-	style_flat_panel(panel, COLOR_BG, border, 1);
+	style_filled_panel(panel, fill);
 	lv_obj_clear_flag(panel, LV_OBJ_FLAG_SCROLLABLE);
 	lv_obj_add_flag(panel, LV_OBJ_FLAG_EVENT_BUBBLE);
 	return panel;
@@ -489,18 +499,18 @@ static void consume_click_cb(lv_event_t *e)
 	}
 }
 
-static void border_opa_cb(void *obj, int32_t v)
+static void bg_opa_cb(void *obj, int32_t v)
 {
-	lv_obj_set_style_border_opa((lv_obj_t *)obj, (lv_opa_t)v, 0);
+	lv_obj_set_style_bg_opa((lv_obj_t *)obj, (lv_opa_t)v, 0);
 }
 
 static void alert_blink_start(lv_obj_t *card)
 {
-	lv_anim_del(card, border_opa_cb);
+	lv_anim_del(card, bg_opa_cb);
 	lv_anim_t anim;
 	lv_anim_init(&anim);
 	lv_anim_set_var(&anim, card);
-	lv_anim_set_exec_cb(&anim, border_opa_cb);
+	lv_anim_set_exec_cb(&anim, bg_opa_cb);
 	lv_anim_set_values(&anim, LV_OPA_40, LV_OPA_COVER);
 	lv_anim_set_duration(&anim, 500);
 	lv_anim_set_playback_duration(&anim, 500);
@@ -513,17 +523,23 @@ static void alert_blink_stop(lv_obj_t *card)
 	if (card == NULL) {
 		return;
 	}
-	lv_anim_del(card, border_opa_cb);
-	lv_obj_set_style_border_opa(card, LV_OPA_COVER, 0);
+	lv_anim_del(card, bg_opa_cb);
+	lv_obj_set_style_bg_opa(card, LV_OPA_COVER, 0);
 }
 
-static void set_card_style(lv_obj_t *card, lv_obj_t *caption, lv_obj_t *title, lv_obj_t *time_lbl, lv_color_t border,
-			   lv_color_t accent)
+static void set_card_style(lv_obj_t *card, lv_obj_t *caption, lv_obj_t *title, lv_obj_t *time_lbl, lv_color_t fill,
+			   bool text_on_fill)
 {
-	style_flat_panel(card, COLOR_BG, border, 1);
-	lv_obj_set_style_text_color(caption, accent, 0);
-	lv_obj_set_style_text_color(title, accent, 0);
-	lv_obj_set_style_text_color(time_lbl, accent, 0);
+	style_filled_panel(card, fill);
+	if (text_on_fill) {
+		lv_obj_set_style_text_color(caption, COLOR_TEXT_ON_FILL, 0);
+		lv_obj_set_style_text_color(title, COLOR_TEXT_ON_FILL, 0);
+		lv_obj_set_style_text_color(time_lbl, COLOR_TEXT_ON_FILL, 0);
+	} else {
+		lv_obj_set_style_text_color(caption, COLOR_MUTED, 0);
+		lv_obj_set_style_text_color(title, COLOR_CYAN, 0);
+		lv_obj_set_style_text_color(time_lbl, COLOR_MUTED, 0);
+	}
 }
 
 static void build_list_row_labels(lv_obj_t **time_labels, lv_obj_t **title_labels, lv_obj_t *parent, int y_start,
@@ -640,14 +656,14 @@ esp_err_t alerts_hmi_lvgl_init(void)
 	style_label_line(s_ui.clock_lbl, FONT_CLOCK, COLOR_CYAN, LV_TEXT_ALIGN_LEFT);
 	hmi_pass_touch(s_ui.clock_lbl);
 
-	s_ui.focus_card = create_bordered_panel(s_ui.root, HMI_PAD_X, HMI_CARD_Y, HMI_CARD_W, HMI_CARD_H, COLOR_BORDER);
+	s_ui.focus_card = create_card_panel(s_ui.root, HMI_PAD_X, HMI_CARD_Y, HMI_CARD_W, HMI_CARD_H, COLOR_CARD_AMBIENT);
 	wire_card_labels(s_ui.focus_card, &s_ui.focus_caption_lbl, &s_ui.focus_title_lbl, &s_ui.focus_time_lbl, HMI_CARD_Y,
 			 HMI_FOCUS_CAPTION_Y, HMI_FOCUS_TITLE_Y, HMI_FOCUS_TIME_Y);
 	lv_obj_add_flag(s_ui.focus_card, LV_OBJ_FLAG_HIDDEN);
 	lv_obj_add_event_cb(s_ui.focus_card, dismiss_click_cb, LV_EVENT_CLICKED, NULL);
 
 	s_ui.secondary_card =
-		create_bordered_panel(s_ui.root, HMI_PAD_X, HMI_SECONDARY_CARD_Y, HMI_CARD_W, HMI_CARD_H, COLOR_BORDER);
+		create_card_panel(s_ui.root, HMI_PAD_X, HMI_SECONDARY_CARD_Y, HMI_CARD_W, HMI_CARD_H, COLOR_CARD_AMBIENT);
 	wire_card_labels(s_ui.secondary_card, &s_ui.secondary_caption_lbl, &s_ui.secondary_title_lbl,
 			 &s_ui.secondary_time_lbl, HMI_SECONDARY_CARD_Y, HMI_SECONDARY_CAPTION_Y, HMI_SECONDARY_TITLE_Y,
 			 HMI_SECONDARY_TIME_Y);
@@ -770,10 +786,10 @@ static void render_ambient_list(const alerts_event_t *events, size_t count, int6
 
 static void render_card_content(lv_obj_t *card, lv_obj_t *caption, lv_obj_t *title, lv_obj_t *time_lbl,
 				const alerts_event_t *event, int64_t now, bool is_now, const char *caption_text,
-				lv_color_t border, lv_color_t accent)
+				lv_color_t fill, bool text_on_fill)
 {
 	set_visible(card, true);
-	set_card_style(card, caption, title, time_lbl, border, accent);
+	set_card_style(card, caption, title, time_lbl, fill, text_on_fill);
 	set_label(caption, caption_text, true);
 	set_label(title, event->title, true);
 	set_title_row_visible(title, true);
@@ -803,24 +819,23 @@ static void render_focus_card(const alerts_hmi_frame_t *frame, int64_t now)
 	}
 
 	const char *caption = "PROXIMO";
-	lv_color_t border = COLOR_BORDER;
-	lv_color_t accent = COLOR_MUTED;
+	lv_color_t fill = COLOR_CARD_AMBIENT;
+	bool text_on_fill = false;
 	if (is_alert) {
 		caption = "ALERTA";
-		border = COLOR_ALERT;
-		accent = COLOR_ALERT;
+		fill = COLOR_ALERT;
+		text_on_fill = true;
 	} else if (is_now) {
 		caption = "AGORA";
-		border = COLOR_NOW;
-		accent = COLOR_NOW;
+		fill = COLOR_NOW;
+		text_on_fill = true;
 		lv_obj_add_flag(s_ui.focus_card, LV_OBJ_FLAG_CLICKABLE);
 	} else {
-		accent = COLOR_CYAN;
 		lv_obj_clear_flag(s_ui.focus_card, LV_OBJ_FLAG_CLICKABLE);
 	}
 
 	render_card_content(s_ui.focus_card, s_ui.focus_caption_lbl, s_ui.focus_title_lbl, s_ui.focus_time_lbl,
-			    &frame->focus, now, is_now, caption, border, accent);
+			    &frame->focus, now, is_now, caption, fill, text_on_fill);
 }
 
 static void render_secondary_card(const alerts_hmi_frame_t *frame, int64_t now)
@@ -833,7 +848,7 @@ static void render_secondary_card(const alerts_hmi_frame_t *frame, int64_t now)
 	}
 	lv_obj_add_flag(s_ui.secondary_card, LV_OBJ_FLAG_CLICKABLE);
 	render_card_content(s_ui.secondary_card, s_ui.secondary_caption_lbl, s_ui.secondary_title_lbl,
-			    s_ui.secondary_time_lbl, &frame->secondary, now, false, "ALERTA", COLOR_ALERT, COLOR_ALERT);
+			    s_ui.secondary_time_lbl, &frame->secondary, now, false, "ALERTA", COLOR_ALERT, true);
 }
 
 esp_err_t alerts_hmi_lvgl_render(const alerts_hmi_frame_t *frame)

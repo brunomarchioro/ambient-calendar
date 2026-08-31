@@ -19,13 +19,14 @@ Handoff humano → agente para layout LVGL no ESP32-C6 (172×320). Comportamento
 
 | Regra          | Valor                                                                     |
 | -------------- | ------------------------------------------------------------------------- |
-| Bordas         | 1 px, retas (`radius = 0`)                                                |
+| Bordas         | 1 px, retas (`radius = 0`) — **só overlay**                               |
+| Cards          | fundo sólido preenchido, **sem borda**                                    |
 | Sombras / blur | **proibido**                                                              |
 | Gradientes     | **proibido**                                                              |
 | Alinhamento    | coordenadas múltiplas de **8 px** (ideal) ou **16 px** (obrigatório em Y) |
-| Texto em card  | preto `#000000` sobre faixa sólida — N/A (cards com fundo preto)          |
+| Texto em card  | ver **Rótulos do card** (preto em Alerta/Agora; ciano/muted em Ambient)   |
 | Texto longo    | scroll horizontal dentro de clip — ver **Rotação de texto**               |
-| Alerta         | borda laranja **piscando** (sem faixa full-screen)                        |
+| Alerta         | fill laranja **piscando** (`bg_opa`, sem faixa full-screen)               |
 
 ## Tokens visuais
 
@@ -35,10 +36,11 @@ Handoff humano → agente para layout LVGL no ESP32-C6 (172×320). Comportamento
 | `COLOR_CYAN`   | `#00E5FF` | relógio, títulos de foco/lista, borda overlay |
 | `COLOR_DATE`   | `#FF4444` | data no header (esquerda)                     |
 | `COLOR_MUTED`  | `#808080` | subtítulos, títulos de lista, SYNC stale      |
-| `COLOR_ALERT`  | `#FF8C00` | card Alert, caption ALERTA                    |
-| `COLOR_NOW`    | `#00FF41` | card Agora, caption AGORA                     |
-| `COLOR_SYNC`   | `#00FF41` | ícone `LV_SYMBOL_REFRESH` (fresco)          |
-| `COLOR_BORDER` | `#404040` | borda card Ambient                            |
+| `COLOR_ALERT`       | `#FF8C00` | fill card Alerta                            |
+| `COLOR_NOW`         | `#00FF41` | fill card Agora                             |
+| `COLOR_SYNC`        | `#00FF41` | ícone `LV_SYMBOL_REFRESH` (fresco)          |
+| `COLOR_CARD_AMBIENT`| `#404040` | fill card Ambient (`PROXIMO`)               |
+| `COLOR_TEXT_ON_FILL`| `#000000` | texto em fill Alerta / Agora                |
 
 ## Layout por zonas (Y)
 
@@ -93,12 +95,12 @@ Slots: `HMI_AMBIENT_LIST_SLOTS` = **4**; overlay derivado de `HMI_OVERLAY_LIST_S
 
 ### Rótulos do card (`focus_caption_lbl`)
 
-| Estado  | Texto      | Cor borda card  |
-| ------- | ---------- | --------------- |
-| Ambient | `PROXIMO`  | `#404040`       |
-| Alert   | `ALERTA`   | `#FF8C00` pisca |
-| Now     | `AGORA`    | `#00FF41`       |
-| Empty   | _(oculto)_ | —               |
+| Estado  | Texto      | Fill card   | Texto (caption / título / tempo)        |
+| ------- | ---------- | ----------- | --------------------------------------- |
+| Ambient | `PROXIMO`  | `#404040`   | muted / ciano / muted                   |
+| Alert   | `ALERTA`   | `#FF8C00` pisca | preto / preto / preto             |
+| Now     | `AGORA`    | `#00FF41`   | preto / preto / preto                   |
+| Empty   | _(oculto)_ | —           | —                                       |
 
 ### Indicador SYNC
 
@@ -131,11 +133,11 @@ Texto longo fica **4 s** parado em x=0 antes do primeiro scroll; entre ciclos, p
 ┌──────────────────┐
 │SEG 30 AGO      ↻│
 │14:37             │
-│┌────────────────┐│ borda cinza — PROXIMO
-││PROXIMO         ││
-││Reuniao design  ││
-││em 30m          ││
-│└────────────────┘│
+│▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓│ fill cinza — PROXIMO
+│▓ PROXIMO        ▓│
+│▓ Reuniao design ▓│
+│▓ em 30m         ▓│
+│▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓│
 │16:30 Daily Stand │
 │TER 09            │
 │17:00 Code Review │
@@ -148,11 +150,11 @@ Texto longo fica **4 s** parado em x=0 antes do primeiro scroll; entre ciclos, p
 ┌──────────────────┐
 │SEG 30 AGO      ↻│
 │14:37             │
-│┌────────────────┐│ borda laranja piscando
-││ALERTA          ││
-││Reuniao design  ││
-││em 15m          ││
-│└────────────────┘│
+│▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒│ fill laranja piscando
+│▒ ALERTA         ▒│
+│▒ Reuniao design ▒│
+│▒ em 15m         ▒│
+│▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒│
 │16:30 Daily Stand │
 └──────────────────┘
 ```
@@ -165,11 +167,11 @@ Toque no card `AGORA` = **encerramento antecipado** (NVS até `endAt`).
 ┌──────────────────┐
 │SEG 30 AGO      ↻│
 │14:37             │
-│┌────────────────┐│ borda verde — toque dismiss
-││AGORA           ││
-││Reuniao design  ││
-││Ate 16:30       ││
-│└────────────────┘│
+│░░░░░░░░░░░░░░░░░░│ fill verde — toque dismiss
+│░ AGORA          ░│
+│░ Reuniao design ░│
+│░ Ate 16:30      ░│
+│░░░░░░░░░░░░░░░░░░│
 │17:00 Code Review │
 └──────────────────┘
 ```
@@ -180,16 +182,16 @@ Toque no card `AGORA` = **encerramento antecipado** (NVS até `endAt`).
 ┌──────────────────┐
 │SEG 30 AGO      ↻│
 │14:37             │
-│┌────────────────┐│ AGORA 96px
-││AGORA           ││
-││Reuniao design  ││
-││Ate 16:30       ││
-│└────────────────┘│
-│┌────────────────┐│ ALERTA 96px, borda piscando
-││ALERTA          ││
-││Daily Stand     ││
-││em 15m          ││
-│└────────────────┘│
+│░░░░░░░░░░░░░░░░░░│ AGORA 96px
+│░ AGORA          ░│
+│░ Reuniao design ░│
+│░ Ate 16:30      ░│
+│░░░░░░░░░░░░░░░░░░│
+│▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒│ ALERTA 96px, fill piscando
+│▒ ALERTA         ▒│
+│▒ Daily Stand    ▒│
+│▒ em 15m         ▒│
+│▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒│
 └──────────────────┘
 ```
 
