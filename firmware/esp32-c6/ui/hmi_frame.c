@@ -1,8 +1,11 @@
 #include "hmi_frame.h"
 
+#include "hmi_dismiss.h"
 #include "hmi_layout.h"
 
 #include <string.h>
+
+#include "esp_err.h"
 
 void alerts_hmi_present_init(alerts_hmi_present_t *present)
 {
@@ -13,9 +16,26 @@ void alerts_hmi_present_init(alerts_hmi_present_t *present)
 	present->overlay_elapsed_ms = 0;
 }
 
-void alerts_hmi_present_tap(alerts_hmi_present_t *present)
+bool alerts_hmi_present_overlay_allowed(const alerts_hmi_frame_t *frame)
+{
+	if (frame == NULL) {
+		return true;
+	}
+	if (frame->overlay_open) {
+		return true;
+	}
+	if (frame->state == ALERTS_HMI_AMBIENT && frame->ambient_list_count > 0) {
+		return false;
+	}
+	return true;
+}
+
+void alerts_hmi_present_tap(alerts_hmi_present_t *present, const alerts_hmi_frame_t *frame)
 {
 	if (present == NULL) {
+		return;
+	}
+	if (!alerts_hmi_present_overlay_allowed(frame)) {
 		return;
 	}
 	if (present->overlay_open) {
@@ -57,13 +77,15 @@ static int64_t now_end(const alerts_event_t *e)
 	if (e->has_end && e->end_unix > e->start_unix) {
 		return e->end_unix;
 	}
-	/* ponytail: sem endAt, pulso de 2 min; upgrade: heurística de duração default */
 	return e->start_unix + 120;
 }
 
 static bool in_now(int64_t now, const alerts_event_t *e)
 {
 	if (!is_timed(e)) {
+		return false;
+	}
+	if (alerts_hmi_dismiss_blocks_now(e, now)) {
 		return false;
 	}
 	return now >= e->start_unix && now < now_end(e);
@@ -174,6 +196,32 @@ static void set_focus(alerts_hmi_frame_t *out, const alerts_event_t *e)
 	out->focus = *e;
 }
 
+static void maybe_fill_list(int64_t now_unix, const alerts_schedule_t *schedule, alerts_hmi_frame_t *out)
+{
+	const alerts_event_t *skip = NULL;
+
+	if (out->state == ALERTS_HMI_NOW && out->has_secondary) {
+		out->ambient_list_count = 0;
+		return;
+	}
+
+	if (out->has_focus) {
+		skip = &out->focus;
+	}
+
+	switch (out->state) {
+	case ALERTS_HMI_AMBIENT:
+	case ALERTS_HMI_ALERT:
+	case ALERTS_HMI_NOW:
+	case ALERTS_HMI_EMPTY:
+		fill_ambient_list(now_unix, schedule, skip, out);
+		break;
+	default:
+		out->ambient_list_count = 0;
+		break;
+	}
+}
+
 static int eval_background(int64_t now_unix, const alerts_schedule_t *schedule, alerts_hmi_frame_t *out)
 {
 	const alerts_event_t *focus_now;
@@ -184,6 +232,11 @@ static int eval_background(int64_t now_unix, const alerts_schedule_t *schedule, 
 	if (focus_now != NULL) {
 		out->state = ALERTS_HMI_NOW;
 		set_focus(out, focus_now);
+		focus_alert = pick_focus(now_unix, schedule->reminder_minutes, schedule, false);
+		if (focus_alert != NULL && strcmp(focus_alert->id, focus_now->id) != 0) {
+			out->has_secondary = true;
+			out->secondary = *focus_alert;
+		}
 		return 0;
 	}
 
@@ -198,7 +251,6 @@ static int eval_background(int64_t now_unix, const alerts_schedule_t *schedule, 
 	if (next_timed != NULL) {
 		out->state = ALERTS_HMI_AMBIENT;
 		set_focus(out, next_timed);
-		fill_ambient_list(now_unix, schedule, next_timed, out);
 		return 0;
 	}
 
@@ -218,6 +270,8 @@ int alerts_hmi_build_frame(int64_t now_unix, const alerts_schedule_t *schedule, 
 	out->now_unix = now_unix;
 	out->overlay_open = overlay_open;
 
+	alerts_hmi_dismiss_expire(now_unix);
+
 	if (schedule == NULL) {
 		out->state = ALERTS_HMI_EMPTY;
 		return 0;
@@ -230,10 +284,20 @@ int alerts_hmi_build_frame(int64_t now_unix, const alerts_schedule_t *schedule, 
 		return -1;
 	}
 
+	maybe_fill_list(now_unix, schedule, out);
+
 	if (overlay_open) {
 		fill_overlay_list(now_unix, schedule, out);
 	}
 	return 0;
+}
+
+int alerts_hmi_dismiss_focus(int64_t now_unix, const alerts_hmi_frame_t *frame)
+{
+	if (frame == NULL || frame->state != ALERTS_HMI_NOW || !frame->has_focus) {
+		return -1;
+	}
+	return alerts_hmi_dismiss_record(&frame->focus, now_unix) == ESP_OK ? 0 : -1;
 }
 
 const char *alerts_hmi_state_name(alerts_hmi_state_t state)

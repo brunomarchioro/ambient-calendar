@@ -13,8 +13,8 @@ test: test_schedule_parse test_hmi_frame test_poll
 test_schedule_parse: test_schedule_parse.c ../storage/schedule_parse.c ../storage/schedule_parse.h ../storage/schedule.h
 	$(CC) $(CFLAGS) -o $@ test_schedule_parse.c ../storage/schedule_parse.c
 
-test_hmi_frame: test_hmi_frame.c ../ui/hmi_frame.c ../ui/hmi_frame.h ../storage/schedule.h
-	$(CC) $(CFLAGS) -o $@ test_hmi_frame.c ../ui/hmi_frame.c
+test_hmi_frame: test_hmi_frame.c ../ui/hmi_frame.c ../ui/hmi_dismiss.c ../ui/hmi_frame.h ../ui/hmi_dismiss.h ../storage/schedule.h
+	$(CC) $(CFLAGS) -DALERTS_HMI_DISMISS_HOST -I./stubs -o $@ test_hmi_frame.c ../ui/hmi_frame.c ../ui/hmi_dismiss.c
 
 test_poll: test_poll.c poll_test_stubs.c poll_test_stubs.h ../sync/poll.c ../sync/poll.h ../storage/schedule_parse.c
 	$(CC) $(HOST_POLL_CFLAGS) -o $@ test_poll.c poll_test_stubs.c ../sync/poll.c ../storage/schedule_parse.c

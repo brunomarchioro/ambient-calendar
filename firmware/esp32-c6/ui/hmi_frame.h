@@ -7,6 +7,8 @@
 #include "schedule.h"
 
 #define ALERTS_HMI_OVERLAY_TIMEOUT_MS 15000
+#define ALERTS_HMI_SYNC_FRESH_SEC 300
+#define ALERTS_HMI_SYNC_STALE_SEC 3600
 
 typedef enum {
 	ALERTS_HMI_EMPTY = 0,
@@ -24,6 +26,8 @@ typedef struct {
 	alerts_hmi_state_t state;
 	bool has_focus;
 	alerts_event_t focus;
+	bool has_secondary;
+	alerts_event_t secondary;
 	alerts_event_t ambient_list[HMI_AMBIENT_FETCH_SLOTS];
 	size_t ambient_list_count;
 	bool overlay_open;
@@ -35,9 +39,11 @@ typedef struct {
 } alerts_hmi_frame_t;
 
 void alerts_hmi_present_init(alerts_hmi_present_t *present);
-void alerts_hmi_present_tap(alerts_hmi_present_t *present);
+bool alerts_hmi_present_overlay_allowed(const alerts_hmi_frame_t *frame);
+void alerts_hmi_present_tap(alerts_hmi_present_t *present, const alerts_hmi_frame_t *frame);
 void alerts_hmi_present_tick(alerts_hmi_present_t *present, int elapsed_ms);
 
 int alerts_hmi_build_frame(int64_t now_unix, const alerts_schedule_t *schedule, const alerts_hmi_present_t *present,
 			   alerts_hmi_frame_t *out);
+int alerts_hmi_dismiss_focus(int64_t now_unix, const alerts_hmi_frame_t *frame);
 const char *alerts_hmi_state_name(alerts_hmi_state_t state);

@@ -2,10 +2,9 @@ idf_component_register(
 	SRCS
 		"bsp.c"
 		"hmi.c"
+		"hmi_dismiss.c"
 		"hmi_frame.c"
 		"hmi_lvgl.c"
-		"fonts/lv_font_alerts_22.c"
-		"fonts/lv_font_alerts_28.c"
 		"waveshare/jd9853_vendor_init.c"
 		"waveshare/ws_lcd.c"
 		"waveshare/ws_touch.c"
@@ -21,4 +20,6 @@ idf_component_register(
 		esp_timer
 		esp_lvgl_port
 		lvgl
+		nvs_flash
+		mydazy__esp_lcd_touch_axs5106l
 )

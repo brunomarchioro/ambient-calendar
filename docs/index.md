@@ -180,74 +180,20 @@ Cache local dos Events do schedule. Sem rede: relógio (se válido), countdown, 
 
 ## 8. Scheduler / HMI / Touch
 
-Um estado por frame. Prioridade: **`Now` > `Alert` > `Ambient` > `Empty`**. Só **timed** em Alerta/Agora. All-day nunca dispara esses dois; pode aparecer na lista do Ambient se couber slot (nunca no “próximo”).
+Um estado por frame. Prioridade: **`Now` > `Alert` > `Ambient` > `Empty`**. Só **timed** em Alerta/Agora. All-day nunca dispara esses dois; pode aparecer na lista se couber slot (nunca no card de foco).
 
 | Estado | Predicado |
 | --- | --- |
-| `Now` (Agora) | timed com `now ∈ [startAt, endAt)`; `endAt == null` → +2 min. Foco = menor `startAt`. |
+| `Now` (Agora) | timed com `now ∈ [startAt, endAt)`; `endAt == null` → +2 min. Foco = menor `startAt`. Pode exibir **foco secundário** (outro Event em Alerta). |
 | `Alert` (Alerta) | timed com `now ∈ [startAt - reminderMinutes, startAt)`. Foco = menor `startAt` (empate → `id`). |
 | `Ambient` | há timed com `startAt > now` e não está em Now/Alert |
 | `Empty` | nenhum timed com `startAt > now` |
 
-Pós-Now: recalcula; próximo = próximo `startAt` futuro.
+**Encerramento antecipado:** toque no card **AGORA** grava fim local em NVS até o `endAt` do cache; recalcula estado (→ Alert se próximo já em janela de alerta).
 
-**Ambient:** hora+data → próximo timed → countdown → até `showNextEvents` linhas.
+**Touch:** toque fora do card AGORA → overlay (exceto Ambient com lista embutida visível); timeout **15 s** → fecha overlay; **sem swipe**; sem create/edit no device.
 
-**Touch:** toque curto → overlay de lista (qualquer estado); timeout **15 s** → estado recalculado; **sem swipe**; sem create/edit no device.
-
-Pixels fora desta spec — só estados/ASCII.
-
-### Ambient
-
-```text
-┌──────────────────┐
-│      14:32       │
-│   SEG · 24 AGO   │
-│                  │
-│     REUNIÃO      │
-│      15:00       │
-│    em 28 min     │
-│ ──────────────── │
-│ 18:30 Academia   │
-│ 20:00 Jantar     │
-└──────────────────┘
-```
-
-### Alert
-
-```text
-┌──────────────────┐
-│      14:45       │
-│                  │
-│     REUNIÃO      │
-│      15:00       │
-│    em 15 min     │
-│     ALERTA       │
-└──────────────────┘
-```
-
-### Now
-
-```text
-┌──────────────────┐
-│      15:00       │
-│                  │
-│     REUNIÃO      │
-│                  │
-│      AGORA       │
-└──────────────────┘
-```
-
-### Empty
-
-```text
-┌──────────────────┐
-│      14:32       │
-│   SEG · 24 AGO   │
-│                  │
-│   SEM EVENTOS    │
-└──────────────────┘
-```
+Layout e pixels: [`hmi-screen-design.md`](hmi-screen-design.md).
 
 ## 9. Web UI
 

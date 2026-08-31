@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "../ui/hmi_dismiss.h"
 #include "../ui/hmi_frame.h"
 #include "../storage/schedule.h"
 
@@ -41,12 +42,15 @@ int main(void)
 	alerts_event_t events[4];
 	alerts_schedule_t s;
 
+	alerts_hmi_dismiss_host_reset();
+
 	/* Empty — no future timed */
 	present_closed(&present);
 	s = sched(30, 2, events, 0);
 	assert(alerts_hmi_build_frame(1787850000, &s, &present, &frame) == 0);
 	assert(frame.state == ALERTS_HMI_EMPTY);
 	assert(!frame.has_focus);
+	assert(frame.ambient_list_count == 0);
 
 	/* schedule NULL */
 	present_closed(&present);
@@ -56,24 +60,28 @@ int main(void)
 
 	/* Ambient — future timed at 15:00, now 14:00 */
 	present_closed(&present);
-	events[0] = ev("a", "Reunião", 1787853600, 1787857200, false, true);
-	s = sched(30, 2, events, 1);
+	events[0] = ev("a", "Reuniao", 1787853600, 1787857200, false, true);
+	events[1] = ev("b", "Jantar", 1787860800, 1787864400, false, true);
+	s = sched(30, 2, events, 2);
 	assert(alerts_hmi_build_frame(1787850000, &s, &present, &frame) == 0);
 	assert(frame.state == ALERTS_HMI_AMBIENT);
 	assert(frame.has_focus && strcmp(frame.focus.id, "a") == 0);
+	assert(frame.ambient_list_count == 1);
+	assert(strcmp(frame.ambient_list[0].id, "b") == 0);
 
 	/* Alert — 14:45 with 30 min reminder, event 15:00 */
 	present_closed(&present);
 	assert(alerts_hmi_build_frame(1787852700, &s, &present, &frame) == 0);
 	assert(frame.state == ALERTS_HMI_ALERT);
-	assert(strcmp(frame.focus.title, "Reunião") == 0);
+	assert(strcmp(frame.focus.title, "Reuniao") == 0);
+	assert(frame.ambient_list_count == 1);
 
 	/* Now — 15:00 */
 	present_closed(&present);
 	assert(alerts_hmi_build_frame(1787853600, &s, &present, &frame) == 0);
 	assert(frame.state == ALERTS_HMI_NOW);
 
-	/* Now — ainda dentro do endAt (+30 min), não só os primeiros 2 min */
+	/* Now — ainda dentro do endAt */
 	present_closed(&present);
 	assert(alerts_hmi_build_frame(1787855400, &s, &present, &frame) == 0);
 	assert(frame.state == ALERTS_HMI_NOW);
@@ -81,7 +89,7 @@ int main(void)
 	/* Now — após endAt */
 	present_closed(&present);
 	assert(alerts_hmi_build_frame(1787857200, &s, &present, &frame) == 0);
-	assert(frame.state == ALERTS_HMI_EMPTY);
+	assert(frame.state == ALERTS_HMI_AMBIENT);
 
 	/* All-day never Alert/Now */
 	present_closed(&present);
@@ -108,28 +116,53 @@ int main(void)
 	assert(frame.state == ALERTS_HMI_NOW);
 	assert(strcmp(frame.focus.id, "a") == 0);
 
-	/* Overlay list — upcoming events regardless of Ambient state */
+	/* Now + secondary alert */
 	present_closed(&present);
-	events[0] = ev("a", "Reunião", 1787853600, 1787857200, false, true);
+	events[0] = ev("now", "NowEvt", 1787853600, 1787857200, false, true);
+	events[1] = ev("next", "NextEvt", 1787855400, 1787859000, false, true);
+	s = sched(30, 2, events, 2);
+	assert(alerts_hmi_build_frame(1787855100, &s, &present, &frame) == 0);
+	assert(frame.state == ALERTS_HMI_NOW);
+	assert(frame.has_secondary);
+	assert(strcmp(frame.secondary.id, "next") == 0);
+	assert(frame.ambient_list_count == 0);
+
+	/* Dismiss now -> alert on next event */
+	present_closed(&present);
+	alerts_hmi_dismiss_host_reset();
+	assert(alerts_hmi_build_frame(1787855100, &s, &present, &frame) == 0);
+	assert(alerts_hmi_dismiss_focus(1787855100, &frame) == 0);
+	assert(alerts_hmi_build_frame(1787855100, &s, &present, &frame) == 0);
+	assert(frame.state == ALERTS_HMI_ALERT);
+	assert(strcmp(frame.focus.id, "next") == 0);
+
+	/* Overlay list */
+	present_closed(&present);
+	events[0] = ev("a", "Reuniao", 1787853600, 1787857200, false, true);
 	events[1] = ev("b", "Jantar", 1787860800, 1787864400, false, true);
 	s = sched(30, 2, events, 2);
-	alerts_hmi_present_tap(&present);
+	alerts_hmi_present_tap(&present, &(alerts_hmi_frame_t){.state = ALERTS_HMI_ALERT, .ambient_list_count = 0});
 	assert(alerts_hmi_build_frame(1787852700, &s, &present, &frame) == 0);
 	assert(frame.overlay_open);
 	assert(frame.overlay_list_count == 2);
-	assert(strcmp(frame.overlay_list[0].id, "a") == 0);
-	assert(strcmp(frame.overlay_list[1].id, "b") == 0);
 
-	/* Overlay tap toggles open/closed */
+	/* Overlay blocked in Ambient with list */
 	present_closed(&present);
-	alerts_hmi_present_tap(&present);
-	assert(present.overlay_open);
-	alerts_hmi_present_tap(&present);
+	assert(alerts_hmi_build_frame(1787850000, &s, &present, &frame) == 0);
+	assert(!alerts_hmi_present_overlay_allowed(&frame));
+	alerts_hmi_present_tap(&present, &frame);
 	assert(!present.overlay_open);
 
-	/* Overlay timeout closes after 15s */
+	/* Overlay tap toggles */
 	present_closed(&present);
-	alerts_hmi_present_tap(&present);
+	alerts_hmi_present_tap(&present, &(alerts_hmi_frame_t){.state = ALERTS_HMI_EMPTY});
+	assert(present.overlay_open);
+	alerts_hmi_present_tap(&present, &(alerts_hmi_frame_t){.overlay_open = true});
+	assert(!present.overlay_open);
+
+	/* Overlay timeout */
+	present_closed(&present);
+	alerts_hmi_present_tap(&present, &(alerts_hmi_frame_t){.state = ALERTS_HMI_EMPTY});
 	alerts_hmi_present_tick(&present, 14000);
 	assert(present.overlay_open);
 	alerts_hmi_present_tick(&present, 1000);

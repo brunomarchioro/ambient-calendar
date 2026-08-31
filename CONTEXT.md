@@ -37,8 +37,20 @@ Agenda dentro de uma Conta Google escolhida para espelho no D1. Identificado pel
 _Avoid_: Agenda Google (colide com a página Agenda), calendar (sem qualificador)
 
 **Overlay**:
-Modo de apresentação temporário que mostra a lista de próximos Events por cima do estado atual do display (Empty, Ambient, Alerta ou Agora). Abre com toque curto; fecha com segundo toque ou após 15 s. O scheduler continua calculando o estado de fundo; o Overlay só altera o que é desenhado.
+Modo de apresentação temporário que mostra a lista de próximos Events por cima do estado atual do display (Empty, Ambient, Alerta ou Agora). Abre com toque curto fora do card de foco; em Ambient com lista visível o toque não abre overlay. Fecha com segundo toque ou após 15 s. O scheduler continua calculando o estado de fundo; o Overlay só altera o que é desenhado.
 _Avoid_: Modal, popup, tela
+
+**Encerramento antecipado**:
+Ação no display (toque no card Agora) que registra localmente que um Event em Agora deixou de ocupar essa janela no instante do toque, até o `endAt` do cache. Não altera o Event no backend.
+_Avoid_: Dismiss, snooze
+
+**Foco secundário**:
+Segundo Event na janela de Alerta exibido como card adicional enquanto o estado de apresentação permanece Agora.
+_Avoid_: Secondary state
+
+**Indicador de sync**:
+Texto no header (`SYNC` ou idade em minutos) que reflete frescor do cache local. Distinto de Agora.
+_Avoid_: LIVE (ambiguidade com Agora)
 
 **Cliente MCP**:
 Assistente de IA externo (ex.: ChatGPT, Claude) que se conecta ao Ambient Calendar Display via Model Context Protocol para listar ou administrar Lembretes. Um deploy pessoal reconhece um único humano autorizado; vários Clientes MCP podem registrar-se, mas compartilham o mesmo conjunto de Events.
