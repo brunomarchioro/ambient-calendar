@@ -2,25 +2,17 @@
 
 #include "ws_pins.h"
 
-#include "driver/gpio.h"
+#include "axs5106l_touch.h"
+
 #include "driver/i2c_master.h"
 #include "esp_check.h"
 #include "esp_log.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
 
 static const char *TAG = "ws_touch";
 
-#define AXS5106L_TOUCH_DATA_REG 0x01
-
-static i2c_master_dev_handle_t s_dev;
+static i2c_master_bus_handle_t s_bus;
+static axs5106l_touch_handle_t s_touch;
 static bool s_ready;
-
-static void map_coords(uint16_t raw_x, uint16_t raw_y, uint16_t *x, uint16_t *y)
-{
-	*x = (uint16_t)(WS_LCD_H_RES - 1U - raw_x);
-	*y = raw_y;
-}
 
 esp_err_t ws_touch_init(void)
 {
@@ -36,68 +28,30 @@ esp_err_t ws_touch_init(void)
 		.glitch_ignore_cnt = 7,
 		.flags.enable_internal_pullup = true,
 	};
-	i2c_master_bus_handle_t bus = NULL;
-	ESP_RETURN_ON_ERROR(i2c_new_master_bus(&bus_cfg, &bus), TAG, "i2c bus");
+	ESP_RETURN_ON_ERROR(i2c_new_master_bus(&bus_cfg, &s_bus), TAG, "i2c bus");
 
-	const gpio_config_t rst_cfg = {
-		.pin_bit_mask = 1ULL << WS_TOUCH_PIN_RST,
-		.mode = GPIO_MODE_OUTPUT,
-	};
-	ESP_RETURN_ON_ERROR(gpio_config(&rst_cfg), TAG, "rst gpio");
-	gpio_set_level(WS_TOUCH_PIN_RST, 0);
-	vTaskDelay(pdMS_TO_TICKS(200));
-	gpio_set_level(WS_TOUCH_PIN_RST, 1);
-	vTaskDelay(pdMS_TO_TICKS(300));
+	const axs5106l_touch_config_t touch_cfg = AXS5106L_TOUCH_DEFAULT_CONFIG(
+		s_bus, WS_TOUCH_PIN_RST, WS_TOUCH_PIN_INT, WS_LCD_H_RES, WS_LCD_V_RES);
+	axs5106l_touch_config_t cfg = touch_cfg;
+	cfg.mirror_x = true;
 
-	const i2c_device_config_t dev_cfg = {
-		.dev_addr_length = I2C_ADDR_BIT_LEN_7,
-		.device_address = WS_TOUCH_I2C_ADDR,
-		.scl_speed_hz = WS_TOUCH_I2C_FREQ_HZ,
-	};
-	ESP_RETURN_ON_ERROR(i2c_master_bus_add_device(bus, &dev_cfg, &s_dev), TAG, "i2c dev");
-
-	const gpio_config_t int_cfg = {
-		.pin_bit_mask = 1ULL << WS_TOUCH_PIN_INT,
-		.mode = GPIO_MODE_INPUT,
-		.pull_up_en = GPIO_PULLUP_ENABLE,
-	};
-	ESP_RETURN_ON_ERROR(gpio_config(&int_cfg), TAG, "int gpio");
-
+	ESP_RETURN_ON_ERROR(axs5106l_touch_new(&cfg, &s_touch), TAG, "axs5106l new");
 	s_ready = true;
-	ESP_LOGI(TAG, "touch init ok (AXS5106L, no swipe handlers)");
+	ESP_LOGI(TAG, "touch init ok (axs5106l component)");
 	return ESP_OK;
+}
+
+esp_err_t ws_touch_attach_lvgl(void)
+{
+	if (!s_ready || s_touch == NULL) {
+		return ESP_ERR_INVALID_STATE;
+	}
+	return axs5106l_touch_attach_lvgl(s_touch);
 }
 
 bool ws_touch_read_pressed(uint16_t *x, uint16_t *y)
 {
-	if (!s_ready) {
-		return false;
-	}
-
-	if (gpio_get_level(WS_TOUCH_PIN_INT) != 0) {
-		return false;
-	}
-
-	uint8_t data[14] = {0};
-	if (i2c_master_transmit_receive(s_dev, (uint8_t[]){AXS5106L_TOUCH_DATA_REG}, 1, data, sizeof(data),
-					pdMS_TO_TICKS(20)) != ESP_OK) {
-		return false;
-	}
-	if (data[1] == 0) {
-		return false;
-	}
-
-	const uint8_t *p = &data[2];
-	uint16_t raw_x = (uint16_t)(((p[0] & 0x0f) << 8) | p[1]);
-	uint16_t raw_y = (uint16_t)(((p[2] & 0x0f) << 8) | p[3]);
-	uint16_t mx = 0;
-	uint16_t my = 0;
-	map_coords(raw_x, raw_y, &mx, &my);
-	if (x != NULL) {
-		*x = mx;
-	}
-	if (y != NULL) {
-		*y = my;
-	}
-	return true;
+	(void)x;
+	(void)y;
+	return false;
 }

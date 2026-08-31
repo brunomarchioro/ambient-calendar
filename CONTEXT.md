@@ -49,7 +49,7 @@ Segundo Event na janela de Alerta exibido como card adicional enquanto o estado 
 _Avoid_: Secondary state
 
 **Indicador de sync**:
-Texto no header (`SYNC` ou idade em minutos) que reflete frescor do cache local. Distinto de Agora.
+Ícone ou idade no header que reflete frescor do cache local: `LV_SYMBOL_REFRESH` (verde, &lt; 5 min) ou `Nm` (cinza, 5–60 min). Distinto de Agora.
 _Avoid_: LIVE (ambiguidade com Agora)
 
 **Cliente MCP**:

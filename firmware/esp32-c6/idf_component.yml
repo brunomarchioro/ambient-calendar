@@ -1,3 +1,4 @@
 dependencies:
   joltwallet/littlefs: "^1.14.8"
   espressif/esp_lvgl_port: "~2.6.0"
+  mydazy/esp_lcd_touch_axs5106l: "^2.0.0"

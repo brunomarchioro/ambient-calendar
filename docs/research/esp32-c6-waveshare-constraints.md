@@ -30,6 +30,17 @@ Freeze on Waveshare’s JD9853 (SPI) + AXS5106L (I2C) via the board’s ESP-IDF 
 | Clock | **SNTP** (`esp_netif_sntp_*`) after Wi-Fi; seed/override with API **`serverTime`** when SNTP is late/unavailable; expect time loss across **power-on reset** |
 | HTTPS | **`esp_http_client`** over TLS + **`crt_bundle_attach`** (or pinned `cert_pem`); enable system time before strict cert date checks |
 
+### Display calibration (per-unit)
+
+JD9853 vendor init sets **CASET** column window **34–205** (`0x22`–`0xCD`, 172 px). LVGL draws **172×320**; `esp_lcd_panel_set_gap(col, row)` in `ws_lcd.c` maps logical (0,0) onto that RAM window.
+
+| Constant | Default | Role |
+| --- | --- | --- |
+| `WS_LCD_COL_OFFSET` | **34** (= CASET `0x22`) | Must not exceed 34 or the 172 px window overruns column 205. Horizontal margin is `HMI_PAD_X` in LVGL. |
+| `WS_LCD_ROW_OFFSET` | **0** | Intentionally unused; vertical breathing room is **`HMI_PAD_Y`** in LVGL (`hmi_layout.h`). |
+
+Touch uses the same 172×320 logical size (`ws_touch.c`); recalibrate touch only if taps miss after changing `COL_OFFSET`.
+
 ---
 
 ## 1. Board silicon and panel

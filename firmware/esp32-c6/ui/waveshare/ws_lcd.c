@@ -50,7 +50,7 @@ esp_err_t ws_lcd_init(esp_lcd_panel_io_handle_t *out_io, esp_lcd_panel_handle_t 
 
 	ESP_RETURN_ON_ERROR(esp_lcd_panel_reset(panel), TAG, "reset");
 	ESP_RETURN_ON_ERROR(ws_jd9853_panel_init(io), TAG, "jd9853 init");
-	ESP_RETURN_ON_ERROR(esp_lcd_panel_set_gap(panel, WS_LCD_COL_OFFSET, 0), TAG, "gap");
+	ESP_RETURN_ON_ERROR(esp_lcd_panel_set_gap(panel, WS_LCD_COL_OFFSET, WS_LCD_ROW_OFFSET), TAG, "gap");
 	ESP_RETURN_ON_ERROR(esp_lcd_panel_disp_on_off(panel, true), TAG, "on");
 
 	*out_io = io;

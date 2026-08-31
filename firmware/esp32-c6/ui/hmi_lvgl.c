@@ -16,12 +16,14 @@
 static const char *TAG = "hmi_lvgl";
 
 #define HMI_SCROLL_DURATION_MS 8000
+#define HMI_SCROLL_START_DELAY_MS 4000
 #define HMI_SCROLL_PAUSE_MS 2500
 #define HMI_SCROLL_STAGGER_MS 700
 #define HMI_ROW_TEXT_DY ((HMI_LIST_ROW - HMI_FONT_BODY_LINE) / 2)
 
 static const lv_font_t *const FONT_BODY = &lv_font_montserrat_20;
 static const lv_font_t *const FONT_CLOCK = &lv_font_montserrat_28;
+static const lv_font_t *const FONT_SYMBOL = &lv_font_montserrat_14;
 
 static const lv_color_t COLOR_BG = LV_COLOR_MAKE(0x00, 0x00, 0x00);
 static const lv_color_t COLOR_CYAN = LV_COLOR_MAKE(0x00, 0xE5, 0xFF);
@@ -205,6 +207,18 @@ static int event_day_key(int64_t start_unix)
 	return (tm_local.tm_year * 10000) + ((tm_local.tm_mon + 1) * 100) + tm_local.tm_mday;
 }
 
+static bool sync_is_fresh(const alerts_hmi_frame_t *frame)
+{
+	if (frame == NULL || frame->timezone[0] == '\0' || !alerts_time_is_synced()) {
+		return false;
+	}
+	if (frame->now_unix <= 0 || frame->schedule_loaded_at_unix <= 0) {
+		return false;
+	}
+	const int64_t age = frame->now_unix - frame->schedule_loaded_at_unix;
+	return age >= 0 && age < ALERTS_HMI_SYNC_FRESH_SEC;
+}
+
 static void format_sync_label(char *buf, size_t buflen, const alerts_hmi_frame_t *frame)
 {
 	if (frame == NULL || frame->timezone[0] == '\0' || !alerts_time_is_synced()) {
@@ -217,7 +231,7 @@ static void format_sync_label(char *buf, size_t buflen, const alerts_hmi_frame_t
 	}
 	const int64_t age = frame->now_unix - frame->schedule_loaded_at_unix;
 	if (age < ALERTS_HMI_SYNC_FRESH_SEC) {
-		snprintf(buf, buflen, "SYNC");
+		snprintf(buf, buflen, "%s", LV_SYMBOL_REFRESH);
 		return;
 	}
 	if (age < ALERTS_HMI_SYNC_STALE_SEC) {
@@ -226,13 +240,6 @@ static void format_sync_label(char *buf, size_t buflen, const alerts_hmi_frame_t
 		return;
 	}
 	buf[0] = '\0';
-}
-
-static bool sync_is_fresh(const alerts_hmi_frame_t *frame)
-{
-	char buf[8];
-	format_sync_label(buf, sizeof(buf), frame);
-	return strcmp(buf, "SYNC") == 0;
 }
 
 static void set_label(lv_obj_t *lbl, const char *text, bool visible)
@@ -344,8 +351,9 @@ static void hmi_start_horizontal_scroll(lv_obj_t *lbl, int stagger_index, int32_
 	lv_anim_set_exec_cb(&anim, hmi_scroll_x_exec);
 	lv_anim_set_values(&anim, 0, end);
 	lv_anim_set_duration(&anim, HMI_SCROLL_DURATION_MS);
+	lv_anim_set_delay(&anim, HMI_SCROLL_START_DELAY_MS + (uint32_t)stagger_index * HMI_SCROLL_STAGGER_MS);
 	lv_anim_set_repeat_count(&anim, LV_ANIM_REPEAT_INFINITE);
-	lv_anim_set_repeat_delay(&anim, HMI_SCROLL_PAUSE_MS + (uint32_t)stagger_index * HMI_SCROLL_STAGGER_MS);
+	lv_anim_set_repeat_delay(&anim, HMI_SCROLL_PAUSE_MS);
 	lv_anim_start(&anim);
 }
 
@@ -411,7 +419,7 @@ static void render_overlay_event(int slot, lv_obj_t *title_lbl, const alerts_eve
 	lv_obj_set_pos(s_ui.overlay_time_lbl[slot], HMI_PAD_X, y + HMI_ROW_TEXT_DY);
 	lv_obj_set_size(s_ui.overlay_time_lbl[slot], HMI_LIST_TIME_W, HMI_FONT_BODY_LINE);
 	style_label_line(s_ui.overlay_time_lbl[slot], FONT_BODY, COLOR_CYAN, LV_TEXT_ALIGN_LEFT);
-	lv_label_set_long_mode(s_ui.overlay_time_lbl[slot], LV_LABEL_LONG_DOT);
+	lv_label_set_long_mode(s_ui.overlay_time_lbl[slot], LV_LABEL_LONG_CLIP);
 	set_label(s_ui.overlay_time_lbl[slot], timebuf, true);
 	layout_overlay_clip(title_lbl, y, HMI_LIST_TITLE_X, HMI_LIST_TITLE_W);
 	style_overlay_row(title_lbl, FONT_BODY, COLOR_MUTED, LV_TEXT_ALIGN_LEFT, true, HMI_LIST_TITLE_W);
@@ -473,6 +481,14 @@ static void dismiss_click_cb(lv_event_t *e)
 	}
 }
 
+static void consume_click_cb(lv_event_t *e)
+{
+	const lv_event_code_t code = lv_event_get_code(e);
+	if (code == LV_EVENT_CLICKED || code == LV_EVENT_SHORT_CLICKED) {
+		lv_event_stop_bubbling(e);
+	}
+}
+
 static void border_opa_cb(void *obj, int32_t v)
 {
 	lv_obj_set_style_border_opa((lv_obj_t *)obj, (lv_opa_t)v, 0);
@@ -520,7 +536,7 @@ static void build_list_row_labels(lv_obj_t **time_labels, lv_obj_t **title_label
 		lv_obj_set_pos(time_labels[i], HMI_PAD_X, y + HMI_ROW_TEXT_DY);
 		lv_obj_set_size(time_labels[i], HMI_LIST_TIME_W, HMI_FONT_BODY_LINE);
 		style_label_line(time_labels[i], FONT_BODY, COLOR_CYAN, LV_TEXT_ALIGN_LEFT);
-		lv_label_set_long_mode(time_labels[i], LV_LABEL_LONG_DOT);
+		lv_label_set_long_mode(time_labels[i], LV_LABEL_LONG_CLIP);
 		hmi_pass_touch(time_labels[i]);
 		lv_obj_add_flag(time_labels[i], LV_OBJ_FLAG_HIDDEN);
 
@@ -544,7 +560,7 @@ static void build_overlay_row_labels(lv_obj_t **time_labels, lv_obj_t **title_la
 		lv_obj_set_pos(time_labels[i], HMI_PAD_X, y + HMI_ROW_TEXT_DY);
 		lv_obj_set_size(time_labels[i], HMI_LIST_TIME_W, HMI_FONT_BODY_LINE);
 		style_label_line(time_labels[i], FONT_BODY, COLOR_CYAN, LV_TEXT_ALIGN_LEFT);
-		lv_label_set_long_mode(time_labels[i], LV_LABEL_LONG_DOT);
+		lv_label_set_long_mode(time_labels[i], LV_LABEL_LONG_CLIP);
 		hmi_pass_touch(time_labels[i]);
 		lv_obj_add_flag(time_labels[i], LV_OBJ_FLAG_HIDDEN);
 
@@ -636,6 +652,7 @@ esp_err_t alerts_hmi_lvgl_init(void)
 			 &s_ui.secondary_time_lbl, HMI_SECONDARY_CARD_Y, HMI_SECONDARY_CAPTION_Y, HMI_SECONDARY_TITLE_Y,
 			 HMI_SECONDARY_TIME_Y);
 	lv_obj_add_flag(s_ui.secondary_card, LV_OBJ_FLAG_HIDDEN);
+	lv_obj_add_event_cb(s_ui.secondary_card, consume_click_cb, LV_EVENT_CLICKED, NULL);
 
 	build_list_row_labels(s_ui.list_time_lbl, s_ui.list_title_lbl, s_ui.root, HMI_LIST_Y, HMI_AMBIENT_LIST_SLOTS,
 			      HMI_LIST_ROW);
@@ -811,8 +828,10 @@ static void render_secondary_card(const alerts_hmi_frame_t *frame, int64_t now)
 	const bool show = frame->state == ALERTS_HMI_NOW && frame->has_secondary;
 	set_visible(s_ui.secondary_card, show);
 	if (!show) {
+		lv_obj_clear_flag(s_ui.secondary_card, LV_OBJ_FLAG_CLICKABLE);
 		return;
 	}
+	lv_obj_add_flag(s_ui.secondary_card, LV_OBJ_FLAG_CLICKABLE);
 	render_card_content(s_ui.secondary_card, s_ui.secondary_caption_lbl, s_ui.secondary_title_lbl,
 			    s_ui.secondary_time_lbl, &frame->secondary, now, false, "ALERTA", COLOR_ALERT, COLOR_ALERT);
 }
@@ -835,8 +854,10 @@ esp_err_t alerts_hmi_lvgl_render(const alerts_hmi_frame_t *frame)
 
 	format_sync_label(buf, sizeof(buf), frame);
 	if (buf[0] != '\0') {
+		const bool fresh = sync_is_fresh(frame);
+		lv_obj_set_style_text_font(s_ui.sync_lbl, fresh ? FONT_SYMBOL : FONT_BODY, 0);
 		set_label(s_ui.sync_lbl, buf, true);
-		lv_obj_set_style_text_color(s_ui.sync_lbl, sync_is_fresh(frame) ? COLOR_SYNC : COLOR_MUTED, 0);
+		lv_obj_set_style_text_color(s_ui.sync_lbl, fresh ? COLOR_SYNC : COLOR_MUTED, 0);
 	} else {
 		set_visible(s_ui.sync_lbl, false);
 	}

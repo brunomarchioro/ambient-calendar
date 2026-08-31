@@ -104,6 +104,8 @@ static esp_err_t store_save(void)
 
 void alerts_hmi_dismiss_expire(int64_t now_unix)
 {
+	bool dirty = false;
+
 	for (int i = 0; i < HMI_DISMISS_MAX; i++) {
 		hmi_dismiss_entry_t *e = &s_store.entries[i];
 		if (e->id[0] == '\0') {
@@ -111,9 +113,12 @@ void alerts_hmi_dismiss_expire(int64_t now_unix)
 		}
 		if (now_unix >= e->end_at_unix) {
 			store_clear_slot(e);
+			dirty = true;
 		}
 	}
-	(void)store_save();
+	if (dirty) {
+		(void)store_save();
+	}
 }
 
 bool alerts_hmi_dismiss_blocks_now(const alerts_event_t *e, int64_t now_unix)

@@ -4,6 +4,7 @@ Tipografia via **Montserrat built-in** do LVGL (`sdkconfig.defaults`):
 
 | Símbolo LVGL              | Uso                          |
 | ------------------------- | ---------------------------- |
+| `lv_font_montserrat_14`   | ícone sync (`LV_SYMBOL_*`)   |
 | `lv_font_montserrat_20`   | corpo, lista, header, cards  |
 | `lv_font_montserrat_28`   | relógio                      |
 

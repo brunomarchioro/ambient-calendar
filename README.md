@@ -10,6 +10,15 @@ cd app && npm install && npm run db:migrate:local && npm run dev
 
 Detalhes (secrets, D1, migrations, scripts): **[`app/README.md`](app/README.md)**.
 
+## Firmware (ESP32-C6)
+
+```sh
+source ~/.espressif/v5.5.1/esp-idf/export.sh   # ative o ESP-IDF no terminal
+cd firmware/esp32-c6/host && make test           # testes host (sem placa)
+```
+
+Build e flash na placa: **[`firmware/esp32-c6/README.md`](firmware/esp32-c6/README.md)**. Secrets locais: [`firmware/.dev.vars.example`](firmware/.dev.vars.example) → `firmware/.dev.vars` (`ALERTS_DEVICE_API_TOKEN` = `DEVICE_API_TOKEN` do Worker).
+
 ## CI/CD (GitHub Actions)
 
 Workflow em [`.github/workflows/ci.yml`](.github/workflows/ci.yml):
@@ -38,8 +47,6 @@ npm run deploy
 ### Alternativa: Cloudflare Workers Builds
 
 Para deploy nativo no push (sem job `deploy` no GitHub Actions), conecte o repo em **Workers & Pages → web → Settings → Builds**. Monorepo: **Root directory** `app`, **Build command** `npm run build`, **Deploy command** `npm run db:migrate:remote && npx wrangler deploy`, branch de produção `main`.
-
-Firmware dev secrets: [`firmware/.dev.vars.example`](firmware/.dev.vars.example) → `firmware/.dev.vars` (gitignored; ADR 0008).
 
 ## Google Calendar API
 
