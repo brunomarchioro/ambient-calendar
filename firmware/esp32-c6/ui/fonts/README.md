@@ -2,10 +2,9 @@
 
 Tipografia via **Montserrat built-in** do LVGL (`sdkconfig.defaults`):
 
-| Símbolo LVGL              | Uso                          |
-| ------------------------- | ---------------------------- |
-| `lv_font_montserrat_14`   | ícone sync (`LV_SYMBOL_*`)   |
-| `lv_font_montserrat_20`   | corpo, lista, header, cards  |
-| `lv_font_montserrat_28`   | relógio                      |
+| Símbolo LVGL            | Uso                         |
+| ----------------------- | --------------------------- |
+| `lv_font_montserrat_20` | toda a HMI (header, cards)  |
 
-Strings fixas da UI em ASCII (sem acentos) — glifos estendidos não são necessários no MVP.
+Todo texto na HMI é ASCII Basic Latin (`U+0020`–`U+007E`): labels fixas e Título no display.
+O backend (`sanitizeDeviceTitle`) faz fold de acentos PT-BR e remove o resto; glifos estendidos não entram no MVP.

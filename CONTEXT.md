@@ -52,6 +52,10 @@ _Avoid_: Secondary state
 Ícone ou idade no header que reflete frescor do cache local: `LV_SYMBOL_REFRESH` (verde, &lt; 5 min) ou `Nm` (cinza, 5–60 min). Distinto de Agora.
 _Avoid_: LIVE (ambiguidade com Agora)
 
+**Título no display**:
+Representação do título do Event enviada ao ESP32 — ASCII Basic Latin, truncada ao limite do firmware. Distinta do título canônico persistido (pode ter acentos ou emoji).
+_Avoid_: DeviceTitle (como entidade), sanitized title
+
 **Cliente MCP**:
 Assistente de IA externo (ex.: ChatGPT, Claude) que se conecta ao Ambient Calendar Display via Model Context Protocol para listar ou administrar Lembretes. Um deploy pessoal reconhece um único humano autorizado; vários Clientes MCP podem registrar-se, mas compartilham o mesmo conjunto de Events.
 _Avoid_: MCP user, bot, agent (genérico)

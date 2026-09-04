@@ -38,7 +38,7 @@ test('envelope has settings fields and omits source externalId lookaheadDays aud
     events: [
       {
         id: 'evt_1',
-        title: 'Reunião',
+        title: 'Reuniao',
         startUnix: Math.floor(new Date('2026-08-27T14:00:00-03:00').getTime() / 1000),
         endUnix: Math.floor(new Date('2026-08-27T15:00:00-03:00').getTime() / 1000),
         allDay: false,
@@ -174,5 +174,5 @@ test('device payload sanitizes event titles for display charset', () => {
       }),
     ],
   })
-  expect(schedule.events[0]?.title).toBe('Café')
+  expect(schedule.events[0]?.title).toBe('Cafe')
 })
