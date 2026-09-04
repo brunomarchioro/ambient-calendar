@@ -37,7 +37,7 @@ Agenda dentro de uma Conta Google escolhida para espelho no D1. Identificado pel
 _Avoid_: Agenda Google (colide com a página Agenda), calendar (sem qualificador)
 
 **Overlay**:
-Modo de apresentação temporário que mostra a lista de próximos Events por cima do estado atual do display (Empty, Ambient, Alerta ou Agora). Abre com toque curto fora do card de foco; em Ambient com lista visível o toque não abre overlay. Fecha com segundo toque ou após 15 s. O scheduler continua calculando o estado de fundo; o Overlay só altera o que é desenhado.
+Modo de apresentação temporário que lista os próximos Events **além do foco** por cima do estado atual (Ambient, Alerta ou Agora). Abre com toque curto no header, na lista embutida, no card de foco (exceto Agora) ou no card secundário em Alerta; em Empty o toque não abre. Fecha com segundo toque no overlay ou após 15 s. Com overlay aberto, encerramento antecipado exige fechar o overlay antes. O scheduler continua calculando o estado de fundo; o Overlay só altera o que é desenhado.
 _Avoid_: Modal, popup, tela
 
 **Encerramento antecipado**:
@@ -49,8 +49,8 @@ Segundo Event na janela de Alerta exibido como card adicional enquanto o estado 
 _Avoid_: Secondary state
 
 **Indicador de sync**:
-Ícone ou idade no header que reflete frescor do cache local: `LV_SYMBOL_REFRESH` (verde, &lt; 5 min) ou `Nm` (cinza, 5–60 min). Distinto de Agora.
-_Avoid_: LIVE (ambiguidade com Agora)
+Texto curto no header que reflete frescor do cache local: `OK` (verde, &lt; 5 min) ou `Nm` (cinza, 5–60 min). Distinto de Agora.
+_Avoid_: LIVE (ambiguidade com Agora), `LV_SYMBOL_*` (sem glifo na Montserrat 20)
 
 **Título no display**:
 Representação do título do Event enviada ao ESP32 — ASCII Basic Latin, truncada ao limite do firmware. Distinta do título canônico persistido (pode ter acentos ou emoji).
