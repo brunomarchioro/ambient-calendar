@@ -33,6 +33,7 @@ typedef struct {
 	bool overlay_open;
 	alerts_event_t overlay_list[HMI_OVERLAY_LIST_SLOTS];
 	size_t overlay_list_count;
+	size_t overlay_upcoming_total;
 	int64_t now_unix;
 	int64_t schedule_loaded_at_unix;
 	char timezone[ALERTS_TZ_LEN];

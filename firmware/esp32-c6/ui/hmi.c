@@ -27,6 +27,19 @@ static int build_frame(void)
 	return 0;
 }
 
+static esp_err_t hmi_paint(int elapsed_ms, bool lvgl_already_locked);
+
+static void hmi_deferred_paint(void *unused)
+{
+	(void)unused;
+	(void)hmi_paint(0, true);
+}
+
+static void hmi_request_paint(void)
+{
+	lv_async_call(hmi_deferred_paint, NULL);
+}
+
 static esp_err_t hmi_paint(int elapsed_ms, bool lvgl_already_locked)
 {
 	alerts_hmi_present_tick(&s_present, elapsed_ms);
@@ -83,8 +96,9 @@ void alerts_hmi_on_background_tap(void)
 		return;
 	}
 	alerts_hmi_present_tap(&s_present, &s_frame);
-	ESP_LOGI(TAG, "tap overlay=%d", s_present.overlay_open);
-	(void)hmi_paint(0, true);
+	ESP_LOGI(TAG, "tap overlay=%d total=%u list=%u", s_present.overlay_open,
+		 (unsigned)s_frame.overlay_upcoming_total, (unsigned)s_frame.overlay_list_count);
+	hmi_request_paint();
 }
 
 void alerts_hmi_on_dismiss_tap(void)
@@ -95,5 +109,5 @@ void alerts_hmi_on_dismiss_tap(void)
 	if (alerts_hmi_dismiss_focus(s_frame.now_unix, &s_frame) == 0) {
 		ESP_LOGI(TAG, "dismiss focus id=%s", s_frame.focus.id);
 	}
-	(void)hmi_paint(0, true);
+	hmi_request_paint();
 }

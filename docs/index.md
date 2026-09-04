@@ -191,7 +191,7 @@ Um estado por frame. Prioridade: **`Now` > `Alert` > `Ambient` > `Empty`**. Só 
 
 **Encerramento antecipado:** toque no card **AGORA** grava fim local em NVS até o `endAt` do cache; recalcula estado (→ Alert se próximo já em janela de alerta).
 
-**Touch:** toque fora do card AGORA → overlay (exceto Ambient com lista embutida visível); timeout **15 s** → fecha overlay; **sem swipe**; sem create/edit no device.
+**Touch:** toque no header, lista, card de foco (exceto Agora) ou card secundário em Alerta → overlay (lista = próximos além do foco; `(N)` = total no cache); toque no card **AGORA** → encerramento antecipado; em **Empty** toque não abre overlay; overlay fecha com segundo toque ou **15 s**; com overlay aberto, dismiss exige fechar antes; **sem swipe**; sem create/edit no device.
 
 Layout e pixels: [`hmi-screen-design.md`](hmi-screen-design.md).
 
