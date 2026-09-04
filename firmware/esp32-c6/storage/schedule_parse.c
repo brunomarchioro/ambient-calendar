@@ -2,12 +2,176 @@
 
 #include <ctype.h>
 #include <limits.h>
+#include <stdint.h>
 #include <string.h>
 
 typedef struct {
 	const char *p;
 	const char *end;
 } cur_t;
+
+/* Título no display: Basic Latin only (lv_font_montserrat_20). Fold PT-BR; drop the rest. */
+static int utf8_next(const char **pp, const char *end, uint32_t *cp)
+{
+	const unsigned char *p = (const unsigned char *)*pp;
+	if (p >= (const unsigned char *)end) {
+		return -1;
+	}
+	unsigned char b0 = p[0];
+	if (b0 < 0x80) {
+		*cp = b0;
+		*pp = (const char *)(p + 1);
+		return 0;
+	}
+	if (b0 < 0xC2 || b0 > 0xF4) {
+		return -1;
+	}
+	size_t need = (b0 < 0xE0) ? 2 : (b0 < 0xF0) ? 3 : 4;
+	if ((size_t)((const unsigned char *)end - p) < need) {
+		return -1;
+	}
+	uint32_t v = b0 & ((1U << (8 - need)) - 1U);
+	for (size_t i = 1; i < need; i++) {
+		unsigned char b = p[i];
+		if ((b & 0xC0) != 0x80) {
+			return -1;
+		}
+		v = (v << 6) | (b & 0x3F);
+	}
+	*cp = v;
+	*pp = (const char *)(p + need);
+	return 0;
+}
+
+static char fold_latin(uint32_t cp)
+{
+	switch (cp) {
+	case 0x00C0:
+	case 0x00C1:
+	case 0x00C2:
+	case 0x00C3:
+	case 0x00C4:
+	case 0x00C5:
+		return 'A';
+	case 0x00C7:
+		return 'C';
+	case 0x00C8:
+	case 0x00C9:
+	case 0x00CA:
+	case 0x00CB:
+		return 'E';
+	case 0x00CC:
+	case 0x00CD:
+	case 0x00CE:
+	case 0x00CF:
+		return 'I';
+	case 0x00D1:
+		return 'N';
+	case 0x00D2:
+	case 0x00D3:
+	case 0x00D4:
+	case 0x00D5:
+	case 0x00D6:
+		return 'O';
+	case 0x00D9:
+	case 0x00DA:
+	case 0x00DB:
+	case 0x00DC:
+		return 'U';
+	case 0x00DD:
+		return 'Y';
+	case 0x00E0:
+	case 0x00E1:
+	case 0x00E2:
+	case 0x00E3:
+	case 0x00E4:
+	case 0x00E5:
+		return 'a';
+	case 0x00E7:
+		return 'c';
+	case 0x00E8:
+	case 0x00E9:
+	case 0x00EA:
+	case 0x00EB:
+		return 'e';
+	case 0x00EC:
+	case 0x00ED:
+	case 0x00EE:
+	case 0x00EF:
+		return 'i';
+	case 0x00F1:
+		return 'n';
+	case 0x00F2:
+	case 0x00F3:
+	case 0x00F4:
+	case 0x00F5:
+	case 0x00F6:
+		return 'o';
+	case 0x00F9:
+	case 0x00FA:
+	case 0x00FB:
+	case 0x00FC:
+		return 'u';
+	case 0x00FD:
+	case 0x00FF:
+		return 'y';
+	default:
+		return '\0';
+	}
+}
+
+static void collapse_ws(char *s)
+{
+	char *w = s;
+	bool prev_space = true;
+	for (const char *r = s; *r != '\0'; r++) {
+		if (isspace((unsigned char)*r)) {
+			if (!prev_space && w > s) {
+				*w++ = ' ';
+			}
+			prev_space = true;
+			continue;
+		}
+		*w++ = *r;
+		prev_space = false;
+	}
+	if (w > s && w[-1] == ' ') {
+		w--;
+	}
+	*w = '\0';
+}
+
+static void sanitize_event_title(char *title)
+{
+	char out[ALERTS_TITLE_LEN];
+	size_t w = 0;
+	const char *r = title;
+	const char *end = title + strlen(title);
+
+	while (r < end && w + 1 < sizeof(out)) {
+		const char *before = r;
+		uint32_t cp;
+		if (utf8_next(&r, end, &cp) != 0) {
+			r = before + 1;
+			continue;
+		}
+		if (cp >= 0x0300 && cp <= 0x036F) {
+			continue;
+		}
+		if (cp >= 0x20 && cp <= 0x7E) {
+			out[w++] = (char)cp;
+			continue;
+		}
+		char folded = fold_latin(cp);
+		if (folded != '\0') {
+			out[w++] = folded;
+		}
+	}
+	out[w] = '\0';
+	collapse_ws(out);
+	strncpy(title, out, ALERTS_TITLE_LEN - 1);
+	title[ALERTS_TITLE_LEN - 1] = '\0';
+}
 
 static void skip_ws(cur_t *c)
 {
@@ -468,6 +632,7 @@ static int parse_event(cur_t *c, alerts_event_t *ev)
 	if (ev->id[0] == '\0') {
 		return ALERTS_PARSE_MISSING;
 	}
+	sanitize_event_title(ev->title);
 	return validate_event(ev);
 }
 

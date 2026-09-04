@@ -12,8 +12,8 @@ Handoff humano → agente para layout LVGL no ESP32-C6 (172×320). Comportamento
 | Orientação  | portrait (Waveshare 1.47")                                                                         |
 | Fundo       | `#000000`                                                                                          |
 | Grade       | 16 px (vertical e horizontal)                                                                      |
-| Fonte       | **Montserrat** built-in LVGL — `lv_font_montserrat_20` (corpo), `lv_font_montserrat_28` (relógio), `lv_font_montserrat_14` (ícone sync) |
-| UI strings  | ASCII only (sem acentos em labels fixas)                                                           |
+| Fonte       | **Montserrat** built-in LVGL — `lv_font_montserrat_20` (única) |
+| UI strings  | ASCII Basic Latin only — labels fixas **e** Título no display (fold PT-BR no backend e no parse do cache) |
 
 ## Estilo (regras)
 
@@ -38,7 +38,7 @@ Handoff humano → agente para layout LVGL no ESP32-C6 (172×320). Comportamento
 | `COLOR_MUTED`  | `#808080` | subtítulos, títulos de lista, SYNC stale      |
 | `COLOR_ALERT`       | `#FF8C00` | fill card Alerta                            |
 | `COLOR_NOW`         | `#00FF41` | fill card Agora                             |
-| `COLOR_SYNC`        | `#00FF41` | ícone `LV_SYMBOL_REFRESH` (fresco)          |
+| `COLOR_SYNC`        | `#00FF41` | texto `OK` (fresco)                         |
 | `COLOR_CARD_AMBIENT`| `#404040` | fill card Ambient (`PROXIMO`)               |
 | `COLOR_TEXT_ON_FILL`| `#000000` | texto em fill Alerta / Agora                |
 
@@ -48,13 +48,13 @@ Handoff humano → agente para layout LVGL no ESP32-C6 (172×320). Comportamento
 | ----------------------------- | --- | ------ | ------------ |
 | Margem topo                   | 0   | 8      | —            |
 | Header                        | 8   | 24     | #1–#2        |
-| Relógio                       | 32  | 32     | #2–#4        |
-| Gap                           | 60  | 4      | —            |
-| Card foco                     | 68  | 96     | #5–#10       |
-| Card secundário (Agora+Alert) | 164 | 96     | #11–#16      |
-| Lista (card único)            | 180 | 128    | #12–#20      |
+| Relógio                       | 32  | 24     | #2–#3        |
+| Gap                           | 56  | 4      | —            |
+| Card foco                     | 60  | 96     | #4–#9        |
+| Card secundário (Agora+Alert) | 156 | 96     | #10–#15      |
+| Lista (card único)            | 172 | 128    | #11–#19      |
 
-| Margens: **12 px** horizontal (`HMI_PAD_X`), **8 px** topo (`HMI_PAD_Y`). Largura útil: **148 px** (`HMI_CARD_W`). Rodapé da lista: **12 px** (`HMI_LIST_BOTTOM_GAP`).
+| Margens: **12 px** horizontal (`HMI_PAD_X`), **8 px** topo (`HMI_PAD_Y`). Largura útil: **148 px** (`HMI_CARD_W`). Rodapé da lista: **20 px** (`HMI_LIST_BOTTOM_GAP`).
 
 **Driver:** `WS_LCD_COL_OFFSET` (= CASET `0x22`, **34**) alinha o framebuffer ao RAM do painel; margem visual é `HMI_PAD_X` / `HMI_PAD_Y` no LVGL — não subir `COL_OFFSET` (estoura a janela e corta à direita).
 
@@ -62,29 +62,31 @@ Handoff humano → agente para layout LVGL no ESP32-C6 (172×320). Comportamento
 
 | Constante           | Valor (px) | Uso                          |
 | ------------------- | ---------- | ---------------------------- |
-| `HMI_SYNC_W`        | 24         | slot sync (direita do header)|
+| `HMI_SYNC_W`        | 32         | slot sync (direita do header)|
 | `HMI_CARD_INNER_W`  | 124        | texto dentro do card (derivado)   |
-| `HMI_LIST_TIME_W`   | 56         | coluna hora (`HH:MM` em fonte 20) |
-| `HMI_LIST_TITLE_W`  | 92         | título na lista (derivado)        |
+| `HMI_LIST_TIME_W`   | 52         | coluna hora (`HH:MM`, alinhada à esquerda) |
+| `HMI_LIST_GAP`      | 4          | respiro entre hora e título                |
+| `HMI_LIST_TITLE_X`  | 68         | início do título (derivado)                |
+| `HMI_LIST_TITLE_W`  | 92         | título na lista (derivado)                 |
 | `HMI_LIST_ROW`      | 32         | altura de cada linha         |
 | `HMI_FONT_BODY_LINE`| 24         | altura reservada (fonte 20)  |
-| `HMI_FONT_CLOCK_LINE`| 32        | altura reservada (fonte 28)  |
+| `HMI_FONT_CLOCK_LINE`| 24        | altura reservada (fonte 20)  |
 
 ## Widgets (IDs lógicos)
 
 | ID                  | Tipo  | Fonte | Conteúdo / notas                       |
 | ------------------- | ----- | ----- | -------------------------------------- |
 | `date_lbl`          | label | 20    | `SEG 30 AGO`                           |
-| `sync_lbl`          | label | 14/20 | `LV_SYMBOL_REFRESH` (14) ou `12m` (20) |
-| `clock_lbl`         | label | 28    | `HH:MM`                                |
+| `sync_lbl`          | label | 20    | `OK` (verde) ou `Nm` (cinza)           |
+| `clock_lbl`         | label | 20    | `HH:MM`                                |
 | `focus_card`        | panel | —     | card principal; toque dismiss se Agora |
 | `focus_caption_lbl` | label | 20    | `PROXIMO` / `ALERTA` / `AGORA`         |
 | `focus_title_lbl`   | label | 20    | título do evento (scroll)              |
 | `focus_time_lbl`    | label | 20    | `em Nm` ou `Ate HH:MM`                 |
 | `secondary_card`    | panel | —     | segundo card em Agora+Alerta           |
 | `secondary_*_lbl`   | label | 20    | mesmo layout, caption `ALERTA`         |
-| `list_time_lbl[i]`  | label | 20    | hora (`COLOR_CYAN`)                    |
-| `list_title_lbl[i]` | label | 20    | título (`COLOR_MUTED`)                 |
+| `list_time_lbl[i]`  | label | 20    | hora (`COLOR_CYAN`), coluna 52 px          |
+| `list_title_lbl[i]` | label | 20    | título (`COLOR_MUTED`), após gap 4 px      |
 | `empty_title_lbl`   | label | 20    | `SEM EVENTOS`                          |
 | `overlay`           | panel | —     | fullscreen, borda ciano                |
 | `overlay_title`     | label | 20    | `PROXIMOS`                             |
@@ -106,11 +108,11 @@ Slots: `HMI_AMBIENT_LIST_SLOTS` = **4**; overlay derivado de `HMI_OVERLAY_LIST_S
 
 | Condição                              | Exibição                                      |
 | ------------------------------------- | --------------------------------------------- |
-| Relógio válido e cache &lt; **5 min** | `LV_SYMBOL_REFRESH` verde (`lv_font_montserrat_14`) |
+| Relógio válido e cache &lt; **5 min** | `OK` verde (`lv_font_montserrat_20`)          |
 | Cache entre **5** e **60 min**        | `Nm` cinza (`lv_font_montserrat_20`)          |
 | &gt; **60 min** ou sem relógio        | oculto                                        |
 
-Slot direito do header: **24 px** (`HMI_SYNC_W`). Data usa o restante (`HMI_CARD_W - HMI_SYNC_W`).
+Slot direito do header: **32 px** (`HMI_SYNC_W`). Data usa o restante (`HMI_CARD_W - HMI_SYNC_W` = **116 px**).
 
 ## Scroll de texto
 
@@ -130,16 +132,16 @@ Velocidade do deslocamento: calculada pelo LVGL (ajustar na board se necessário
 
 ```text
 ┌──────────────────┐
-│SEG 30 AGO      ↻│
+│SEG 30 AGO     OK│
 │14:37             │
 │▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓│ fill cinza — PROXIMO
 │▓ PROXIMO        ▓│
 │▓ Reuniao design ▓│
 │▓ em 30m         ▓│
 │▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓│
-│16:30 Daily Stand │
-│TER 09            │
-│17:00 Code Review │
+│16:30    Daily Stand│
+│TER 09              │
+│17:00   Code Review │
 └──────────────────┘
 ```
 
@@ -147,14 +149,14 @@ Velocidade do deslocamento: calculada pelo LVGL (ajustar na board se necessário
 
 ```text
 ┌──────────────────┐
-│SEG 30 AGO      ↻│
+│SEG 30 AGO     OK│
 │14:37             │
 │▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒│ fill laranja piscando
 │▒ ALERTA         ▒│
 │▒ Reuniao design ▒│
 │▒ em 15m         ▒│
 │▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒│
-│16:30 Daily Stand │
+│16:30    Daily Stand│
 └──────────────────┘
 ```
 
@@ -164,14 +166,14 @@ Toque no card `AGORA` = **encerramento antecipado** (NVS até `endAt`).
 
 ```text
 ┌──────────────────┐
-│SEG 30 AGO      ↻│
+│SEG 30 AGO     OK│
 │14:37             │
 │░░░░░░░░░░░░░░░░░░│ fill verde — toque dismiss
 │░ AGORA          ░│
 │░ Reuniao design ░│
 │░ Ate 16:30      ░│
 │░░░░░░░░░░░░░░░░░░│
-│17:00 Code Review │
+│17:00   Code Review │
 └──────────────────┘
 ```
 
@@ -179,7 +181,7 @@ Toque no card `AGORA` = **encerramento antecipado** (NVS até `endAt`).
 
 ```text
 ┌──────────────────┐
-│SEG 30 AGO      ↻│
+│SEG 30 AGO     OK│
 │14:37             │
 │░░░░░░░░░░░░░░░░░░│ AGORA 96px
 │░ AGORA          ░│
@@ -198,7 +200,7 @@ Toque no card `AGORA` = **encerramento antecipado** (NVS até `endAt`).
 
 ```text
 ┌──────────────────┐
-│SEG 30 AGO      ↻│
+│SEG 30 AGO     OK│
 │14:37             │
 │   SEM EVENTOS    │
 │                  │
@@ -212,7 +214,7 @@ Toque no card `AGORA` = **encerramento antecipado** (NVS até `endAt`).
 ┌──────────────────┐
 │PROXIMOS      (11)│
 │TER 09            │
-│18:00 Jantar      │
+│18:00    Jantar     │
 └──────────────────┘
 ```
 
@@ -257,7 +259,7 @@ Toque no card `AGORA` = **encerramento antecipado** (NVS até `endAt`).
 
 1. Layout/cores/fontes **neste arquivo** primeiro.
 2. `hmi_layout.h`, `hmi_frame.c`, `hmi_dismiss.c`, `hmi_lvgl.c`.
-3. Fontes: Montserrat built-in — `14` (símbolo sync), `20` (corpo), `28` (relógio) em `sdkconfig.defaults`.
+3. Fontes: Montserrat built-in — só `lv_font_montserrat_20` em `sdkconfig.defaults` (`CONFIG_LV_FONT_MONTSERRAT_20` + `CONFIG_LV_FONT_DEFAULT_MONTSERRAT_20`).
 4. Validar na board ESP32-C6; PNG quando este arquivo mudar (ADR 0010).
 
 ## Referências

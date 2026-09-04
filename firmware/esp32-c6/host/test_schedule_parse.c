@@ -144,7 +144,7 @@ int main(void)
 	assert(s.show_next_events == 2);
 	assert(s.event_count == 1);
 	assert(strcmp(s.events[0].id, "evt_1") == 0);
-	assert(strcmp(s.events[0].title, "Reunião") == 0);
+	assert(strcmp(s.events[0].title, "Reuniao") == 0);
 	assert(!s.events[0].all_day);
 	assert(s.events[0].has_end);
 	assert(s.server_unix == UNIX_NOW);

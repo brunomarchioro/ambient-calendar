@@ -26,8 +26,6 @@ static lv_anim_t s_scroll_anims[HMI_SCROLL_STYLE_SLOTS];
 static bool s_scroll_styles_ready;
 
 static const lv_font_t *const FONT_BODY = &lv_font_montserrat_20;
-static const lv_font_t *const FONT_CLOCK = &lv_font_montserrat_28;
-static const lv_font_t *const FONT_SYMBOL = &lv_font_montserrat_14;
 
 static const lv_color_t COLOR_BG = LV_COLOR_MAKE(0x00, 0x00, 0x00);
 static const lv_color_t COLOR_CYAN = LV_COLOR_MAKE(0x00, 0xE5, 0xFF);
@@ -236,7 +234,7 @@ static void format_sync_label(char *buf, size_t buflen, const alerts_hmi_frame_t
 	}
 	const int64_t age = frame->now_unix - frame->schedule_loaded_at_unix;
 	if (age < ALERTS_HMI_SYNC_FRESH_SEC) {
-		snprintf(buf, buflen, "%s", LV_SYMBOL_REFRESH);
+		snprintf(buf, buflen, "OK");
 		return;
 	}
 	if (age < ALERTS_HMI_SYNC_STALE_SEC) {
@@ -679,7 +677,7 @@ esp_err_t alerts_hmi_lvgl_init(void)
 	s_ui.clock_lbl = lv_label_create(s_ui.root);
 	lv_obj_set_pos(s_ui.clock_lbl, HMI_PAD_X, HMI_CLOCK_Y);
 	lv_obj_set_size(s_ui.clock_lbl, HMI_CARD_W, HMI_CLOCK_H);
-	style_label_line(s_ui.clock_lbl, FONT_CLOCK, COLOR_CYAN, LV_TEXT_ALIGN_LEFT);
+	style_label_line(s_ui.clock_lbl, FONT_BODY, COLOR_CYAN, LV_TEXT_ALIGN_LEFT);
 	hmi_pass_touch(s_ui.clock_lbl);
 
 	s_ui.focus_card = create_card_panel(s_ui.root, HMI_PAD_X, HMI_CARD_Y, HMI_CARD_W, HMI_CARD_H, COLOR_CARD_AMBIENT);
@@ -895,7 +893,6 @@ esp_err_t alerts_hmi_lvgl_render(const alerts_hmi_frame_t *frame)
 	format_sync_label(buf, sizeof(buf), frame);
 	if (buf[0] != '\0') {
 		const bool fresh = sync_is_fresh(frame);
-		lv_obj_set_style_text_font(s_ui.sync_lbl, fresh ? FONT_SYMBOL : FONT_BODY, 0);
 		set_label(s_ui.sync_lbl, buf, true);
 		lv_obj_set_style_text_color(s_ui.sync_lbl, fresh ? COLOR_SYNC : COLOR_MUTED, 0);
 	} else {
