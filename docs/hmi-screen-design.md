@@ -239,7 +239,7 @@ Toque no card `AGORA` = **encerramento antecipado** (NVS até `endAt`).
 | Ambient/Alert tempo | `em Nm`                                           |
 | Agora fim           | `Ate HH:MM` se `has_end`                          |
 | Lista               | Timed após foco; até 4 linhas; oculta em Now+2º   |
-| Cabeçalho dia       | `TER 09`, cor ciano                               |
+| Cabeçalho dia       | `QUA 16` / `TER 9`, ciano; quando dia ≠ hoje (relógio local após TZ); consome um slot; nunca órfão (sem evento abaixo, o slot fica vazio) |
 | Encerramento        | NVS `event_id` + `dismissed_at` até `endAt` cache |
 | Foco secundário     | Outro Event em Alerta durante Agora               |
 
