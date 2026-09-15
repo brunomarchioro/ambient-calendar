@@ -22,7 +22,6 @@ static void test_today_only(void)
 
 static void test_first_item_tomorrow(void)
 {
-	/* today=T; focus would be tomorrow; first list item tomorrow → header (no focus in API) */
 	const int keys[] = {20260916};
 	hmi_row_t rows[4];
 	const size_t n = hmi_day_rows_plan(TODAY, keys, 1, 4, rows);
