@@ -1,5 +1,6 @@
 #include "hmi_lvgl.h"
 
+#include "hmi_day_rows.h"
 #include "hmi_layout.h"
 #include "time_seed.h"
 #include "time_tz.h"
@@ -200,10 +201,10 @@ static void format_day_header_short(char *buf, size_t buflen, int64_t day_unix)
 	snprintf(buf, buflen, "%s %d", weekday_pt(tm_local.tm_wday), tm_local.tm_mday);
 }
 
-static int event_day_key(int64_t start_unix)
+static int local_day_key(int64_t unix_ts)
 {
 	struct tm tm_local;
-	time_t t = (time_t)start_unix;
+	time_t t = (time_t)unix_ts;
 	if (localtime_r(&t, &tm_local) == NULL) {
 		return -1;
 	}
@@ -456,32 +457,33 @@ static void render_overlay_event(int slot, lv_obj_t *title_lbl, const alerts_eve
 	hmi_apply_scroll(title_lbl, slot, HMI_LIST_TITLE_W, title_changed);
 }
 
-static size_t render_overlay_list(lv_obj_t **labels, int slot_count, const alerts_event_t *events, size_t count)
+static size_t render_overlay_list(lv_obj_t **labels, int slot_count, const alerts_event_t *events, size_t count,
+				  int64_t now_unix)
 {
-	int slot = 0;
-	int last_day = -1;
+	int day_keys[HMI_OVERLAY_LIST_SLOTS];
+	hmi_row_t rows[HMI_OVERLAY_LIST_SLOTS];
+	size_t n = 0;
 	size_t event_rows = 0;
 
-	for (size_t i = 0; i < count && slot < slot_count; i++) {
-		const alerts_event_t *e = &events[i];
-		const int day = event_day_key(e->start_unix);
-
-		if (day != last_day) {
-			if (slot < slot_count) {
-				render_overlay_date(slot, labels[slot], e->start_unix);
-				slot++;
-			}
-			last_day = day;
+	if (events != NULL && count > 0 && slot_count > 0) {
+		const size_t use = count > (size_t)slot_count ? (size_t)slot_count : count;
+		for (size_t i = 0; i < use; i++) {
+			day_keys[i] = local_day_key(events[i].start_unix);
 		}
+		n = hmi_day_rows_plan(local_day_key(now_unix), day_keys, use, (size_t)slot_count, rows);
+	}
 
-		if (slot < slot_count) {
-			render_overlay_event(slot, labels[slot], e);
-			slot++;
+	for (size_t slot = 0; slot < n; slot++) {
+		const alerts_event_t *e = &events[rows[slot].event_index];
+		if (rows[slot].kind == HMI_ROW_DAY_HEADER) {
+			render_overlay_date((int)slot, labels[slot], e->start_unix);
+		} else {
+			render_overlay_event((int)slot, labels[slot], e);
 			event_rows++;
 		}
 	}
 
-	for (; slot < slot_count; slot++) {
+	for (int slot = (int)n; slot < slot_count; slot++) {
 		set_label(s_ui.overlay_time_lbl[slot], "", false);
 		set_label(labels[slot], "", false);
 		set_visible(lv_obj_get_parent(labels[slot]), false);
@@ -779,28 +781,30 @@ static void render_ambient_event(int slot, const alerts_event_t *e)
 	hmi_apply_scroll(s_ui.list_title_lbl[slot], slot, HMI_LIST_TITLE_W, title_changed);
 }
 
-static void render_ambient_list(const alerts_event_t *events, size_t count, int64_t focus_day)
+static void render_ambient_list(const alerts_event_t *events, size_t count, int64_t now_unix)
 {
-	int slot = 0;
-	int last_day = focus_day;
+	int day_keys[HMI_AMBIENT_FETCH_SLOTS];
+	hmi_row_t rows[HMI_AMBIENT_LIST_SLOTS];
+	size_t n = 0;
 
-	for (size_t i = 0; i < count && slot < HMI_AMBIENT_LIST_SLOTS; i++) {
-		const alerts_event_t *e = &events[i];
-		const int day = event_day_key(e->start_unix);
-
-		if (day != last_day && slot < HMI_AMBIENT_LIST_SLOTS) {
-			render_ambient_day_header(slot, e->start_unix);
-			slot++;
-			last_day = day;
+	if (events != NULL && count > 0) {
+		const size_t use = count > HMI_AMBIENT_FETCH_SLOTS ? HMI_AMBIENT_FETCH_SLOTS : count;
+		for (size_t i = 0; i < use; i++) {
+			day_keys[i] = local_day_key(events[i].start_unix);
 		}
+		n = hmi_day_rows_plan(local_day_key(now_unix), day_keys, use, HMI_AMBIENT_LIST_SLOTS, rows);
+	}
 
-		if (slot < HMI_AMBIENT_LIST_SLOTS) {
-			render_ambient_event(slot, e);
-			slot++;
+	for (size_t slot = 0; slot < n; slot++) {
+		const alerts_event_t *e = &events[rows[slot].event_index];
+		if (rows[slot].kind == HMI_ROW_DAY_HEADER) {
+			render_ambient_day_header((int)slot, e->start_unix);
+		} else {
+			render_ambient_event((int)slot, e);
 		}
 	}
 
-	for (; slot < HMI_AMBIENT_LIST_SLOTS; slot++) {
+	for (size_t slot = n; slot < HMI_AMBIENT_LIST_SLOTS; slot++) {
 		set_label(s_ui.list_time_lbl[slot], "", false);
 		set_label(s_ui.list_title_lbl[slot], "", false);
 		set_title_row_visible(s_ui.list_title_lbl[slot], false);
@@ -922,10 +926,9 @@ esp_err_t alerts_hmi_lvgl_render(const alerts_hmi_frame_t *frame)
 
 	const bool show_list = !(frame->state == ALERTS_HMI_NOW && frame->has_secondary);
 	if (show_list && frame->ambient_list_count > 0) {
-		const int focus_day = frame->has_focus ? event_day_key(frame->focus.start_unix) : -1;
-		render_ambient_list(frame->ambient_list, frame->ambient_list_count, focus_day);
+		render_ambient_list(frame->ambient_list, frame->ambient_list_count, now);
 	} else {
-		render_ambient_list(NULL, 0, -1);
+		render_ambient_list(NULL, 0, now);
 	}
 
 	if (frame->overlay_open) {
@@ -933,7 +936,7 @@ esp_err_t alerts_hmi_lvgl_render(const alerts_hmi_frame_t *frame)
 		lv_obj_move_foreground(s_ui.overlay);
 		const size_t event_count =
 			render_overlay_list(s_ui.overlay_list, HMI_OVERLAY_LIST_SLOTS, frame->overlay_list,
-					    frame->overlay_list_count);
+					    frame->overlay_list_count, now);
 		snprintf(buf, sizeof(buf), "(%u)", (unsigned)event_count);
 		set_label(s_ui.overlay_count_lbl, buf, true);
 	} else {
