@@ -24,7 +24,7 @@ bool alerts_hmi_present_overlay_allowed(const alerts_hmi_frame_t *frame)
 	if (frame->overlay_open) {
 		return true;
 	}
-	if (frame->state == ALERTS_HMI_AMBIENT && frame->ambient_list_count > 0) {
+	if (frame->state == ALERTS_HMI_EMPTY) {
 		return false;
 	}
 	return true;
@@ -181,13 +181,33 @@ static void fill_ambient_list(int64_t now, const alerts_schedule_t *s, const ale
 	out->ambient_list_count = collect_upcoming(now, s, skip, out->ambient_list, limit);
 }
 
+static size_t count_upcoming(int64_t now, const alerts_schedule_t *s, const alerts_event_t *skip)
+{
+	size_t n = 0;
+
+	for (size_t i = 0; i < s->event_count; i++) {
+		const alerts_event_t *e = &s->events[i];
+		if (skip != NULL && strcmp(e->id, skip->id) == 0) {
+			continue;
+		}
+		if (e->start_unix <= now) {
+			continue;
+		}
+		n++;
+	}
+	return n;
+}
+
 static void fill_overlay_list(int64_t now, const alerts_schedule_t *s, alerts_hmi_frame_t *out)
 {
+	const alerts_event_t *skip = out->has_focus ? &out->focus : NULL;
 	size_t limit = HMI_OVERLAY_LIST_SLOTS;
+
 	if (limit > ALERTS_MAX_EVENTS) {
 		limit = ALERTS_MAX_EVENTS;
 	}
-	out->overlay_list_count = collect_upcoming(now, s, NULL, out->overlay_list, limit);
+	out->overlay_upcoming_total = count_upcoming(now, s, skip);
+	out->overlay_list_count = collect_upcoming(now, s, skip, out->overlay_list, limit);
 }
 
 static void set_focus(alerts_hmi_frame_t *out, const alerts_event_t *e)

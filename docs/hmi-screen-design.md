@@ -36,10 +36,10 @@ Handoff humano → agente para layout LVGL no ESP32-C6 (172×320). Comportamento
 | `COLOR_CYAN`   | `#00E5FF` | relógio, títulos de foco/lista, borda overlay |
 | `COLOR_DATE`   | `#FF4444` | data no header (esquerda)                     |
 | `COLOR_MUTED`  | `#808080` | subtítulos, títulos de lista, SYNC stale      |
-| `COLOR_ALERT`       | `#FF8C00` | fill card Alerta                            |
-| `COLOR_NOW`         | `#00FF41` | fill card Agora                             |
+| `COLOR_ALERT`       | `#FF9500` | fill card Alerta                            |
+| `COLOR_NOW`         | `#00CC66` | fill card Agora                             |
 | `COLOR_SYNC`        | `#00FF41` | texto `OK` (fresco)                         |
-| `COLOR_CARD_AMBIENT`| `#404040` | fill card Ambient (`PROXIMO`)               |
+| `COLOR_CARD_AMBIENT`| `#555555` | fill card Ambient (`PROXIMO`)               |
 | `COLOR_TEXT_ON_FILL`| `#000000` | texto em fill Alerta / Agora                |
 
 ## Layout por zonas (Y)
@@ -64,10 +64,10 @@ Handoff humano → agente para layout LVGL no ESP32-C6 (172×320). Comportamento
 | ------------------- | ---------- | ---------------------------- |
 | `HMI_SYNC_W`        | 32         | slot sync (direita do header)|
 | `HMI_CARD_INNER_W`  | 124        | texto dentro do card (derivado)   |
-| `HMI_LIST_TIME_W`   | 52         | coluna hora (`HH:MM`, alinhada à esquerda) |
+| `HMI_LIST_TIME_W`   | 60         | coluna hora (`HH:MM` ~58 px em fonte 20)   |
 | `HMI_LIST_GAP`      | 4          | respiro entre hora e título                |
-| `HMI_LIST_TITLE_X`  | 68         | início do título (derivado)                |
-| `HMI_LIST_TITLE_W`  | 92         | título na lista (derivado)                 |
+| `HMI_LIST_TITLE_X`  | 76         | início do título (derivado)                |
+| `HMI_LIST_TITLE_W`  | 84         | título na lista (derivado)                 |
 | `HMI_LIST_ROW`      | 32         | altura de cada linha         |
 | `HMI_FONT_BODY_LINE`| 24         | altura reservada (fonte 20)  |
 | `HMI_FONT_CLOCK_LINE`| 24        | altura reservada (fonte 20)  |
@@ -79,18 +79,18 @@ Handoff humano → agente para layout LVGL no ESP32-C6 (172×320). Comportamento
 | `date_lbl`          | label | 20    | `SEG 30 AGO`                           |
 | `sync_lbl`          | label | 20    | `OK` (verde) ou `Nm` (cinza)           |
 | `clock_lbl`         | label | 20    | `HH:MM`                                |
-| `focus_card`        | panel | —     | card principal; toque dismiss se Agora |
+| `focus_card`        | panel | —     | card principal; toque dismiss se Agora, senão abre overlay |
 | `focus_caption_lbl` | label | 20    | `PROXIMO` / `ALERTA` / `AGORA`         |
 | `focus_title_lbl`   | label | 20    | título do evento (scroll)              |
 | `focus_time_lbl`    | label | 20    | `em Nm` ou `Ate HH:MM`                 |
 | `secondary_card`    | panel | —     | segundo card em Agora+Alerta           |
 | `secondary_*_lbl`   | label | 20    | mesmo layout, caption `ALERTA`         |
-| `list_time_lbl[i]`  | label | 20    | hora (`COLOR_CYAN`), coluna 52 px          |
+| `list_time_lbl[i]`  | label | 20    | hora (`COLOR_CYAN`), coluna 60 px          |
 | `list_title_lbl[i]` | label | 20    | título (`COLOR_MUTED`), após gap 4 px      |
 | `empty_title_lbl`   | label | 20    | `SEM EVENTOS`                          |
 | `overlay`           | panel | —     | fullscreen, borda ciano                |
 | `overlay_title`     | label | 20    | `PROXIMOS`                             |
-| `overlay_count_lbl` | label | 20    | `(N)`                                  |
+| `overlay_count_lbl` | label | 20    | `(N)` — total upcoming além do foco      |
 | `overlay_list[i]`   | label | 20    | cabeçalho dia ou evento                |
 
 Slots: `HMI_AMBIENT_LIST_SLOTS` = **4**; overlay derivado de `HMI_OVERLAY_LIST_SLOTS`.
@@ -99,9 +99,9 @@ Slots: `HMI_AMBIENT_LIST_SLOTS` = **4**; overlay derivado de `HMI_OVERLAY_LIST_S
 
 | Estado  | Texto      | Fill card   | Texto (caption / título / tempo)        |
 | ------- | ---------- | ----------- | --------------------------------------- |
-| Ambient | `PROXIMO`  | `#404040`   | muted / ciano / muted                   |
-| Alert   | `ALERTA`   | `#FF8C00` pisca | preto / preto / preto             |
-| Now     | `AGORA`    | `#00FF41`   | preto / preto / preto                   |
+| Ambient | `PROXIMO`  | `#555555`   | muted / ciano / muted                   |
+| Alert   | `ALERTA`   | `#FF9500` pisca | preto / preto / preto             |
+| Now     | `AGORA`    | `#00CC66`   | preto / preto / preto                   |
 | Empty   | _(oculto)_ | —           | —                                       |
 
 ### Indicador SYNC
@@ -245,15 +245,19 @@ Toque no card `AGORA` = **encerramento antecipado** (NVS até `endAt`).
 
 ## Interação
 
-| Gesto                        | Efeito                                     |
-| ---------------------------- | ------------------------------------------ |
-| Toque card `AGORA`           | Encerramento antecipado → recalcula estado |
-| Toque card secundário `ALERTA` | Sem ação (não abre overlay)              |
-| Toque fora dos cards         | Overlay (ver regras abaixo)                |
-| Ambient com `list_count > 0` | Toque **não** abre overlay                 |
-| Ambient com lista vazia      | Toque abre overlay                         |
-| 15 s com overlay             | Fecha overlay                              |
-| Swipe                        | **não suportado**                          |
+| Gesto                          | Efeito                                                |
+| ------------------------------ | ----------------------------------------------------- |
+| Toque card `AGORA` (foco)      | Encerramento antecipado → recalcula estado            |
+| Toque card `PROXIMO` / `ALERTA` (foco) | Abre overlay                                  |
+| Toque card secundário `ALERTA` | Abre overlay                                          |
+| Toque na lista embutida        | Abre overlay                                          |
+| Toque no header / fundo        | Abre overlay (se permitido)                           |
+| Estado **Empty**               | Toque **não** abre overlay                            |
+| Overlay aberto + toque         | Fecha overlay (toggle); dismiss exige overlay fechado |
+| 15 s com overlay               | Fecha overlay                                         |
+| Swipe                          | **não suportado**                                     |
+
+Overlay lista próximos **além do evento em foco** (paridade com lista embutida). `(N)` = total upcoming no cache, não só linhas visíveis.
 
 ## Handoff para implementação
 

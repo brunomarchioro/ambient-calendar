@@ -1,0 +1,13 @@
+{
+  "folders": [
+    {
+      "path": ".",
+      "name": "ambient-calendar"
+    },
+    {
+      "path": "firmware/esp32-c6",
+      "name": "ESP32-C6 firmware"
+    }
+  ],
+  "settings": {}
+}

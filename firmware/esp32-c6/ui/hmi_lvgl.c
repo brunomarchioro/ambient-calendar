@@ -31,10 +31,10 @@ static const lv_color_t COLOR_BG = LV_COLOR_MAKE(0x00, 0x00, 0x00);
 static const lv_color_t COLOR_CYAN = LV_COLOR_MAKE(0x00, 0xE5, 0xFF);
 static const lv_color_t COLOR_DATE = LV_COLOR_MAKE(0xFF, 0x44, 0x44);
 static const lv_color_t COLOR_MUTED = LV_COLOR_MAKE(0x80, 0x80, 0x80);
-static const lv_color_t COLOR_ALERT = LV_COLOR_MAKE(0xFF, 0x8C, 0x00);
-static const lv_color_t COLOR_NOW = LV_COLOR_MAKE(0x00, 0xFF, 0x41);
+static const lv_color_t COLOR_ALERT = LV_COLOR_MAKE(0xFF, 0x95, 0x00);
+static const lv_color_t COLOR_NOW = LV_COLOR_MAKE(0x00, 0xCC, 0x66);
 static const lv_color_t COLOR_SYNC = LV_COLOR_MAKE(0x00, 0xFF, 0x41);
-static const lv_color_t COLOR_CARD_AMBIENT = LV_COLOR_MAKE(0x40, 0x40, 0x40);
+static const lv_color_t COLOR_CARD_AMBIENT = LV_COLOR_MAKE(0x55, 0x55, 0x55);
 static const lv_color_t COLOR_TEXT_ON_FILL = LV_COLOR_MAKE(0x00, 0x00, 0x00);
 
 typedef struct {
@@ -50,14 +50,10 @@ typedef struct {
 	lv_obj_t *secondary_caption_lbl;
 	lv_obj_t *secondary_title_lbl;
 	lv_obj_t *secondary_time_lbl;
-	lv_obj_t *list_time_lbl[HMI_AMBIENT_LIST_SLOTS];
-	lv_obj_t *list_title_lbl[HMI_AMBIENT_LIST_SLOTS];
+	lv_obj_t *list_time_lbl[HMI_LIST_SLOTS];
+	lv_obj_t *list_title_lbl[HMI_LIST_SLOTS];
 	lv_obj_t *empty_title_lbl;
 	lv_obj_t *overlay;
-	lv_obj_t *overlay_title;
-	lv_obj_t *overlay_count_lbl;
-	lv_obj_t *overlay_time_lbl[HMI_OVERLAY_LIST_SLOTS];
-	lv_obj_t *overlay_list[HMI_OVERLAY_LIST_SLOTS];
 	alerts_hmi_state_t last_state;
 	bool last_secondary;
 	char last_tz[ALERTS_TZ_LEN];
@@ -66,6 +62,7 @@ typedef struct {
 static hmi_ui_t s_ui;
 static alerts_hmi_tap_cb_t s_background_tap_cb;
 static alerts_hmi_tap_cb_t s_dismiss_tap_cb;
+static bool s_focus_tap_dismiss;
 
 void alerts_hmi_lvgl_set_background_tap_cb(alerts_hmi_tap_cb_t cb)
 {
@@ -287,6 +284,7 @@ static lv_obj_t *create_text_clip(lv_obj_t *parent, int x, int y, int width, int
 	lv_obj_set_size(clip, width, height);
 	lv_obj_clear_flag(clip, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
 	lv_obj_add_flag(clip, LV_OBJ_FLAG_EVENT_BUBBLE);
+	lv_obj_set_style_bg_opa(clip, LV_OPA_TRANSP, 0);
 	return clip;
 }
 
@@ -305,15 +303,13 @@ static void style_filled_panel(lv_obj_t *obj, lv_color_t bg)
 	lv_obj_set_style_pad_all(obj, 0, 0);
 }
 
-static void style_flat_panel(lv_obj_t *obj, lv_color_t bg, lv_color_t border, int border_w)
+static void set_title_row_visible(lv_obj_t *title_lbl, bool visible)
 {
-	lv_obj_set_style_bg_color(obj, bg, 0);
-	lv_obj_set_style_bg_opa(obj, LV_OPA_COVER, 0);
-	lv_obj_set_style_border_color(obj, border, 0);
-	lv_obj_set_style_border_width(obj, border_w, 0);
-	lv_obj_set_style_border_opa(obj, LV_OPA_COVER, 0);
-	lv_obj_set_style_radius(obj, 0, 0);
-	lv_obj_set_style_pad_all(obj, 0, 0);
+	if (title_lbl == NULL) {
+		return;
+	}
+	lv_obj_t *clip = lv_obj_get_parent(title_lbl);
+	set_visible(clip, visible);
 }
 
 static lv_obj_t *create_card_panel(lv_obj_t *parent, int x, int y, int w, int h, lv_color_t fill)
@@ -406,88 +402,91 @@ static void style_clip_text_label(lv_obj_t *lbl, const lv_font_t *font, lv_color
 	lv_label_set_long_mode(lbl, LV_LABEL_LONG_CLIP);
 }
 
-static void style_overlay_row(lv_obj_t *lbl, const lv_font_t *font, lv_color_t color, lv_text_align_t align, bool scroll,
-			      int width)
+static void layout_list_row(int slot, int y, lv_obj_t *time_lbl, lv_obj_t *title_lbl)
 {
-	style_label_line(lbl, font, color, align);
-	lv_obj_set_width(lbl, width);
-	if (scroll) {
-		lv_label_set_long_mode(lbl, LV_LABEL_LONG_CLIP);
-	} else {
-		lv_label_set_long_mode(lbl, LV_LABEL_LONG_DOT);
-	}
+	lv_obj_t *clip = lv_obj_get_parent(title_lbl);
+
+	lv_obj_set_pos(time_lbl, HMI_PAD_X, y + HMI_ROW_TEXT_DY);
+	lv_obj_set_size(time_lbl, HMI_LIST_TIME_W, HMI_FONT_BODY_LINE);
+	lv_obj_set_pos(clip, HMI_LIST_TITLE_X, y);
+	lv_obj_set_size(clip, HMI_LIST_TITLE_W, HMI_LIST_ROW);
+	lv_obj_set_pos(title_lbl, 0, HMI_ROW_TEXT_DY);
+	lv_obj_set_height(title_lbl, HMI_FONT_BODY_LINE);
 }
 
-static void layout_overlay_clip(lv_obj_t *lbl, int y, int x, int width)
+static void render_list_day_header(int slot, int y, lv_obj_t *time_lbl, lv_obj_t *title_lbl, int64_t day_unix)
 {
-	lv_obj_t *clip = lv_obj_get_parent(lbl);
-	lv_obj_set_pos(clip, x, y);
-	lv_obj_set_size(clip, width, HMI_LIST_ROW);
-	lv_obj_set_pos(lbl, 0, HMI_ROW_TEXT_DY);
+	char buf[32];
+	lv_obj_t *clip = lv_obj_get_parent(title_lbl);
+
+	set_label(time_lbl, "", false);
+	set_visible(time_lbl, false);
+	lv_obj_set_pos(clip, HMI_PAD_X, y);
+	lv_obj_set_size(clip, HMI_CARD_W, HMI_LIST_ROW);
+	lv_obj_set_pos(title_lbl, 0, HMI_ROW_TEXT_DY);
+	lv_obj_set_height(title_lbl, HMI_FONT_BODY_LINE);
+	style_label_line(title_lbl, FONT_BODY, COLOR_CYAN, LV_TEXT_ALIGN_LEFT);
+	lv_label_set_long_mode(title_lbl, LV_LABEL_LONG_DOT);
+	format_day_header_short(buf, sizeof(buf), day_unix);
+	set_label(title_lbl, buf, true);
 	set_visible(clip, true);
 }
 
-static void render_overlay_date(int slot, lv_obj_t *lbl, int64_t day_unix)
-{
-	char buf[96];
-	const int y = HMI_OVERLAY_LIST_Y + slot * HMI_LIST_ROW;
-	set_label(s_ui.overlay_time_lbl[slot], "", false);
-	layout_overlay_clip(lbl, y, HMI_PAD_X, WS_LCD_H_RES - HMI_PAD_X * 2);
-	format_day_header_short(buf, sizeof(buf), day_unix);
-	style_overlay_row(lbl, FONT_BODY, COLOR_CYAN, LV_TEXT_ALIGN_LEFT, false, WS_LCD_H_RES - 16);
-	set_label(lbl, buf, true);
-}
-
-static void render_overlay_event(int slot, lv_obj_t *title_lbl, const alerts_event_t *e)
+static void render_list_event_row(int slot, int y, lv_obj_t *time_lbl, lv_obj_t *title_lbl, const alerts_event_t *e)
 {
 	char timebuf[8];
-	const int y = HMI_OVERLAY_LIST_Y + slot * HMI_LIST_ROW;
+
 	format_event_time(timebuf, sizeof(timebuf), e->start_unix);
-	lv_obj_set_pos(s_ui.overlay_time_lbl[slot], HMI_PAD_X, y + HMI_ROW_TEXT_DY);
-	lv_obj_set_size(s_ui.overlay_time_lbl[slot], HMI_LIST_TIME_W, HMI_FONT_BODY_LINE);
-	style_label_line(s_ui.overlay_time_lbl[slot], FONT_BODY, COLOR_CYAN, LV_TEXT_ALIGN_LEFT);
-	lv_label_set_long_mode(s_ui.overlay_time_lbl[slot], LV_LABEL_LONG_CLIP);
-	set_label(s_ui.overlay_time_lbl[slot], timebuf, true);
-	layout_overlay_clip(title_lbl, y, HMI_LIST_TITLE_X, HMI_LIST_TITLE_W);
+	layout_list_row(slot, y, time_lbl, title_lbl);
+	style_label_line(time_lbl, FONT_BODY, COLOR_CYAN, LV_TEXT_ALIGN_LEFT);
+	lv_label_set_long_mode(time_lbl, LV_LABEL_LONG_CLIP);
+	set_label(time_lbl, timebuf, true);
+	set_visible(time_lbl, true);
 	const bool title_changed = set_label(title_lbl, e->title, true);
 	if (title_changed) {
-		style_overlay_row(title_lbl, FONT_BODY, COLOR_MUTED, LV_TEXT_ALIGN_LEFT, true, HMI_LIST_TITLE_W);
+		style_clip_text_label(title_lbl, FONT_BODY, COLOR_MUTED, LV_TEXT_ALIGN_LEFT);
 	}
+	set_title_row_visible(title_lbl, true);
 	hmi_apply_scroll(title_lbl, slot, HMI_LIST_TITLE_W, title_changed);
 }
 
-static size_t render_overlay_list(lv_obj_t **labels, int slot_count, const alerts_event_t *events, size_t count)
+static void clear_list_slots(int from_slot, int slot_count)
+{
+	for (int slot = from_slot; slot < slot_count; slot++) {
+		set_label(s_ui.list_time_lbl[slot], "", false);
+		set_visible(s_ui.list_time_lbl[slot], false);
+		set_label(s_ui.list_title_lbl[slot], "", false);
+		set_title_row_visible(s_ui.list_title_lbl[slot], false);
+	}
+}
+
+static void render_timed_list(int y_start, int max_slots, const alerts_event_t *events, size_t count, int focus_day)
 {
 	int slot = 0;
-	int last_day = -1;
-	size_t event_rows = 0;
+	int last_day = focus_day;
 
-	for (size_t i = 0; i < count && slot < slot_count; i++) {
+	for (size_t i = 0; i < count && slot < max_slots; i++) {
 		const alerts_event_t *e = &events[i];
 		const int day = event_day_key(e->start_unix);
+		const int y = y_start + slot * HMI_LIST_ROW;
 
 		if (day != last_day) {
-			if (slot < slot_count) {
-				render_overlay_date(slot, labels[slot], e->start_unix);
+			if (slot < max_slots) {
+				render_list_day_header(slot, y, s_ui.list_time_lbl[slot], s_ui.list_title_lbl[slot],
+						       e->start_unix);
 				slot++;
+				last_day = day;
 			}
-			last_day = day;
 		}
 
-		if (slot < slot_count) {
-			render_overlay_event(slot, labels[slot], e);
+		if (slot < max_slots) {
+			const int row_y = y_start + slot * HMI_LIST_ROW;
+			render_list_event_row(slot, row_y, s_ui.list_time_lbl[slot], s_ui.list_title_lbl[slot], e);
 			slot++;
-			event_rows++;
 		}
 	}
 
-	for (; slot < slot_count; slot++) {
-		set_label(s_ui.overlay_time_lbl[slot], "", false);
-		set_label(labels[slot], "", false);
-		set_visible(lv_obj_get_parent(labels[slot]), false);
-	}
-
-	return event_rows;
+	clear_list_slots(slot, HMI_LIST_SLOTS);
 }
 
 static void background_click_cb(lv_event_t *e)
@@ -498,22 +497,30 @@ static void background_click_cb(lv_event_t *e)
 	}
 }
 
-static void dismiss_click_cb(lv_event_t *e)
+static void overlay_click_cb(lv_event_t *e)
 {
 	const lv_event_code_t code = lv_event_get_code(e);
-	if (code == LV_EVENT_CLICKED || code == LV_EVENT_SHORT_CLICKED) {
+	if ((code == LV_EVENT_CLICKED || code == LV_EVENT_SHORT_CLICKED) && s_background_tap_cb != NULL) {
 		lv_event_stop_bubbling(e);
-		if (s_dismiss_tap_cb != NULL) {
-			s_dismiss_tap_cb();
-		}
+		s_background_tap_cb();
 	}
 }
 
-static void consume_click_cb(lv_event_t *e)
+static void focus_card_click_cb(lv_event_t *e)
 {
 	const lv_event_code_t code = lv_event_get_code(e);
-	if (code == LV_EVENT_CLICKED || code == LV_EVENT_SHORT_CLICKED) {
-		lv_event_stop_bubbling(e);
+	if (code != LV_EVENT_CLICKED && code != LV_EVENT_SHORT_CLICKED) {
+		return;
+	}
+	lv_event_stop_bubbling(e);
+	if (s_focus_tap_dismiss) {
+		if (s_dismiss_tap_cb != NULL) {
+			s_dismiss_tap_cb();
+		}
+		return;
+	}
+	if (s_background_tap_cb != NULL) {
+		s_background_tap_cb();
 	}
 }
 
@@ -560,6 +567,12 @@ static void set_card_style(lv_obj_t *card, lv_obj_t *caption, lv_obj_t *title, l
 	}
 }
 
+static void hmi_wire_overlay_tap(lv_obj_t *obj)
+{
+	lv_obj_add_flag(obj, LV_OBJ_FLAG_CLICKABLE);
+	lv_obj_add_event_cb(obj, overlay_click_cb, LV_EVENT_CLICKED, NULL);
+}
+
 static void build_list_row_labels(lv_obj_t **time_labels, lv_obj_t **title_labels, lv_obj_t *parent, int y_start,
 				  int count, int row_h)
 {
@@ -571,7 +584,7 @@ static void build_list_row_labels(lv_obj_t **time_labels, lv_obj_t **title_label
 		lv_obj_set_size(time_labels[i], HMI_LIST_TIME_W, HMI_FONT_BODY_LINE);
 		style_label_line(time_labels[i], FONT_BODY, COLOR_CYAN, LV_TEXT_ALIGN_LEFT);
 		lv_label_set_long_mode(time_labels[i], LV_LABEL_LONG_CLIP);
-		hmi_pass_touch(time_labels[i]);
+		hmi_wire_overlay_tap(time_labels[i]);
 		lv_obj_add_flag(time_labels[i], LV_OBJ_FLAG_HIDDEN);
 
 		lv_obj_t *clip = create_text_clip(parent, HMI_LIST_TITLE_X, y, HMI_LIST_TITLE_W, HMI_LIST_ROW);
@@ -581,44 +594,9 @@ static void build_list_row_labels(lv_obj_t **time_labels, lv_obj_t **title_label
 		hmi_attach_scroll_style(title_labels[i], i);
 		lv_obj_set_pos(title_labels[i], 0, HMI_ROW_TEXT_DY);
 		lv_obj_set_height(title_labels[i], HMI_FONT_BODY_LINE);
-		hmi_pass_touch(title_labels[i]);
+		hmi_wire_overlay_tap(clip);
 		lv_obj_add_flag(clip, LV_OBJ_FLAG_HIDDEN);
 	}
-}
-
-static void build_overlay_row_labels(lv_obj_t **time_labels, lv_obj_t **title_labels, lv_obj_t *parent, int y_start,
-				     int count)
-{
-	for (int i = 0; i < count; i++) {
-		const int y = y_start + i * HMI_LIST_ROW;
-
-		time_labels[i] = lv_label_create(parent);
-		lv_obj_set_pos(time_labels[i], HMI_PAD_X, y + HMI_ROW_TEXT_DY);
-		lv_obj_set_size(time_labels[i], HMI_LIST_TIME_W, HMI_FONT_BODY_LINE);
-		style_label_line(time_labels[i], FONT_BODY, COLOR_CYAN, LV_TEXT_ALIGN_LEFT);
-		lv_label_set_long_mode(time_labels[i], LV_LABEL_LONG_CLIP);
-		hmi_pass_touch(time_labels[i]);
-		lv_obj_add_flag(time_labels[i], LV_OBJ_FLAG_HIDDEN);
-
-		lv_obj_t *clip = create_text_clip(parent, HMI_LIST_TITLE_X, y, HMI_LIST_TITLE_W, HMI_LIST_ROW);
-		title_labels[i] = lv_label_create(clip);
-		style_clip_text_label(title_labels[i], FONT_BODY, COLOR_MUTED, LV_TEXT_ALIGN_LEFT);
-		lv_obj_set_width(title_labels[i], HMI_LIST_TITLE_W);
-		hmi_attach_scroll_style(title_labels[i], i);
-		lv_obj_set_pos(title_labels[i], 0, HMI_ROW_TEXT_DY);
-		lv_obj_set_height(title_labels[i], HMI_FONT_BODY_LINE);
-		hmi_pass_touch(title_labels[i]);
-		lv_obj_add_flag(clip, LV_OBJ_FLAG_HIDDEN);
-	}
-}
-
-static void set_title_row_visible(lv_obj_t *title_lbl, bool visible)
-{
-	if (title_lbl == NULL) {
-		return;
-	}
-	lv_obj_t *clip = lv_obj_get_parent(title_lbl);
-	set_visible(clip, visible);
 }
 
 static void wire_card_labels(lv_obj_t *card, lv_obj_t **caption, lv_obj_t **title, lv_obj_t **time_lbl, int card_y,
@@ -684,7 +662,7 @@ esp_err_t alerts_hmi_lvgl_init(void)
 	wire_card_labels(s_ui.focus_card, &s_ui.focus_caption_lbl, &s_ui.focus_title_lbl, &s_ui.focus_time_lbl, HMI_CARD_Y,
 			 HMI_FOCUS_CAPTION_Y, HMI_FOCUS_TITLE_Y, HMI_FOCUS_TIME_Y);
 	lv_obj_add_flag(s_ui.focus_card, LV_OBJ_FLAG_HIDDEN);
-	lv_obj_add_event_cb(s_ui.focus_card, dismiss_click_cb, LV_EVENT_CLICKED, NULL);
+	lv_obj_add_event_cb(s_ui.focus_card, focus_card_click_cb, LV_EVENT_CLICKED, NULL);
 
 	s_ui.secondary_card =
 		create_card_panel(s_ui.root, HMI_PAD_X, HMI_SECONDARY_CARD_Y, HMI_CARD_W, HMI_CARD_H, COLOR_CARD_AMBIENT);
@@ -692,9 +670,9 @@ esp_err_t alerts_hmi_lvgl_init(void)
 			 &s_ui.secondary_time_lbl, HMI_SECONDARY_CARD_Y, HMI_SECONDARY_CAPTION_Y, HMI_SECONDARY_TITLE_Y,
 			 HMI_SECONDARY_TIME_Y);
 	lv_obj_add_flag(s_ui.secondary_card, LV_OBJ_FLAG_HIDDEN);
-	lv_obj_add_event_cb(s_ui.secondary_card, consume_click_cb, LV_EVENT_CLICKED, NULL);
+	lv_obj_add_event_cb(s_ui.secondary_card, overlay_click_cb, LV_EVENT_CLICKED, NULL);
 
-	build_list_row_labels(s_ui.list_time_lbl, s_ui.list_title_lbl, s_ui.root, HMI_LIST_Y, HMI_AMBIENT_LIST_SLOTS,
+	build_list_row_labels(s_ui.list_time_lbl, s_ui.list_title_lbl, s_ui.root, HMI_LIST_Y, HMI_LIST_SLOTS,
 			      HMI_LIST_ROW);
 
 	s_ui.empty_title_lbl = lv_label_create(s_ui.root);
@@ -709,102 +687,50 @@ esp_err_t alerts_hmi_lvgl_init(void)
 	lv_obj_set_pos(s_ui.overlay, HMI_OVERLAY_INSET, HMI_OVERLAY_INSET);
 	lv_obj_set_size(s_ui.overlay, HMI_OVERLAY_W, HMI_OVERLAY_H);
 	lv_obj_clear_flag(s_ui.overlay, LV_OBJ_FLAG_SCROLLABLE);
-	style_flat_panel(s_ui.overlay, COLOR_BG, COLOR_CYAN, 1);
+	lv_obj_set_style_bg_opa(s_ui.overlay, LV_OPA_TRANSP, 0);
 	lv_obj_add_flag(s_ui.overlay, LV_OBJ_FLAG_CLICKABLE);
-	lv_obj_add_event_cb(s_ui.overlay, background_click_cb, LV_EVENT_CLICKED, NULL);
+	lv_obj_add_event_cb(s_ui.overlay, overlay_click_cb, LV_EVENT_CLICKED, NULL);
 	lv_obj_add_flag(s_ui.overlay, LV_OBJ_FLAG_HIDDEN);
-
-	s_ui.overlay_title = lv_label_create(s_ui.overlay);
-	lv_label_set_text(s_ui.overlay_title, "PROXIMOS");
-	lv_obj_set_pos(s_ui.overlay_title, HMI_PAD_X, HMI_OVERLAY_TITLE_Y);
-	lv_obj_set_width(s_ui.overlay_title, HMI_CARD_W);
-	style_label_line(s_ui.overlay_title, FONT_BODY, COLOR_CYAN, LV_TEXT_ALIGN_LEFT);
-	hmi_pass_touch(s_ui.overlay_title);
-
-	s_ui.overlay_count_lbl = lv_label_create(s_ui.overlay);
-	lv_obj_set_size(s_ui.overlay_count_lbl, HMI_SYNC_W, HMI_FONT_BODY_LINE);
-	style_label_line(s_ui.overlay_count_lbl, FONT_BODY, COLOR_MUTED, LV_TEXT_ALIGN_RIGHT);
-	lv_obj_align(s_ui.overlay_count_lbl, LV_ALIGN_TOP_RIGHT, -HMI_PAD_X, HMI_OVERLAY_TITLE_Y);
-	hmi_pass_touch(s_ui.overlay_count_lbl);
-
-	build_overlay_row_labels(s_ui.overlay_time_lbl, s_ui.overlay_list, s_ui.overlay, HMI_OVERLAY_LIST_Y,
-				 HMI_OVERLAY_LIST_SLOTS);
 
 	lv_obj_move_foreground(s_ui.focus_card);
 	lv_obj_move_foreground(s_ui.secondary_card);
-	lv_obj_move_foreground(s_ui.overlay);
 
 	s_ui.last_state = ALERTS_HMI_EMPTY;
 	ESP_LOGI(TAG, "lvgl widgets ready");
 	return ESP_OK;
 }
 
-static void render_ambient_day_header(int slot, int64_t day_unix)
+static void move_list_to_foreground(void)
+{
+	for (int i = 0; i < HMI_LIST_SLOTS; i++) {
+		lv_obj_move_foreground(s_ui.list_time_lbl[i]);
+		lv_obj_move_foreground(lv_obj_get_parent(s_ui.list_title_lbl[i]));
+	}
+}
+
+static void render_overlay_layer(const alerts_hmi_frame_t *frame)
 {
 	char buf[32];
-	const int y = HMI_LIST_Y + slot * HMI_LIST_ROW;
-	lv_obj_t *clip = lv_obj_get_parent(s_ui.list_title_lbl[slot]);
 
-	set_label(s_ui.list_time_lbl[slot], "", false);
-	lv_obj_set_pos(clip, HMI_PAD_X, y);
-	lv_obj_set_size(clip, HMI_CARD_W, HMI_LIST_ROW);
-	lv_obj_set_pos(s_ui.list_title_lbl[slot], 0, HMI_ROW_TEXT_DY);
-	lv_obj_set_height(s_ui.list_title_lbl[slot], HMI_FONT_BODY_LINE);
-	style_label_line(s_ui.list_title_lbl[slot], FONT_BODY, COLOR_CYAN, LV_TEXT_ALIGN_LEFT);
-	lv_label_set_long_mode(s_ui.list_title_lbl[slot], LV_LABEL_LONG_DOT);
-	format_day_header_short(buf, sizeof(buf), day_unix);
-	set_label(s_ui.list_title_lbl[slot], buf, true);
-	set_visible(clip, true);
-}
+	set_visible(s_ui.clock_lbl, false);
+	set_visible(s_ui.focus_card, false);
+	set_visible(s_ui.secondary_card, false);
+	set_visible(s_ui.empty_title_lbl, false);
 
-static void render_ambient_event(int slot, const alerts_event_t *e)
-{
-	char timebuf[8];
-	const int y = HMI_LIST_Y + slot * HMI_LIST_ROW;
-	lv_obj_t *clip = lv_obj_get_parent(s_ui.list_title_lbl[slot]);
+	set_label(s_ui.date_lbl, "PROXIMOS", true);
+	lv_obj_set_style_text_color(s_ui.date_lbl, COLOR_CYAN, 0);
+	snprintf(buf, sizeof(buf), "(%u)", (unsigned)frame->overlay_upcoming_total);
+	set_label(s_ui.sync_lbl, buf, true);
+	set_visible(s_ui.sync_lbl, true);
+	lv_obj_set_style_text_color(s_ui.sync_lbl, COLOR_MUTED, 0);
 
-	format_event_time(timebuf, sizeof(timebuf), e->start_unix);
-	lv_obj_set_pos(s_ui.list_time_lbl[slot], HMI_PAD_X, y + HMI_ROW_TEXT_DY);
-	lv_obj_set_size(s_ui.list_time_lbl[slot], HMI_LIST_TIME_W, HMI_FONT_BODY_LINE);
-	set_label(s_ui.list_time_lbl[slot], timebuf, true);
-	lv_obj_set_pos(clip, HMI_LIST_TITLE_X, y);
-	lv_obj_set_size(clip, HMI_LIST_TITLE_W, HMI_LIST_ROW);
-	lv_obj_set_pos(s_ui.list_title_lbl[slot], 0, HMI_ROW_TEXT_DY);
-	lv_obj_set_height(s_ui.list_title_lbl[slot], HMI_FONT_BODY_LINE);
-	const bool title_changed = set_label(s_ui.list_title_lbl[slot], e->title, true);
-	if (title_changed) {
-		style_clip_text_label(s_ui.list_title_lbl[slot], FONT_BODY, COLOR_MUTED, LV_TEXT_ALIGN_LEFT);
-	}
-	set_visible(clip, true);
-	hmi_apply_scroll(s_ui.list_title_lbl[slot], slot, HMI_LIST_TITLE_W, title_changed);
-}
+	const int focus_day = frame->has_focus ? event_day_key(frame->focus.start_unix) : -1;
+	render_timed_list(HMI_OVERLAY_LIST_Y, HMI_LIST_SLOTS, frame->overlay_list, frame->overlay_list_count,
+			  focus_day);
 
-static void render_ambient_list(const alerts_event_t *events, size_t count, int64_t focus_day)
-{
-	int slot = 0;
-	int last_day = focus_day;
-
-	for (size_t i = 0; i < count && slot < HMI_AMBIENT_LIST_SLOTS; i++) {
-		const alerts_event_t *e = &events[i];
-		const int day = event_day_key(e->start_unix);
-
-		if (day != last_day && slot < HMI_AMBIENT_LIST_SLOTS) {
-			render_ambient_day_header(slot, e->start_unix);
-			slot++;
-			last_day = day;
-		}
-
-		if (slot < HMI_AMBIENT_LIST_SLOTS) {
-			render_ambient_event(slot, e);
-			slot++;
-		}
-	}
-
-	for (; slot < HMI_AMBIENT_LIST_SLOTS; slot++) {
-		set_label(s_ui.list_time_lbl[slot], "", false);
-		set_label(s_ui.list_title_lbl[slot], "", false);
-		set_title_row_visible(s_ui.list_title_lbl[slot], false);
-	}
+	lv_obj_move_foreground(s_ui.date_lbl);
+	lv_obj_move_foreground(s_ui.sync_lbl);
+	move_list_to_foreground();
 }
 
 static void render_card_content(lv_obj_t *card, lv_obj_t *caption, lv_obj_t *title, lv_obj_t *time_lbl,
@@ -852,10 +778,9 @@ static void render_focus_card(const alerts_hmi_frame_t *frame, int64_t now)
 		caption = "AGORA";
 		fill = COLOR_NOW;
 		text_on_fill = true;
-		lv_obj_add_flag(s_ui.focus_card, LV_OBJ_FLAG_CLICKABLE);
-	} else {
-		lv_obj_clear_flag(s_ui.focus_card, LV_OBJ_FLAG_CLICKABLE);
 	}
+	s_focus_tap_dismiss = is_now;
+	lv_obj_add_flag(s_ui.focus_card, LV_OBJ_FLAG_CLICKABLE);
 
 	render_card_content(s_ui.focus_card, s_ui.focus_caption_lbl, s_ui.focus_title_lbl, s_ui.focus_time_lbl,
 			    &frame->focus, now, is_now, caption, fill, text_on_fill);
@@ -884,8 +809,23 @@ esp_err_t alerts_hmi_lvgl_render(const alerts_hmi_frame_t *frame)
 	const int64_t now = frame->now_unix;
 	char buf[96];
 
+	s_ui.last_state = frame->state;
+	s_ui.last_secondary = frame->has_secondary;
+
+	if (frame->overlay_open) {
+		alert_blink_stop(s_ui.focus_card);
+		alert_blink_stop(s_ui.secondary_card);
+		render_overlay_layer(frame);
+		return ESP_OK;
+	}
+
+	lv_obj_add_flag(s_ui.overlay, LV_OBJ_FLAG_HIDDEN);
+
+	lv_obj_set_style_text_color(s_ui.date_lbl, COLOR_DATE, 0);
+
 	format_clock_line(buf, sizeof(buf), now);
 	set_label(s_ui.clock_lbl, buf, true);
+	set_visible(s_ui.clock_lbl, true);
 
 	format_date_line(buf, sizeof(buf), now);
 	set_label(s_ui.date_lbl, buf, true);
@@ -899,11 +839,6 @@ esp_err_t alerts_hmi_lvgl_render(const alerts_hmi_frame_t *frame)
 		set_visible(s_ui.sync_lbl, false);
 	}
 
-	s_ui.last_state = frame->state;
-	s_ui.last_secondary = frame->has_secondary;
-
-	const bool is_empty = frame->state == ALERTS_HMI_EMPTY;
-
 	render_focus_card(frame, now);
 	render_secondary_card(frame, now);
 
@@ -915,6 +850,7 @@ esp_err_t alerts_hmi_lvgl_render(const alerts_hmi_frame_t *frame)
 		alert_blink_start(s_ui.secondary_card);
 	}
 
+	const bool is_empty = frame->state == ALERTS_HMI_EMPTY;
 	set_visible(s_ui.empty_title_lbl, is_empty);
 	if (is_empty) {
 		set_label(s_ui.empty_title_lbl, "SEM EVENTOS", true);
@@ -923,21 +859,10 @@ esp_err_t alerts_hmi_lvgl_render(const alerts_hmi_frame_t *frame)
 	const bool show_list = !(frame->state == ALERTS_HMI_NOW && frame->has_secondary);
 	if (show_list && frame->ambient_list_count > 0) {
 		const int focus_day = frame->has_focus ? event_day_key(frame->focus.start_unix) : -1;
-		render_ambient_list(frame->ambient_list, frame->ambient_list_count, focus_day);
+		render_timed_list(HMI_LIST_Y, HMI_AMBIENT_LIST_SLOTS, frame->ambient_list, frame->ambient_list_count,
+				  focus_day);
 	} else {
-		render_ambient_list(NULL, 0, -1);
-	}
-
-	if (frame->overlay_open) {
-		lv_obj_remove_flag(s_ui.overlay, LV_OBJ_FLAG_HIDDEN);
-		lv_obj_move_foreground(s_ui.overlay);
-		const size_t event_count =
-			render_overlay_list(s_ui.overlay_list, HMI_OVERLAY_LIST_SLOTS, frame->overlay_list,
-					    frame->overlay_list_count);
-		snprintf(buf, sizeof(buf), "(%u)", (unsigned)event_count);
-		set_label(s_ui.overlay_count_lbl, buf, true);
-	} else {
-		lv_obj_add_flag(s_ui.overlay, LV_OBJ_FLAG_HIDDEN);
+		render_timed_list(HMI_LIST_Y, HMI_LIST_SLOTS, NULL, 0, -1);
 	}
 
 	return ESP_OK;

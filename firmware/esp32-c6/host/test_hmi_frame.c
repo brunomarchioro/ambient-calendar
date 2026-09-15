@@ -136,7 +136,36 @@ int main(void)
 	assert(frame.state == ALERTS_HMI_ALERT);
 	assert(strcmp(frame.focus.id, "next") == 0);
 
-	/* Overlay list */
+	/* Overlay list — skip focus event */
+	present_closed(&present);
+	events[0] = ev("a", "Reuniao", 1787853600, 1787857200, false, true);
+	events[1] = ev("b", "Jantar", 1787860800, 1787864400, false, true);
+	s = sched(30, 2, events, 2);
+	assert(alerts_hmi_build_frame(1787850000, &s, &present, &frame) == 0);
+	alerts_hmi_present_tap(&present, &frame);
+	assert(alerts_hmi_build_frame(1787850000, &s, &present, &frame) == 0);
+	assert(frame.overlay_open);
+	assert(frame.overlay_list_count == 1);
+	assert(strcmp(frame.overlay_list[0].id, "b") == 0);
+	assert(frame.overlay_upcoming_total == 1);
+
+	/* Overlay allowed in Ambient with list */
+	present_closed(&present);
+	assert(alerts_hmi_build_frame(1787850000, &s, &present, &frame) == 0);
+	assert(alerts_hmi_present_overlay_allowed(&frame));
+	alerts_hmi_present_tap(&present, &frame);
+	assert(present.overlay_open);
+
+	/* Overlay blocked in Empty */
+	present_closed(&present);
+	s = sched(30, 2, events, 0);
+	assert(alerts_hmi_build_frame(1787850000, &s, &present, &frame) == 0);
+	assert(frame.state == ALERTS_HMI_EMPTY);
+	assert(!alerts_hmi_present_overlay_allowed(&frame));
+	alerts_hmi_present_tap(&present, &frame);
+	assert(!present.overlay_open);
+
+	/* Overlay tap toggles */
 	present_closed(&present);
 	events[0] = ev("a", "Reuniao", 1787853600, 1787857200, false, true);
 	events[1] = ev("b", "Jantar", 1787860800, 1787864400, false, true);
@@ -144,25 +173,19 @@ int main(void)
 	alerts_hmi_present_tap(&present, &(alerts_hmi_frame_t){.state = ALERTS_HMI_ALERT, .ambient_list_count = 0});
 	assert(alerts_hmi_build_frame(1787852700, &s, &present, &frame) == 0);
 	assert(frame.overlay_open);
-	assert(frame.overlay_list_count == 2);
-
-	/* Overlay blocked in Ambient with list */
-	present_closed(&present);
-	assert(alerts_hmi_build_frame(1787850000, &s, &present, &frame) == 0);
-	assert(!alerts_hmi_present_overlay_allowed(&frame));
-	alerts_hmi_present_tap(&present, &frame);
-	assert(!present.overlay_open);
+	assert(frame.overlay_list_count == 1);
 
 	/* Overlay tap toggles */
 	present_closed(&present);
-	alerts_hmi_present_tap(&present, &(alerts_hmi_frame_t){.state = ALERTS_HMI_EMPTY});
+	alerts_hmi_present_tap(&present, &(alerts_hmi_frame_t){.state = ALERTS_HMI_ALERT, .ambient_list_count = 0});
 	assert(present.overlay_open);
-	alerts_hmi_present_tap(&present, &(alerts_hmi_frame_t){.overlay_open = true});
+	alerts_hmi_present_tap(&present, &(alerts_hmi_frame_t){.overlay_open = true, .state = ALERTS_HMI_ALERT});
 	assert(!present.overlay_open);
 
 	/* Overlay timeout */
 	present_closed(&present);
-	alerts_hmi_present_tap(&present, &(alerts_hmi_frame_t){.state = ALERTS_HMI_EMPTY});
+	alerts_hmi_present_tap(&present, &(alerts_hmi_frame_t){.state = ALERTS_HMI_ALERT, .ambient_list_count = 0});
+	assert(present.overlay_open);
 	alerts_hmi_present_tick(&present, 14000);
 	assert(present.overlay_open);
 	alerts_hmi_present_tick(&present, 1000);
