@@ -3,6 +3,7 @@ idf_component_register(
 		"bsp.c"
 		"hmi.c"
 		"hmi_dismiss.c"
+		"hmi_day_rows.c"
 		"hmi_frame.c"
 		"hmi_lvgl.c"
 		"waveshare/jd9853_vendor_init.c"
