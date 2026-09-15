@@ -31,7 +31,7 @@ typedef struct {
 	alerts_event_t ambient_list[HMI_AMBIENT_FETCH_SLOTS];
 	size_t ambient_list_count;
 	bool overlay_open;
-	alerts_event_t overlay_list[HMI_OVERLAY_LIST_SLOTS];
+	alerts_event_t overlay_list[HMI_OVERLAY_FETCH_SLOTS];
 	size_t overlay_list_count;
 	int64_t now_unix;
 	int64_t schedule_loaded_at_unix;

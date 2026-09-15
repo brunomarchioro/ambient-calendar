@@ -183,7 +183,7 @@ static void fill_ambient_list(int64_t now, const alerts_schedule_t *s, const ale
 
 static void fill_overlay_list(int64_t now, const alerts_schedule_t *s, alerts_hmi_frame_t *out)
 {
-	size_t limit = HMI_OVERLAY_LIST_SLOTS;
+	size_t limit = HMI_OVERLAY_FETCH_SLOTS;
 	if (limit > ALERTS_MAX_EVENTS) {
 		limit = ALERTS_MAX_EVENTS;
 	}

@@ -460,13 +460,13 @@ static void render_overlay_event(int slot, lv_obj_t *title_lbl, const alerts_eve
 static size_t render_overlay_list(lv_obj_t **labels, int slot_count, const alerts_event_t *events, size_t count,
 				  int64_t now_unix)
 {
-	int day_keys[HMI_OVERLAY_LIST_SLOTS];
-	hmi_row_t rows[HMI_OVERLAY_LIST_SLOTS];
+	int day_keys[HMI_OVERLAY_FETCH_SLOTS];
+	hmi_day_row_t rows[HMI_OVERLAY_LIST_SLOTS];
 	size_t n = 0;
 	size_t event_rows = 0;
 
 	if (events != NULL && count > 0 && slot_count > 0) {
-		const size_t use = count > (size_t)slot_count ? (size_t)slot_count : count;
+		const size_t use = count > HMI_OVERLAY_FETCH_SLOTS ? HMI_OVERLAY_FETCH_SLOTS : count;
 		for (size_t i = 0; i < use; i++) {
 			day_keys[i] = local_day_key(events[i].start_unix);
 		}
@@ -475,7 +475,7 @@ static size_t render_overlay_list(lv_obj_t **labels, int slot_count, const alert
 
 	for (size_t slot = 0; slot < n; slot++) {
 		const alerts_event_t *e = &events[rows[slot].event_index];
-		if (rows[slot].kind == HMI_ROW_DAY_HEADER) {
+		if (rows[slot].kind == HMI_DAY_ROW_HEADER) {
 			render_overlay_date((int)slot, labels[slot], e->start_unix);
 		} else {
 			render_overlay_event((int)slot, labels[slot], e);
@@ -784,7 +784,7 @@ static void render_ambient_event(int slot, const alerts_event_t *e)
 static void render_ambient_list(const alerts_event_t *events, size_t count, int64_t now_unix)
 {
 	int day_keys[HMI_AMBIENT_FETCH_SLOTS];
-	hmi_row_t rows[HMI_AMBIENT_LIST_SLOTS];
+	hmi_day_row_t rows[HMI_AMBIENT_LIST_SLOTS];
 	size_t n = 0;
 
 	if (events != NULL && count > 0) {
@@ -797,7 +797,7 @@ static void render_ambient_list(const alerts_event_t *events, size_t count, int6
 
 	for (size_t slot = 0; slot < n; slot++) {
 		const alerts_event_t *e = &events[rows[slot].event_index];
-		if (rows[slot].kind == HMI_ROW_DAY_HEADER) {
+		if (rows[slot].kind == HMI_DAY_ROW_HEADER) {
 			render_ambient_day_header((int)slot, e->start_unix);
 		} else {
 			render_ambient_event((int)slot, e);

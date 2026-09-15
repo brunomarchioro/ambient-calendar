@@ -1,6 +1,6 @@
 #include "hmi_day_rows.h"
 
-size_t hmi_day_rows_plan(int today_key, const int *day_keys, size_t count, size_t max_rows, hmi_row_t *out)
+size_t hmi_day_rows_plan(int today_key, const int *day_keys, size_t count, size_t max_rows, hmi_day_row_t *out)
 {
 	size_t n = 0;
 	int previous_day = today_key;
@@ -15,13 +15,13 @@ size_t hmi_day_rows_plan(int today_key, const int *day_keys, size_t count, size_
 		}
 
 		if (needs_header) {
-			out[n].kind = HMI_ROW_DAY_HEADER;
+			out[n].kind = HMI_DAY_ROW_HEADER;
 			out[n].event_index = i;
 			n++;
 			previous_day = day;
 		}
 
-		out[n].kind = HMI_ROW_EVENT;
+		out[n].kind = HMI_DAY_ROW_EVENT;
 		out[n].event_index = i;
 		n++;
 	}

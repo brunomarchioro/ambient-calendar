@@ -7,6 +7,7 @@ import {
   updateEventMutationOptions,
 } from '@/web/events/api/event-mutations'
 import { eventsQueryKey, eventsQueryOptions } from '@/web/events/api/events-query'
+import { AgendaDayHeader } from '@/web/events/components/agenda-day-header'
 import { EventCard } from '@/web/events/components/event-card'
 import { LembreteForm } from '@/web/events/components/lembrete-form'
 import { planDayRows } from '@/web/events/day-rows'
@@ -14,10 +15,6 @@ import { selectEventsInHorizon } from '@/shared/events/horizon'
 import { canMutateEvent } from '@/web/events/utils'
 import { settingsQueryOptions } from '@/web/settings/api/settings-query'
 import { Card, CardContent } from '@/web/common/components/ui/card'
-
-export function AgendaDayHeader({ label }: { label: string }) {
-  return <h3 className="pt-2 text-xs font-semibold tracking-wide text-muted-foreground">{label}</h3>
-}
 
 export function AgendaPage() {
   const queryClient = useQueryClient()
@@ -42,6 +39,7 @@ export function AgendaPage() {
     ...deleteEventMutationOptions(),
     onSuccess: async () => {
       if (editing) setEditing(null)
+      await queryClient.invalidateQueries({ queryKey: eventsQueryKey })
     },
   })
 
