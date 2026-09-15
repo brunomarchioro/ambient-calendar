@@ -36,10 +36,10 @@ Handoff humano → agente para layout LVGL no ESP32-C6 (172×320). Comportamento
 | `COLOR_CYAN`   | `#00E5FF` | relógio, títulos de foco/lista, borda overlay |
 | `COLOR_DATE`   | `#FF4444` | data no header (esquerda)                     |
 | `COLOR_MUTED`  | `#808080` | subtítulos, títulos de lista, SYNC stale      |
-| `COLOR_ALERT`       | `#FF8C00` | fill card Alerta                            |
-| `COLOR_NOW`         | `#00FF41` | fill card Agora                             |
+| `COLOR_ALERT`       | `#FF9500` | fill card Alerta                            |
+| `COLOR_NOW`         | `#00CC66` | fill card Agora                             |
 | `COLOR_SYNC`        | `#00FF41` | texto `OK` (fresco)                         |
-| `COLOR_CARD_AMBIENT`| `#404040` | fill card Ambient (`PROXIMO`)               |
+| `COLOR_CARD_AMBIENT`| `#555555` | fill card Ambient (`PROXIMO`)               |
 | `COLOR_TEXT_ON_FILL`| `#000000` | texto em fill Alerta / Agora                |
 
 ## Layout por zonas (Y)
@@ -99,9 +99,9 @@ Slots: `HMI_AMBIENT_LIST_SLOTS` = **4**; overlay derivado de `HMI_OVERLAY_LIST_S
 
 | Estado  | Texto      | Fill card   | Texto (caption / título / tempo)        |
 | ------- | ---------- | ----------- | --------------------------------------- |
-| Ambient | `PROXIMO`  | `#404040`   | muted / ciano / muted                   |
-| Alert   | `ALERTA`   | `#FF8C00` pisca | preto / preto / preto             |
-| Now     | `AGORA`    | `#00FF41`   | preto / preto / preto                   |
+| Ambient | `PROXIMO`  | `#555555`   | muted / ciano / muted                   |
+| Alert   | `ALERTA`   | `#FF9500` pisca | preto / preto / preto             |
+| Now     | `AGORA`    | `#00CC66`   | preto / preto / preto                   |
 | Empty   | _(oculto)_ | —           | —                                       |
 
 ### Indicador SYNC

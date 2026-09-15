@@ -31,10 +31,10 @@ static const lv_color_t COLOR_BG = LV_COLOR_MAKE(0x00, 0x00, 0x00);
 static const lv_color_t COLOR_CYAN = LV_COLOR_MAKE(0x00, 0xE5, 0xFF);
 static const lv_color_t COLOR_DATE = LV_COLOR_MAKE(0xFF, 0x44, 0x44);
 static const lv_color_t COLOR_MUTED = LV_COLOR_MAKE(0x80, 0x80, 0x80);
-static const lv_color_t COLOR_ALERT = LV_COLOR_MAKE(0xFF, 0x8C, 0x00);
-static const lv_color_t COLOR_NOW = LV_COLOR_MAKE(0x00, 0xFF, 0x41);
+static const lv_color_t COLOR_ALERT = LV_COLOR_MAKE(0xFF, 0x95, 0x00);
+static const lv_color_t COLOR_NOW = LV_COLOR_MAKE(0x00, 0xCC, 0x66);
 static const lv_color_t COLOR_SYNC = LV_COLOR_MAKE(0x00, 0xFF, 0x41);
-static const lv_color_t COLOR_CARD_AMBIENT = LV_COLOR_MAKE(0x40, 0x40, 0x40);
+static const lv_color_t COLOR_CARD_AMBIENT = LV_COLOR_MAKE(0x55, 0x55, 0x55);
 static const lv_color_t COLOR_TEXT_ON_FILL = LV_COLOR_MAKE(0x00, 0x00, 0x00);
 
 typedef struct {
