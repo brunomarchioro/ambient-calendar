@@ -9,10 +9,15 @@ import {
 import { eventsQueryKey, eventsQueryOptions } from '@/web/events/api/events-query'
 import { EventCard } from '@/web/events/components/event-card'
 import { LembreteForm } from '@/web/events/components/lembrete-form'
+import { planDayRows } from '@/web/events/day-rows'
 import { selectEventsInHorizon } from '@/shared/events/horizon'
 import { canMutateEvent } from '@/web/events/utils'
 import { settingsQueryOptions } from '@/web/settings/api/settings-query'
 import { Card, CardContent } from '@/web/common/components/ui/card'
+
+export function AgendaDayHeader({ label }: { label: string }) {
+  return <h3 className="pt-2 text-xs font-semibold tracking-wide text-muted-foreground">{label}</h3>
+}
 
 export function AgendaPage() {
   const queryClient = useQueryClient()
@@ -37,7 +42,6 @@ export function AgendaPage() {
     ...deleteEventMutationOptions(),
     onSuccess: async () => {
       if (editing) setEditing(null)
-      await queryClient.invalidateQueries({ queryKey: eventsQueryKey })
     },
   })
 
@@ -50,6 +54,11 @@ export function AgendaPage() {
       showNextEvents: settings.showNextEvents,
     })
   }, [eventsQuery.data, settings])
+
+  const rows = useMemo(
+    () => (settings ? planDayRows(upcoming, { now: new Date(), timeZone: settings.timezone }) : []),
+    [upcoming, settings],
+  )
 
   return (
     <div className="flex flex-col gap-8">
@@ -93,20 +102,24 @@ export function AgendaPage() {
           </div>
         ) : null}
         <div className="flex flex-col gap-3">
-          {upcoming.map((event) => (
-            <EventCard
-              key={event.id}
-              event={event}
-              deleting={deleteMutation.isPending && deleteMutation.variables === event.id}
-              onEdit={() => {
-                if (canMutateEvent(event)) setEditing(event)
-              }}
-              onDelete={() => {
-                if (!canMutateEvent(event)) return
-                if (window.confirm('Excluir este Lembrete?')) deleteMutation.mutate(event.id)
-              }}
-            />
-          ))}
+          {rows.map((row) =>
+            row.kind === 'header' ? (
+              <AgendaDayHeader key={`day:${row.dayKey}`} label={row.label} />
+            ) : (
+              <EventCard
+                key={row.event.id}
+                event={row.event}
+                deleting={deleteMutation.isPending && deleteMutation.variables === row.event.id}
+                onEdit={() => {
+                  if (canMutateEvent(row.event)) setEditing(row.event)
+                }}
+                onDelete={() => {
+                  if (!canMutateEvent(row.event)) return
+                  if (window.confirm('Excluir este Lembrete?')) deleteMutation.mutate(row.event.id)
+                }}
+              />
+            ),
+          )}
         </div>
       </section>
     </div>
