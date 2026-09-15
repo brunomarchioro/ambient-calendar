@@ -18,7 +18,7 @@ test('today-only item has no header', () => {
   expect(rows.map(rowShape)).toEqual(['E:a'])
 })
 
-test('first item tomorrow gets header (focus-is-tomorrow gap)', () => {
+test('first item tomorrow gets header', () => {
   const rows = planDayRows([event('a', '2026-09-16T09:00:00-03:00')], { now: TODAY, timeZone: TZ })
   expect(rows.map(rowShape)).toEqual(['H:QUA 16', 'E:a'])
 })
