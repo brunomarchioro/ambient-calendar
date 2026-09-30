@@ -21,5 +21,4 @@ idf_component_register(
 		esp_lvgl_port
 		lvgl
 		nvs_flash
-		mydazy__esp_lcd_touch_axs5106l
 )
