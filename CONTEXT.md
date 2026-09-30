@@ -28,6 +28,14 @@ _Avoid_: Now (como entidade), Live, in-progress
 Preferências singleton do Ambient Calendar Display: fuso, janela de Alerta, horizonte de sync e quantos próximos Events a HMI e a agenda web listam (`showNextEvents`).
 _Avoid_: Config, Preferences, AppConfig
 
+**Bloqueio do dispositivo**:
+Barreira de privacidade local que oculta o conteúdo dos Events e impede interações na HMI até o desbloqueio. Não protege contra acesso físico à flash do dispositivo.
+_Avoid_: Overlay, autenticação, bloqueio de segurança
+
+**PIN do dispositivo**:
+Permutação dos algarismos `1`, `2`, `3` e `4`, usados exatamente uma vez cada, que remove o Bloqueio do dispositivo. Oferece 24 combinações e serve apenas como barreira de privacidade casual.
+_Avoid_: senha, PIN da conta, DEVICE_API_TOKEN
+
 **Conta Google**:
 Conta Google conectada ao Ambient Calendar Display via OAuth (credencial offline + identidade, ex.: e-mail). Pode haver mais de uma por deploy.
 _Avoid_: User, account (genérico), GoogleUser

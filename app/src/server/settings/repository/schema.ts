@@ -6,6 +6,7 @@ export const settings = sqliteTable('Settings', {
   reminderMinutes: integer('reminderMinutes').notNull(),
   lookaheadDays: integer('lookaheadDays').notNull(),
   showNextEvents: integer('showNextEvents').notNull(),
+  devicePin: text('devicePin'),
 })
 
 export type SettingsRow = typeof settings.$inferSelect

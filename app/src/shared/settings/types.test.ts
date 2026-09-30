@@ -1,5 +1,13 @@
 import { expect, test } from 'vitest'
-import { SETTINGS_DEFAULTS, parseSettings, seedIfMissing } from '@/shared/settings/types'
+import {
+  DEVICE_PIN_MESSAGE,
+  SETTINGS_DEFAULTS,
+  parseDevicePin,
+  parseSettings,
+  parseSettingsResponse,
+  seedIfMissing,
+  toSettingsResponse,
+} from '@/shared/settings/types'
 
 test('seed defaults match §4', () => {
   expect(SETTINGS_DEFAULTS).toEqual({
@@ -7,6 +15,7 @@ test('seed defaults match §4', () => {
     reminderMinutes: 30,
     lookaheadDays: 7,
     showNextEvents: 2,
+    devicePin: null,
   })
   expect(parseSettings(SETTINGS_DEFAULTS).success).toBe(true)
 })
@@ -21,6 +30,7 @@ test('seedIfMissing keeps an existing Settings row', () => {
     reminderMinutes: 1,
     lookaheadDays: 1,
     showNextEvents: 1,
+    devicePin: null,
   }
   expect(seedIfMissing(row)).toEqual(row)
 })
@@ -65,4 +75,30 @@ test('accepts range edges and a valid IANA timezone', () => {
 
 test('rejects quiet hours and other extra keys', () => {
   expect(parseSettings({ ...SETTINGS_DEFAULTS, quietHours: true }).success).toBe(false)
+})
+
+test('device PIN accepts only permutations of 1, 2, 3 and 4', () => {
+  expect(parseDevicePin('1234').success).toBe(true)
+  expect(parseDevicePin('4321').success).toBe(true)
+  for (const value of ['1123', '123', '12345', '0123', 'abcd']) {
+    const parsed = parseDevicePin(value)
+    expect(parsed.success).toBe(false)
+    if (!parsed.success) expect(parsed.error.issues[0]?.message).toBe(DEVICE_PIN_MESSAGE)
+  }
+})
+
+test('public settings expose only whether the PIN is configured', () => {
+  const response = toSettingsResponse({
+    ...SETTINGS_DEFAULTS,
+    devicePin: '2143',
+  })
+  expect(response).toEqual({
+    timezone: 'America/Sao_Paulo',
+    reminderMinutes: 30,
+    lookaheadDays: 7,
+    showNextEvents: 2,
+    pinConfigured: true,
+  })
+  expect(JSON.stringify(response)).not.toContain('2143')
+  expect(parseSettingsResponse(response).success).toBe(true)
 })

@@ -15,6 +15,13 @@
       "when": 1787924000000,
       "tag": "0001_google_multi_account",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1790808144527,
+      "tag": "0002_slim_magus",
+      "breakpoints": true
     }
   ]
 }

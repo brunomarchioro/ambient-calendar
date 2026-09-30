@@ -4,11 +4,7 @@ import type { Settings } from '@/shared/settings/types'
 import type { DeviceEvent, DeviceEventRow, DeviceSchedule } from '@/server/device/types'
 import { sanitizeDeviceTitle } from '@/server/device/services/device-title'
 
-export function toDeviceSchedule(args: {
-  now: Date
-  settings: Settings
-  rows: DeviceEventRow[]
-}): DeviceSchedule {
+export function toDeviceSchedule(args: { now: Date; settings: Settings; rows: DeviceEventRow[] }): DeviceSchedule {
   const selected = selectParsedEventsInHorizon(args.rows, {
     now: args.now,
     lookaheadDays: args.settings.lookaheadDays,
@@ -25,6 +21,7 @@ export function toDeviceSchedule(args: {
     timezone: args.settings.timezone,
     reminderMinutes: args.settings.reminderMinutes,
     showNextEvents: args.settings.showNextEvents,
+    devicePin: args.settings.devicePin,
     events,
   }
 }

@@ -19,6 +19,7 @@ import { Route as ApiDeviceScheduleRouteImport } from './routes/api/device/sched
 import { Route as ApiEventsIdRouteImport } from './routes/api/events.$id'
 import { Route as ApiGoogleAccountsRouteImport } from './routes/api/google.accounts'
 import { Route as ApiGoogleSyncRouteImport } from './routes/api/google.sync'
+import { Route as ApiSettingsPinRouteImport } from './routes/api/settings/pin'
 import { Route as ApiGoogleCalendarsIdRouteImport } from './routes/api/google.calendars.$id'
 import { Route as ApiGoogleOauthCallbackRouteImport } from './routes/api/google.oauth.callback'
 import { Route as ApiGoogleOauthStartRouteImport } from './routes/api/google.oauth.start'
@@ -74,6 +75,11 @@ const ApiGoogleSyncRoute = ApiGoogleSyncRouteImport.update({
   path: '/api/google/sync',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiSettingsPinRoute = ApiSettingsPinRouteImport.update({
+  id: '/pin',
+  path: '/pin',
+  getParentRoute: () => ApiSettingsRoute,
+} as any)
 const ApiGoogleCalendarsIdRoute = ApiGoogleCalendarsIdRouteImport.update({
   id: '/api/google/calendars/$id',
   path: '/api/google/calendars/$id',
@@ -101,12 +107,13 @@ export interface FileRoutesByFullPath {
   '/settings': typeof SettingsRoute
   '/api/events': typeof ApiEventsRouteWithChildren
   '/api/health': typeof ApiHealthRoute
-  '/api/settings': typeof ApiSettingsRoute
+  '/api/settings': typeof ApiSettingsRouteWithChildren
   '/events/': typeof EventsIndexRoute
   '/api/device/schedule': typeof ApiDeviceScheduleRoute
   '/api/events/$id': typeof ApiEventsIdRoute
   '/api/google/accounts': typeof ApiGoogleAccountsRouteWithChildren
   '/api/google/sync': typeof ApiGoogleSyncRoute
+  '/api/settings/pin': typeof ApiSettingsPinRoute
   '/api/google/calendars/$id': typeof ApiGoogleCalendarsIdRoute
   '/api/google/oauth/callback': typeof ApiGoogleOauthCallbackRoute
   '/api/google/oauth/start': typeof ApiGoogleOauthStartRoute
@@ -117,12 +124,13 @@ export interface FileRoutesByTo {
   '/settings': typeof SettingsRoute
   '/api/events': typeof ApiEventsRouteWithChildren
   '/api/health': typeof ApiHealthRoute
-  '/api/settings': typeof ApiSettingsRoute
+  '/api/settings': typeof ApiSettingsRouteWithChildren
   '/events': typeof EventsIndexRoute
   '/api/device/schedule': typeof ApiDeviceScheduleRoute
   '/api/events/$id': typeof ApiEventsIdRoute
   '/api/google/accounts': typeof ApiGoogleAccountsRouteWithChildren
   '/api/google/sync': typeof ApiGoogleSyncRoute
+  '/api/settings/pin': typeof ApiSettingsPinRoute
   '/api/google/calendars/$id': typeof ApiGoogleCalendarsIdRoute
   '/api/google/oauth/callback': typeof ApiGoogleOauthCallbackRoute
   '/api/google/oauth/start': typeof ApiGoogleOauthStartRoute
@@ -134,12 +142,13 @@ export interface FileRoutesById {
   '/settings': typeof SettingsRoute
   '/api/events': typeof ApiEventsRouteWithChildren
   '/api/health': typeof ApiHealthRoute
-  '/api/settings': typeof ApiSettingsRoute
+  '/api/settings': typeof ApiSettingsRouteWithChildren
   '/events/': typeof EventsIndexRoute
   '/api/device/schedule': typeof ApiDeviceScheduleRoute
   '/api/events/$id': typeof ApiEventsIdRoute
   '/api/google/accounts': typeof ApiGoogleAccountsRouteWithChildren
   '/api/google/sync': typeof ApiGoogleSyncRoute
+  '/api/settings/pin': typeof ApiSettingsPinRoute
   '/api/google/calendars/$id': typeof ApiGoogleCalendarsIdRoute
   '/api/google/oauth/callback': typeof ApiGoogleOauthCallbackRoute
   '/api/google/oauth/start': typeof ApiGoogleOauthStartRoute
@@ -158,6 +167,7 @@ export interface FileRouteTypes {
     | '/api/events/$id'
     | '/api/google/accounts'
     | '/api/google/sync'
+    | '/api/settings/pin'
     | '/api/google/calendars/$id'
     | '/api/google/oauth/callback'
     | '/api/google/oauth/start'
@@ -174,6 +184,7 @@ export interface FileRouteTypes {
     | '/api/events/$id'
     | '/api/google/accounts'
     | '/api/google/sync'
+    | '/api/settings/pin'
     | '/api/google/calendars/$id'
     | '/api/google/oauth/callback'
     | '/api/google/oauth/start'
@@ -190,6 +201,7 @@ export interface FileRouteTypes {
     | '/api/events/$id'
     | '/api/google/accounts'
     | '/api/google/sync'
+    | '/api/settings/pin'
     | '/api/google/calendars/$id'
     | '/api/google/oauth/callback'
     | '/api/google/oauth/start'
@@ -201,7 +213,7 @@ export interface RootRouteChildren {
   SettingsRoute: typeof SettingsRoute
   ApiEventsRoute: typeof ApiEventsRouteWithChildren
   ApiHealthRoute: typeof ApiHealthRoute
-  ApiSettingsRoute: typeof ApiSettingsRoute
+  ApiSettingsRoute: typeof ApiSettingsRouteWithChildren
   EventsIndexRoute: typeof EventsIndexRoute
   ApiDeviceScheduleRoute: typeof ApiDeviceScheduleRoute
   ApiGoogleAccountsRoute: typeof ApiGoogleAccountsRouteWithChildren
@@ -283,6 +295,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiGoogleSyncRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/settings/pin': {
+      id: '/api/settings/pin'
+      path: '/pin'
+      fullPath: '/api/settings/pin'
+      preLoaderRoute: typeof ApiSettingsPinRouteImport
+      parentRoute: typeof ApiSettingsRoute
+    }
     '/api/google/calendars/$id': {
       id: '/api/google/calendars/$id'
       path: '/api/google/calendars/$id'
@@ -326,6 +345,18 @@ const ApiEventsRouteWithChildren = ApiEventsRoute._addFileChildren(
   ApiEventsRouteChildren,
 )
 
+interface ApiSettingsRouteChildren {
+  ApiSettingsPinRoute: typeof ApiSettingsPinRoute
+}
+
+const ApiSettingsRouteChildren: ApiSettingsRouteChildren = {
+  ApiSettingsPinRoute: ApiSettingsPinRoute,
+}
+
+const ApiSettingsRouteWithChildren = ApiSettingsRoute._addFileChildren(
+  ApiSettingsRouteChildren,
+)
+
 interface ApiGoogleAccountsRouteChildren {
   ApiGoogleAccountsIdDisconnectRoute: typeof ApiGoogleAccountsIdDisconnectRoute
 }
@@ -342,7 +373,7 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsRoute: SettingsRoute,
   ApiEventsRoute: ApiEventsRouteWithChildren,
   ApiHealthRoute: ApiHealthRoute,
-  ApiSettingsRoute: ApiSettingsRoute,
+  ApiSettingsRoute: ApiSettingsRouteWithChildren,
   EventsIndexRoute: EventsIndexRoute,
   ApiDeviceScheduleRoute: ApiDeviceScheduleRoute,
   ApiGoogleAccountsRoute: ApiGoogleAccountsRouteWithChildren,

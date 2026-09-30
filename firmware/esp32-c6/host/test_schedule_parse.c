@@ -47,6 +47,25 @@ int main(void)
 		"\"timezone\":\"America/Sao_Paulo\","
 		"\"reminderMinutes\":30,"
 		"\"showNextEvents\":2,"
+		"\"devicePin\":null,"
+		"\"events\":[]"
+		"}";
+	const char *locked =
+		"{"
+		"\"serverUnix\":1787850000,"
+		"\"timezone\":\"America/Sao_Paulo\","
+		"\"reminderMinutes\":30,"
+		"\"showNextEvents\":2,"
+		"\"devicePin\":\"2413\","
+		"\"events\":[]"
+		"}";
+	const char *bad_pin =
+		"{"
+		"\"serverUnix\":1787850000,"
+		"\"timezone\":\"America/Sao_Paulo\","
+		"\"reminderMinutes\":30,"
+		"\"showNextEvents\":2,"
+		"\"devicePin\":\"1123\","
 		"\"events\":[]"
 		"}";
 	const char *null_end =
@@ -153,6 +172,12 @@ int main(void)
 
 	expect_ok(empty, &s);
 	assert(s.event_count == 0);
+	assert(!s.has_device_pin);
+
+	expect_ok(locked, &s);
+	assert(s.has_device_pin);
+	assert(strcmp(s.device_pin, "2413") == 0);
+	assert(alerts_schedule_parse(bad_pin, strlen(bad_pin), &s) == ALERTS_PARSE_TYPE);
 
 	expect_ok(null_end, &s);
 	assert(s.event_count == 1);

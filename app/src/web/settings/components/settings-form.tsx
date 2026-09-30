@@ -1,6 +1,6 @@
 import { useForm } from '@tanstack/react-form'
 import { useSearch } from '@tanstack/react-router'
-import { parseSettings, settingsSchema, type Settings } from '@/shared/settings/types'
+import { parseSettingsValues, settingsValuesSchema, type SettingsValues } from '@/shared/settings/types'
 import { Button } from '@/web/common/components/ui/button'
 import { Field, FieldGroup, FieldLabel } from '@/web/common/components/ui/field'
 import { NativeSelect } from '@/web/common/components/ui/native-select'
@@ -15,28 +15,24 @@ export function SettingsForm({
   onSave,
   onGoogleChange,
 }: {
-  settings: Settings
+  settings: SettingsValues
   pending: boolean
   error: string | null
-  onSave: (settings: Settings) => Promise<Settings>
+  onSave: (settings: SettingsValues) => Promise<unknown>
   onGoogleChange: () => void
 }) {
   const search = useSearch({ strict: false }) as { google?: string }
   const oauthBanner =
-    search.google && GOOGLE_STATUS_MESSAGES[search.google]
-      ? GOOGLE_STATUS_MESSAGES[search.google]
-      : null
+    search.google && GOOGLE_STATUS_MESSAGES[search.google] ? GOOGLE_STATUS_MESSAGES[search.google] : null
 
-  const zones = TIMEZONES.includes(settings.timezone)
-    ? TIMEZONES
-    : [settings.timezone, ...TIMEZONES]
+  const zones = TIMEZONES.includes(settings.timezone) ? TIMEZONES : [settings.timezone, ...TIMEZONES]
   const form = useForm({
     defaultValues: settings,
     validators: {
-      onSubmit: settingsSchema,
+      onSubmit: settingsValuesSchema,
     },
     onSubmit: async ({ value }) => {
-      const parsed = parseSettings(value)
+      const parsed = parseSettingsValues(value)
       if (!parsed.success) return
       await onSave(parsed.data)
     },
@@ -73,17 +69,13 @@ export function SettingsForm({
         </form.Field>
 
         <form.Field name="reminderMinutes">
-          {(field) => (
-            <SettingsNumberField field={field} label="Minutos de antecedência do Alerta" min={1} max={180} />
-          )}
+          {(field) => <SettingsNumberField field={field} label="Minutos de antecedência do Alerta" min={1} max={180} />}
         </form.Field>
         <form.Field name="lookaheadDays">
           {(field) => <SettingsNumberField field={field} label="Dias de horizonte" min={1} max={30} />}
         </form.Field>
         <form.Field name="showNextEvents">
-          {(field) => (
-            <SettingsNumberField field={field} label="Próximos Events (agenda e display)" min={1} max={5} />
-          )}
+          {(field) => <SettingsNumberField field={field} label="Próximos Events (agenda e display)" min={1} max={5} />}
         </form.Field>
 
         {form.state.errors.length > 0 || error ? (

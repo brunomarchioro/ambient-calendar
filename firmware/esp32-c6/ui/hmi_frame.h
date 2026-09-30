@@ -7,6 +7,7 @@
 #include "schedule.h"
 
 #define ALERTS_HMI_OVERLAY_TIMEOUT_MS 15000
+#define ALERTS_HMI_PIN_ERROR_MS 300
 #define ALERTS_HMI_SYNC_FRESH_SEC 300
 #define ALERTS_HMI_SYNC_STALE_SEC 3600
 
@@ -20,6 +21,11 @@ typedef enum {
 typedef struct {
 	bool overlay_open;
 	int overlay_elapsed_ms;
+	bool locked;
+	bool pin_error;
+	char device_pin[ALERTS_DEVICE_PIN_LEN];
+	char pin_entry[ALERTS_DEVICE_PIN_LEN];
+	int pin_length;
 } alerts_hmi_present_t;
 
 typedef struct {
@@ -35,13 +41,21 @@ typedef struct {
 	size_t overlay_list_count;
 	int64_t now_unix;
 	int64_t schedule_loaded_at_unix;
+	bool schedule_available;
 	char timezone[ALERTS_TZ_LEN];
+	bool locked;
+	bool pin_error;
+	int pin_length;
 } alerts_hmi_frame_t;
 
 void alerts_hmi_present_init(alerts_hmi_present_t *present);
 bool alerts_hmi_present_overlay_allowed(const alerts_hmi_frame_t *frame);
 void alerts_hmi_present_tap(alerts_hmi_present_t *present, const alerts_hmi_frame_t *frame);
 void alerts_hmi_present_tick(alerts_hmi_present_t *present, int elapsed_ms);
+void alerts_hmi_present_clear_pin_error(alerts_hmi_present_t *present);
+bool alerts_hmi_present_set_pin(alerts_hmi_present_t *present, const char *pin);
+bool alerts_hmi_present_lock(alerts_hmi_present_t *present);
+bool alerts_hmi_present_pin_digit(alerts_hmi_present_t *present, int digit);
 
 int alerts_hmi_build_frame(int64_t now_unix, const alerts_schedule_t *schedule, const alerts_hmi_present_t *present,
 			   alerts_hmi_frame_t *out);

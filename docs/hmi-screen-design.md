@@ -6,13 +6,13 @@ Handoff humano → agente para layout LVGL no ESP32-C6 (172×320). Comportamento
 
 ## Canvas
 
-| Propriedade | Valor                                                                                              |
-| ----------- | -------------------------------------------------------------------------------------------------- |
-| Resolução   | 172 × 320 px                                                                                       |
-| Orientação  | portrait (Waveshare 1.47")                                                                         |
-| Fundo       | `#000000`                                                                                          |
-| Grade       | 16 px (vertical e horizontal)                                                                      |
-| Fonte       | **Montserrat** built-in LVGL — `lv_font_montserrat_20` (única) |
+| Propriedade | Valor                                                                                                     |
+| ----------- | --------------------------------------------------------------------------------------------------------- |
+| Resolução   | 172 × 320 px                                                                                              |
+| Orientação  | portrait (Waveshare 1.47")                                                                                |
+| Fundo       | `#000000`                                                                                                 |
+| Grade       | 16 px (vertical e horizontal)                                                                             |
+| Fonte       | **Montserrat** built-in LVGL — `lv_font_montserrat_20` (única)                                            |
 | UI strings  | ASCII Basic Latin only — labels fixas **e** Título no display (fold PT-BR no backend e no parse do cache) |
 
 ## Estilo (regras)
@@ -30,17 +30,18 @@ Handoff humano → agente para layout LVGL no ESP32-C6 (172×320). Comportamento
 
 ## Tokens visuais
 
-| Token          | Hex       | Uso                                           |
-| -------------- | --------- | --------------------------------------------- |
-| `COLOR_BG`     | `#000000` | fundo                                         |
-| `COLOR_CYAN`   | `#00E5FF` | relógio, títulos de foco/lista, borda overlay |
-| `COLOR_DATE`   | `#FF4444` | data no header (esquerda)                     |
-| `COLOR_MUTED`  | `#808080` | subtítulos, títulos de lista, SYNC stale      |
-| `COLOR_ALERT`       | `#FF8C00` | fill card Alerta                            |
-| `COLOR_NOW`         | `#00FF41` | fill card Agora                             |
-| `COLOR_SYNC`        | `#00FF41` | texto `OK` (fresco)                         |
-| `COLOR_CARD_AMBIENT`| `#404040` | fill card Ambient (`PROXIMO`)               |
-| `COLOR_TEXT_ON_FILL`| `#000000` | texto em fill Alerta / Agora                |
+| Token                | Hex       | Uso                                           |
+| -------------------- | --------- | --------------------------------------------- |
+| `COLOR_BG`           | `#000000` | fundo                                         |
+| `COLOR_CYAN`         | `#00E5FF` | relógio, títulos de foco/lista, borda overlay |
+| `COLOR_DATE`         | `#FF4444` | data no header (esquerda)                     |
+| `COLOR_MUTED`        | `#808080` | subtítulos, títulos de lista, SYNC stale      |
+| `COLOR_ALERT`        | `#FF8C00` | fill card Alerta                              |
+| `COLOR_NOW`          | `#00FF41` | fill card Agora                               |
+| `COLOR_SYNC`         | `#00FF41` | texto `OK` (fresco)                           |
+| `COLOR_CARD_AMBIENT` | `#404040` | fill card Ambient (`PROXIMO`)                 |
+| `COLOR_TEXT_ON_FILL` | `#000000` | texto em fill Alerta / Agora                  |
+| `COLOR_ERROR`        | `#FF4444` | indicadores de tentativa incorreta            |
 
 ## Layout por zonas (Y)
 
@@ -60,17 +61,17 @@ Handoff humano → agente para layout LVGL no ESP32-C6 (172×320). Comportamento
 
 ### Dimensões horizontais
 
-| Constante           | Valor (px) | Uso                          |
-| ------------------- | ---------- | ---------------------------- |
-| `HMI_SYNC_W`        | 32         | slot sync (direita do header)|
-| `HMI_CARD_INNER_W`  | 124        | texto dentro do card (derivado)   |
-| `HMI_LIST_TIME_W`   | 52         | coluna hora (`HH:MM`, alinhada à esquerda) |
-| `HMI_LIST_GAP`      | 4          | respiro entre hora e título                |
-| `HMI_LIST_TITLE_X`  | 68         | início do título (derivado)                |
-| `HMI_LIST_TITLE_W`  | 92         | título na lista (derivado)                 |
-| `HMI_LIST_ROW`      | 32         | altura de cada linha         |
-| `HMI_FONT_BODY_LINE`| 24         | altura reservada (fonte 20)  |
-| `HMI_FONT_CLOCK_LINE`| 24        | altura reservada (fonte 20)  |
+| Constante             | Valor (px) | Uso                                        |
+| --------------------- | ---------- | ------------------------------------------ |
+| `HMI_SYNC_W`          | 32         | slot sync (direita do header)              |
+| `HMI_CARD_INNER_W`    | 124        | texto dentro do card (derivado)            |
+| `HMI_LIST_TIME_W`     | 52         | coluna hora (`HH:MM`, alinhada à esquerda) |
+| `HMI_LIST_GAP`        | 4          | respiro entre hora e título                |
+| `HMI_LIST_TITLE_X`    | 68         | início do título (derivado)                |
+| `HMI_LIST_TITLE_W`    | 92         | título na lista (derivado)                 |
+| `HMI_LIST_ROW`        | 32         | altura de cada linha                       |
+| `HMI_FONT_BODY_LINE`  | 24         | altura reservada (fonte 20)                |
+| `HMI_FONT_CLOCK_LINE` | 24         | altura reservada (fonte 20)                |
 
 ## Widgets (IDs lógicos)
 
@@ -85,8 +86,8 @@ Handoff humano → agente para layout LVGL no ESP32-C6 (172×320). Comportamento
 | `focus_time_lbl`    | label | 20    | `em Nm` ou `Ate HH:MM`                 |
 | `secondary_card`    | panel | —     | segundo card em Agora+Alerta           |
 | `secondary_*_lbl`   | label | 20    | mesmo layout, caption `ALERTA`         |
-| `list_time_lbl[i]`  | label | 20    | hora (`COLOR_CYAN`), coluna 52 px          |
-| `list_title_lbl[i]` | label | 20    | título (`COLOR_MUTED`), após gap 4 px      |
+| `list_time_lbl[i]`  | label | 20    | hora (`COLOR_CYAN`), coluna 52 px      |
+| `list_title_lbl[i]` | label | 20    | título (`COLOR_MUTED`), após gap 4 px  |
 | `empty_title_lbl`   | label | 20    | `SEM EVENTOS`                          |
 | `overlay`           | panel | —     | fullscreen, borda ciano                |
 | `overlay_title`     | label | 20    | `PROXIMOS`                             |
@@ -97,20 +98,20 @@ Slots: `HMI_AMBIENT_LIST_SLOTS` = **4**; overlay derivado de `HMI_OVERLAY_LIST_S
 
 ### Rótulos do card (`focus_caption_lbl`)
 
-| Estado  | Texto      | Fill card   | Texto (caption / título / tempo)        |
-| ------- | ---------- | ----------- | --------------------------------------- |
-| Ambient | `PROXIMO`  | `#404040`   | muted / ciano / muted                   |
-| Alert   | `ALERTA`   | `#FF8C00` pisca | preto / preto / preto             |
-| Now     | `AGORA`    | `#00FF41`   | preto / preto / preto                   |
-| Empty   | _(oculto)_ | —           | —                                       |
+| Estado  | Texto      | Fill card       | Texto (caption / título / tempo) |
+| ------- | ---------- | --------------- | -------------------------------- |
+| Ambient | `PROXIMO`  | `#404040`       | muted / ciano / muted            |
+| Alert   | `ALERTA`   | `#FF8C00` pisca | preto / preto / preto            |
+| Now     | `AGORA`    | `#00FF41`       | preto / preto / preto            |
+| Empty   | _(oculto)_ | —               | —                                |
 
 ### Indicador SYNC
 
-| Condição                              | Exibição                                      |
-| ------------------------------------- | --------------------------------------------- |
-| Relógio válido e cache &lt; **5 min** | `OK` verde (`lv_font_montserrat_20`)          |
-| Cache entre **5** e **60 min**        | `Nm` cinza (`lv_font_montserrat_20`)          |
-| &gt; **60 min** ou sem relógio        | oculto                                        |
+| Condição                              | Exibição                             |
+| ------------------------------------- | ------------------------------------ |
+| Relógio válido e cache &lt; **5 min** | `OK` verde (`lv_font_montserrat_20`) |
+| Cache entre **5** e **60 min**        | `Nm` cinza (`lv_font_montserrat_20`) |
+| &gt; **60 min** ou sem relógio        | oculto                               |
 
 Slot direito do header: **32 px** (`HMI_SYNC_W`). Data usa o restante (`HMI_CARD_W - HMI_SYNC_W` = **116 px**).
 
@@ -118,11 +119,11 @@ Slot direito do header: **32 px** (`HMI_SYNC_W`). Data usa o restante (`HMI_CARD
 
 Marquee horizontal contínuo (`LV_LABEL_LONG_SCROLL_CIRCULAR` + template `lv_style_set_anim`). Widgets: `focus_title_lbl`, `list_title_lbl[i]`, títulos no overlay. Texto curto (cabe no clip) permanece estático (`LV_LABEL_LONG_CLIP`).
 
-| Constante                   | Valor  | Campo anim (`lv_style_set_anim`)     |
-| --------------------------- | ------ | ------------------------------------ |
-| `HMI_SCROLL_START_DELAY_MS` | `4000` | `lv_anim_set_delay` (base)           |
-| `HMI_SCROLL_STAGGER_MS`     | `700`  | somado ao delay por slot (`× slot`)  |
-| `HMI_SCROLL_PAUSE_MS`       | `2500` | `lv_anim_set_repeat_delay`           |
+| Constante                   | Valor  | Campo anim (`lv_style_set_anim`)    |
+| --------------------------- | ------ | ----------------------------------- |
+| `HMI_SCROLL_START_DELAY_MS` | `4000` | `lv_anim_set_delay` (base)          |
+| `HMI_SCROLL_STAGGER_MS`     | `700`  | somado ao delay por slot (`× slot`) |
+| `HMI_SCROLL_PAUSE_MS`       | `2500` | `lv_anim_set_repeat_delay`          |
 
 Velocidade do deslocamento: calculada pelo LVGL (ajustar na board se necessário). Reconfigurar scroll só quando o título muda (`strcmp` no render).
 
@@ -218,18 +219,41 @@ Toque no card `AGORA` = **encerramento antecipado** (NVS até `endAt`).
 └──────────────────┘
 ```
 
+### Bloqueio do dispositivo
+
+Camada fullscreen acima de todos os estados e do overlay. Botões com área de toque **70×88 px**, ordem fixa em grade 2×2. Pressionado: fill ciano e número preto. O PIN correto desbloqueia imediatamente; o incorreto mantém quatro indicadores vermelhos por **300 ms** e então limpa a tentativa.
+
+```text
+┌──────────────────┐
+│    BLOQUEADO     │
+│     ○ ○ ○ ○      │
+│                  │
+│ ███████  ███████ │
+│ █  1  █  █  2  █ │
+│ ███████  ███████ │
+│ ███████  ███████ │
+│ █  3  █  █  4  █ │
+│ ███████  ███████ │
+└──────────────────┘
+```
+
+Variações para validação visual: `locked` (nenhum indicador), `locked / entering` (dois indicadores ciano) e `locked / error` (quatro indicadores vermelhos).
+
 ## Tabela de estados (visibilidade)
 
-| Widget            | Empty | Ambient | Alert | Now | Now+2º | Overlay |
-| ----------------- | ----- | ------- | ----- | --- | ------ | ------- |
-| date, clock, sync | ●     | ●       | ●     | ●   | ●      | ●       |
-| focus_card        | ○     | ●       | ●     | ●   | ●      | ○       |
-| secondary_card    | ○     | ○       | ○     | ○   | ●      | ○       |
-| empty_title       | ●     | ○       | ○     | ○   | ○      | ○       |
-| list\_\*          | ○¹    | ●       | ●     | ●   | ○      | ○       |
-| overlay           | ○     | ○       | ○     | ○   | ○      | ●       |
+| Widget            | Empty | Ambient | Alert | Now | Now+2º | Overlay | Bloqueado |
+| ----------------- | ----- | ------- | ----- | --- | ------ | ------- | --------- |
+| date, clock, sync | ●     | ●       | ●     | ●   | ●      | ●       | ○         |
+| focus_card        | ○     | ●       | ●     | ●   | ●      | ○       | ○         |
+| secondary_card    | ○     | ○       | ○     | ○   | ●      | ○       | ○         |
+| empty_title       | ●     | ○       | ○     | ○   | ○      | ○       | ○         |
+| list\_\*          | ○¹    | ●       | ●     | ●   | ○      | ○       | ○         |
+| overlay           | ○     | ○       | ○     | ○   | ○      | ●       | ○         |
+| lock_layer        | ○     | ○       | ○     | ○   | ○      | ○       | ●         |
 
 ¹ layout parity; vazia se scheduler Empty
+
+Sem schedule carregado (primeiro boot sem cache), a tela permanece totalmente preta até o primeiro sync válido.
 
 ## Regras de conteúdo dinâmico
 
@@ -245,15 +269,16 @@ Toque no card `AGORA` = **encerramento antecipado** (NVS até `endAt`).
 
 ## Interação
 
-| Gesto                        | Efeito                                     |
-| ---------------------------- | ------------------------------------------ |
-| Toque card `AGORA`           | Encerramento antecipado → recalcula estado |
-| Toque card secundário `ALERTA` | Sem ação (não abre overlay)              |
-| Toque fora dos cards         | Overlay (ver regras abaixo)                |
-| Ambient com `list_count > 0` | Toque **não** abre overlay                 |
-| Ambient com lista vazia      | Toque abre overlay                         |
-| 15 s com overlay             | Fecha overlay                              |
-| Swipe                        | **não suportado**                          |
+| Gesto                           | Efeito                                     |
+| ------------------------------- | ------------------------------------------ |
+| Toque card `AGORA`              | Encerramento antecipado → recalcula estado |
+| Toque card secundário `ALERTA`  | Sem ação (não abre overlay)                |
+| Toque fora dos cards            | Overlay (ver regras abaixo)                |
+| Ambient com `list_count > 0`    | Toque **não** abre overlay                 |
+| Ambient com lista vazia         | Toque abre overlay                         |
+| 15 s com overlay                | Fecha overlay                              |
+| Pressão de 2 s em qualquer área | Bloqueia se houver PIN; consome o clique   |
+| Swipe                           | **não suportado**                          |
 
 ## Handoff para implementação
 

@@ -36,6 +36,7 @@ static const lv_color_t COLOR_NOW = LV_COLOR_MAKE(0x00, 0xFF, 0x41);
 static const lv_color_t COLOR_SYNC = LV_COLOR_MAKE(0x00, 0xFF, 0x41);
 static const lv_color_t COLOR_CARD_AMBIENT = LV_COLOR_MAKE(0x40, 0x40, 0x40);
 static const lv_color_t COLOR_TEXT_ON_FILL = LV_COLOR_MAKE(0x00, 0x00, 0x00);
+static const lv_color_t COLOR_ERROR = LV_COLOR_MAKE(0xFF, 0x44, 0x44);
 
 typedef struct {
 	lv_obj_t *root;
@@ -58,6 +59,9 @@ typedef struct {
 	lv_obj_t *overlay_count_lbl;
 	lv_obj_t *overlay_time_lbl[HMI_OVERLAY_LIST_SLOTS];
 	lv_obj_t *overlay_list[HMI_OVERLAY_LIST_SLOTS];
+	lv_obj_t *lock_layer;
+	lv_obj_t *lock_indicators[4];
+	lv_obj_t *lock_buttons[4];
 	alerts_hmi_state_t last_state;
 	bool last_secondary;
 	char last_tz[ALERTS_TZ_LEN];
@@ -66,6 +70,9 @@ typedef struct {
 static hmi_ui_t s_ui;
 static alerts_hmi_tap_cb_t s_background_tap_cb;
 static alerts_hmi_tap_cb_t s_dismiss_tap_cb;
+static alerts_hmi_tap_cb_t s_manual_lock_cb;
+static alerts_hmi_pin_cb_t s_pin_cb;
+static bool s_long_press_consumed;
 
 void alerts_hmi_lvgl_set_background_tap_cb(alerts_hmi_tap_cb_t cb)
 {
@@ -75,6 +82,16 @@ void alerts_hmi_lvgl_set_background_tap_cb(alerts_hmi_tap_cb_t cb)
 void alerts_hmi_lvgl_set_dismiss_tap_cb(alerts_hmi_tap_cb_t cb)
 {
 	s_dismiss_tap_cb = cb;
+}
+
+void alerts_hmi_lvgl_set_manual_lock_cb(alerts_hmi_tap_cb_t cb)
+{
+	s_manual_lock_cb = cb;
+}
+
+void alerts_hmi_lvgl_set_pin_cb(alerts_hmi_pin_cb_t cb)
+{
+	s_pin_cb = cb;
 }
 
 static const char *weekday_pt(int wday)
@@ -493,6 +510,10 @@ static size_t render_overlay_list(lv_obj_t **labels, int slot_count, const alert
 static void background_click_cb(lv_event_t *e)
 {
 	const lv_event_code_t code = lv_event_get_code(e);
+	if (s_long_press_consumed) {
+		s_long_press_consumed = false;
+		return;
+	}
 	if ((code == LV_EVENT_CLICKED || code == LV_EVENT_SHORT_CLICKED) && s_background_tap_cb != NULL) {
 		s_background_tap_cb();
 	}
@@ -503,6 +524,10 @@ static void dismiss_click_cb(lv_event_t *e)
 	const lv_event_code_t code = lv_event_get_code(e);
 	if (code == LV_EVENT_CLICKED || code == LV_EVENT_SHORT_CLICKED) {
 		lv_event_stop_bubbling(e);
+		if (s_long_press_consumed) {
+			s_long_press_consumed = false;
+			return;
+		}
 		if (s_dismiss_tap_cb != NULL) {
 			s_dismiss_tap_cb();
 		}
@@ -514,6 +539,32 @@ static void consume_click_cb(lv_event_t *e)
 	const lv_event_code_t code = lv_event_get_code(e);
 	if (code == LV_EVENT_CLICKED || code == LV_EVENT_SHORT_CLICKED) {
 		lv_event_stop_bubbling(e);
+		if (s_long_press_consumed) {
+			s_long_press_consumed = false;
+		}
+	}
+}
+
+static void long_press_cb(lv_event_t *e)
+{
+	lv_event_stop_bubbling(e);
+	s_long_press_consumed = true;
+	if (s_manual_lock_cb != NULL) {
+		s_manual_lock_cb();
+	}
+}
+
+static void pin_click_cb(lv_event_t *e)
+{
+	lv_obj_t *button = (lv_obj_t *)lv_event_get_target(e);
+	lv_obj_t *label = lv_obj_get_child(button, 0);
+	const lv_event_code_t code = lv_event_get_code(e);
+	if (code == LV_EVENT_PRESSED) {
+		lv_obj_set_style_text_color(label, COLOR_TEXT_ON_FILL, 0);
+	} else if (code == LV_EVENT_RELEASED || code == LV_EVENT_PRESS_LOST) {
+		lv_obj_set_style_text_color(label, COLOR_CYAN, 0);
+	} else if (code == LV_EVENT_CLICKED && s_pin_cb != NULL) {
+		s_pin_cb((int)(intptr_t)lv_event_get_user_data(e));
 	}
 }
 
@@ -648,6 +699,9 @@ static void wire_card_labels(lv_obj_t *card, lv_obj_t **caption, lv_obj_t **titl
 esp_err_t alerts_hmi_lvgl_init(void)
 {
 	memset(&s_ui, 0, sizeof(s_ui));
+	for (lv_indev_t *indev = lv_indev_get_next(NULL); indev != NULL; indev = lv_indev_get_next(indev)) {
+		lv_indev_set_long_press_time(indev, 2000);
+	}
 
 	s_ui.root = lv_obj_create(lv_screen_active());
 	lv_obj_remove_style_all(s_ui.root);
@@ -658,6 +712,7 @@ esp_err_t alerts_hmi_lvgl_init(void)
 	lv_obj_set_style_bg_opa(s_ui.root, LV_OPA_COVER, 0);
 	lv_obj_add_flag(s_ui.root, LV_OBJ_FLAG_CLICKABLE);
 	lv_obj_add_event_cb(s_ui.root, background_click_cb, LV_EVENT_CLICKED, NULL);
+	lv_obj_add_event_cb(s_ui.root, long_press_cb, LV_EVENT_LONG_PRESSED, NULL);
 
 	s_ui.date_lbl = lv_label_create(s_ui.root);
 	lv_obj_set_pos(s_ui.date_lbl, HMI_PAD_X, HMI_HEADER_Y);
@@ -712,6 +767,7 @@ esp_err_t alerts_hmi_lvgl_init(void)
 	style_flat_panel(s_ui.overlay, COLOR_BG, COLOR_CYAN, 1);
 	lv_obj_add_flag(s_ui.overlay, LV_OBJ_FLAG_CLICKABLE);
 	lv_obj_add_event_cb(s_ui.overlay, background_click_cb, LV_EVENT_CLICKED, NULL);
+	lv_obj_add_event_cb(s_ui.overlay, long_press_cb, LV_EVENT_LONG_PRESSED, NULL);
 	lv_obj_add_flag(s_ui.overlay, LV_OBJ_FLAG_HIDDEN);
 
 	s_ui.overlay_title = lv_label_create(s_ui.overlay);
@@ -730,9 +786,52 @@ esp_err_t alerts_hmi_lvgl_init(void)
 	build_overlay_row_labels(s_ui.overlay_time_lbl, s_ui.overlay_list, s_ui.overlay, HMI_OVERLAY_LIST_Y,
 				 HMI_OVERLAY_LIST_SLOTS);
 
+	s_ui.lock_layer = lv_obj_create(s_ui.root);
+	lv_obj_remove_style_all(s_ui.lock_layer);
+	lv_obj_set_size(s_ui.lock_layer, WS_LCD_H_RES, WS_LCD_V_RES);
+	style_filled_panel(s_ui.lock_layer, COLOR_BG);
+	lv_obj_clear_flag(s_ui.lock_layer, LV_OBJ_FLAG_SCROLLABLE);
+	lv_obj_add_flag(s_ui.lock_layer, LV_OBJ_FLAG_HIDDEN);
+
+	lv_obj_t *lock_title = lv_label_create(s_ui.lock_layer);
+	lv_label_set_text(lock_title, "BLOQUEADO");
+	lv_obj_set_pos(lock_title, 0, 16);
+	lv_obj_set_width(lock_title, WS_LCD_H_RES);
+	style_label_line(lock_title, FONT_BODY, COLOR_CYAN, LV_TEXT_ALIGN_CENTER);
+
+	for (int i = 0; i < 4; i++) {
+		s_ui.lock_indicators[i] = lv_obj_create(s_ui.lock_layer);
+		lv_obj_remove_style_all(s_ui.lock_indicators[i]);
+		lv_obj_set_pos(s_ui.lock_indicators[i], 48 + i * 21, 64);
+		lv_obj_set_size(s_ui.lock_indicators[i], 12, 12);
+		style_flat_panel(s_ui.lock_indicators[i], COLOR_BG, COLOR_CYAN, 2);
+		lv_obj_set_style_radius(s_ui.lock_indicators[i], LV_RADIUS_CIRCLE, 0);
+	}
+
+	for (int i = 0; i < 4; i++) {
+		const int col = i % 2;
+		const int row = i / 2;
+		lv_obj_t *button = lv_button_create(s_ui.lock_layer);
+		s_ui.lock_buttons[i] = button;
+		lv_obj_set_pos(button, 10 + col * 82, 112 + row * 96);
+		lv_obj_set_size(button, 70, 88);
+		lv_obj_set_style_radius(button, 0, 0);
+		lv_obj_set_style_border_width(button, 0, 0);
+		lv_obj_set_style_bg_color(button, COLOR_CARD_AMBIENT, 0);
+		lv_obj_set_style_bg_color(button, COLOR_CYAN, LV_STATE_PRESSED);
+		lv_obj_set_style_text_color(button, COLOR_CYAN, 0);
+		lv_obj_set_style_text_color(button, COLOR_TEXT_ON_FILL, LV_STATE_PRESSED);
+		lv_obj_add_event_cb(button, pin_click_cb, LV_EVENT_ALL, (void *)(intptr_t)(i + 1));
+		lv_obj_t *label = lv_label_create(button);
+		lv_label_set_text_fmt(label, "%d", i + 1);
+		style_label_line(label, FONT_BODY, COLOR_CYAN, LV_TEXT_ALIGN_CENTER);
+		lv_obj_center(label);
+	}
+
 	lv_obj_move_foreground(s_ui.focus_card);
 	lv_obj_move_foreground(s_ui.secondary_card);
 	lv_obj_move_foreground(s_ui.overlay);
+	lv_obj_move_foreground(s_ui.lock_layer);
 
 	s_ui.last_state = ALERTS_HMI_EMPTY;
 	ESP_LOGI(TAG, "lvgl widgets ready");
@@ -878,6 +977,22 @@ esp_err_t alerts_hmi_lvgl_render(const alerts_hmi_frame_t *frame)
 {
 	if (frame == NULL) {
 		return ESP_ERR_INVALID_ARG;
+	}
+
+	set_visible(s_ui.lock_layer, frame->locked);
+	if (frame->locked) {
+		for (int i = 0; i < 4; i++) {
+			const bool filled = i < frame->pin_length;
+			const lv_color_t color = frame->pin_error ? COLOR_ERROR : COLOR_CYAN;
+			lv_obj_set_style_border_color(s_ui.lock_indicators[i], color, 0);
+			lv_obj_set_style_bg_color(s_ui.lock_indicators[i], color, 0);
+			lv_obj_set_style_bg_opa(s_ui.lock_indicators[i], filled ? LV_OPA_COVER : LV_OPA_TRANSP, 0);
+		}
+		lv_obj_move_foreground(s_ui.lock_layer);
+		return ESP_OK;
+	}
+	if (!frame->schedule_available) {
+		return ESP_OK;
 	}
 
 	apply_frame_tz(frame->timezone);

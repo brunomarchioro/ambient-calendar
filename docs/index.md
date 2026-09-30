@@ -28,15 +28,15 @@ Google Calendar ──► Cloudflare Worker (TanStack Start)
                    ESP32-C6 + LVGL
 ```
 
-| Peça | Freeze |
-| --- | --- |
-| Runtime | Um Worker: `fetch` → Start, `scheduled` → sync. Vite + `@cloudflare/vite-plugin` + `nodejs_compat`. Entry custom (não só o `server-entry` default). |
-| API | Só **server routes** HTTP. Sem `createServerFn`, sem RSC. |
-| Web | SPA / `ssr: false`; dados via `fetch` + TanStack Query. |
-| DB | Cloudflare D1 (binding/`env`). Uma query por vez por DB — ok para uso pessoal. |
-| Auth web | HTTP Basic no Worker ([ADR 0012](./adr/0012-web-basic-auth.md)). Sem sessão própria no app. |
-| Plano | **Workers Paid** para Cron + sync Google. Não prometer Free. |
-| Cron | Intervalo em Wrangler (UTC). Padrão MVP: **a cada 15 min**. Wall ≤ 15 min; CPU de Cron &lt;1h → teto 30 s no Paid. |
+| Peça     | Freeze                                                                                                                                              |
+| -------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Runtime  | Um Worker: `fetch` → Start, `scheduled` → sync. Vite + `@cloudflare/vite-plugin` + `nodejs_compat`. Entry custom (não só o `server-entry` default). |
+| API      | Só **server routes** HTTP. Sem `createServerFn`, sem RSC.                                                                                           |
+| Web      | SPA / `ssr: false`; dados via `fetch` + TanStack Query.                                                                                             |
+| DB       | Cloudflare D1 (binding/`env`). Uma query por vez por DB — ok para uso pessoal.                                                                      |
+| Auth web | HTTP Basic no Worker ([ADR 0012](./adr/0012-web-basic-auth.md)). Sem sessão própria no app.                                                         |
+| Plano    | **Workers Paid** para Cron + sync Google. Não prometer Free.                                                                                        |
+| Cron     | Intervalo em Wrangler (UTC). Padrão MVP: **a cada 15 min**. Wall ≤ 15 min; CPU de Cron &lt;1h → teto 30 s no Paid.                                  |
 
 Não prometer: Node `fs`, D1 com writers concorrentes pesados, Cron &gt;15 min de wall.
 
@@ -74,12 +74,13 @@ Event
 
 ### Settings (singleton)
 
-| Campo | Default | Range | Quem usa |
-| --- | --- | --- | --- |
-| `timezone` | `America/Sao_Paulo` | IANA | sync, device, web |
-| `reminderMinutes` | `30` | `1..180` | Alerta no ESP32; device + web; **não** no cron Google |
-| `lookaheadDays` | `7` | `1..30` | só backend (horizonte sync + filtro do schedule); web |
-| `showNextEvents` | `2` | `1..5` | HMI; device + web; backend **não** corta `events[]` do schedule |
+| Campo             | Default             | Range                            | Quem usa                                                        |
+| ----------------- | ------------------- | -------------------------------- | --------------------------------------------------------------- |
+| `timezone`        | `America/Sao_Paulo` | IANA                             | sync, device, web                                               |
+| `reminderMinutes` | `30`                | `1..180`                         | Alerta no ESP32; device + web; **não** no cron Google           |
+| `lookaheadDays`   | `7`                 | `1..30`                          | só backend (horizonte sync + filtro do schedule); web           |
+| `showNextEvents`  | `2`                 | `1..5`                           | HMI; device + web; backend **não** corta `events[]` do schedule |
+| `devicePin`       | `null`              | permutação de `1`, `2`, `3`, `4` | Bloqueio do dispositivo; nunca retornado pela API web           |
 
 Seed com defaults se a linha não existir. Quiet hours **não existem**.
 
@@ -114,6 +115,7 @@ Auth device: `Authorization: Bearer <DEVICE_API_TOKEN>` só em `/api/device/*`.
   "timezone": "America/Sao_Paulo",
   "reminderMinutes": 30,
   "showNextEvents": 2,
+  "devicePin": null,
   "events": [
     {
       "id": "evt_123",
@@ -127,6 +129,7 @@ Auth device: `Authorization: Bearer <DEVICE_API_TOKEN>` só em `/api/device/*`.
 ```
 
 - Sem `lookaheadDays`, `source`, `externalId`, timezone por Event, timestamps de auditoria.
+- `devicePin`: `null` ou os quatro algarismos `1..4`, usados uma vez cada. Campo secreto do contrato autenticado do device; pode permanecer no cache LittleFS.
 - Tempos: **segundos Unix UTC** (`serverUnix`, `startUnix`, `endUnix`); all-day = meia-noite no fuso de Settings em Unix + `allDay: true`; `endUnix` exclusivo; timed sem fim → `endUnix: null`. Relógio no ESP32 via SNTP; `serverUnix` seed/fallback (ADR 0004).
 - `events`: overlap em `[now, now+lookaheadDays]`, `startUnix` asc; `[]` ok; `showNextEvents` não corta o array.
 - Erros: `401` token; `503` se não monta a resposta. Body mínimo.
@@ -141,6 +144,8 @@ DELETE /api/events/:id      — só manual
 
 GET    /api/settings
 PUT    /api/settings
+PUT    /api/settings/pin     — cadastra/substitui; body `{ "pin": "1234" }`
+DELETE /api/settings/pin     — remove
 
 GET    /api/health
 
@@ -160,17 +165,17 @@ Rota `/mcp` + **Autorização MCP** (OAuth 2.1, KV `OAUTH_KV`). **Cliente MCP** 
 
 ## 7. Firmware constraints
 
-| Tópico | Freeze |
-| --- | --- |
-| Board | Waveshare ESP32-C6-Touch-LCD-1.47 (C6FH8) |
-| Display | JD9853, 172×320, SPI |
-| Touch | AXS5106L, I2C |
-| IDF | ≥ 5.5; BSP Waveshare + LVGL demos |
-| RAM / flash | 512 KB HP SRAM, 8 MB flash, **sem PSRAM** — cache de agenda em flash |
-| FS | NVS (meta) + LittleFS (agenda); **não** SPIFFS |
-| Relógio | SNTP primário; `serverUnix` seed/fallback |
-| HTTPS | `esp_http_client` + certificate bundle |
-| Bootstrap | Wi-Fi, URL da API e token em **compile-time / flash** — sem captive portal |
+| Tópico      | Freeze                                                                     |
+| ----------- | -------------------------------------------------------------------------- |
+| Board       | Waveshare ESP32-C6-Touch-LCD-1.47 (C6FH8)                                  |
+| Display     | JD9853, 172×320, SPI                                                       |
+| Touch       | AXS5106L, I2C                                                              |
+| IDF         | ≥ 5.5; BSP Waveshare + LVGL demos                                          |
+| RAM / flash | 512 KB HP SRAM, 8 MB flash, **sem PSRAM** — cache de agenda em flash       |
+| FS          | NVS (meta) + LittleFS (agenda); **não** SPIFFS                             |
+| Relógio     | SNTP primário; `serverUnix` seed/fallback                                  |
+| HTTPS       | `esp_http_client` + certificate bundle                                     |
+| Bootstrap   | Wi-Fi, URL da API e token em **compile-time / flash** — sem captive portal |
 
 Research: [esp32-c6-waveshare-constraints.md](./research/esp32-c6-waveshare-constraints.md).
 
@@ -182,16 +187,18 @@ Cache local dos Events do schedule. Sem rede: relógio (se válido), countdown, 
 
 Um estado por frame. Prioridade: **`Now` > `Alert` > `Ambient` > `Empty`**. Só **timed** em Alerta/Agora. All-day nunca dispara esses dois; pode aparecer na lista se couber slot (nunca no card de foco).
 
-| Estado | Predicado |
-| --- | --- |
-| `Now` (Agora) | timed com `now ∈ [startAt, endAt)`; `endAt == null` → +2 min. Foco = menor `startAt`. Pode exibir **foco secundário** (outro Event em Alerta). |
-| `Alert` (Alerta) | timed com `now ∈ [startAt - reminderMinutes, startAt)`. Foco = menor `startAt` (empate → `id`). |
-| `Ambient` | há timed com `startAt > now` e não está em Now/Alert |
-| `Empty` | nenhum timed com `startAt > now` |
+| Estado           | Predicado                                                                                                                                      |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Now` (Agora)    | timed com `now ∈ [startAt, endAt)`; `endAt == null` → +2 min. Foco = menor `startAt`. Pode exibir **foco secundário** (outro Event em Alerta). |
+| `Alert` (Alerta) | timed com `now ∈ [startAt - reminderMinutes, startAt)`. Foco = menor `startAt` (empate → `id`).                                                |
+| `Ambient`        | há timed com `startAt > now` e não está em Now/Alert                                                                                           |
+| `Empty`          | nenhum timed com `startAt > now`                                                                                                               |
 
 **Encerramento antecipado:** toque no card **AGORA** grava fim local em NVS até o `endAt` do cache; recalcula estado (→ Alert se próximo já em janela de alerta).
 
-**Touch:** toque fora do card AGORA → overlay (exceto Ambient com lista embutida visível); timeout **15 s** → fecha overlay; **sem swipe**; sem create/edit no device.
+**Touch:** toque fora do card AGORA → overlay (exceto Ambient com lista embutida visível); timeout **15 s** → fecha overlay; **sem swipe**; sem create/edit no device. Com PIN configurado, pressão de **2 s em qualquer área** bloqueia e consome o clique de soltura.
+
+**Bloqueio do dispositivo:** ortogonal aos estados da agenda. Oculta Event, Alerta, Agora e overlay; scheduler e polling continuam. Quatro botões fixos (`1..4`) em grade 2×2; erro fica vermelho por 300 ms e limpa a tentativa. Sem limite de tentativas e sem relock por inatividade; PIN novo bloqueia, PIN removido desbloqueia no próximo poll. Ver [ADR 0013](./adr/0013-device-lock-casual-privacy.md).
 
 Layout e pixels: [`hmi-screen-design.md`](hmi-screen-design.md).
 
@@ -199,7 +206,7 @@ Layout e pixels: [`hmi-screen-design.md`](hmi-screen-design.md).
 
 Não é admin completo.
 
-**Settings:** os quatro campos do §4; **Contas Google** (conectar/desconectar, calendários habilitados, sync manual).
+**Settings:** os quatro campos públicos do §4; status e cadastro/alteração/remoção do PIN do dispositivo; **Contas Google** (conectar/desconectar, calendários habilitados, sync manual). `GET /api/settings` retorna `pinConfigured`, nunca o PIN.
 
 **Agenda:** próximos Events; Google read-only; CRUD de Lembretes (título, data/hora, duração opcional).
 

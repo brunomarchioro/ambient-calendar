@@ -12,8 +12,7 @@ void alerts_hmi_present_init(alerts_hmi_present_t *present)
 	if (present == NULL) {
 		return;
 	}
-	present->overlay_open = false;
-	present->overlay_elapsed_ms = 0;
+	memset(present, 0, sizeof(*present));
 }
 
 bool alerts_hmi_present_overlay_allowed(const alerts_hmi_frame_t *frame)
@@ -32,7 +31,7 @@ bool alerts_hmi_present_overlay_allowed(const alerts_hmi_frame_t *frame)
 
 void alerts_hmi_present_tap(alerts_hmi_present_t *present, const alerts_hmi_frame_t *frame)
 {
-	if (present == NULL) {
+	if (present == NULL || present->locked) {
 		return;
 	}
 	if (!alerts_hmi_present_overlay_allowed(frame)) {
@@ -49,14 +48,84 @@ void alerts_hmi_present_tap(alerts_hmi_present_t *present, const alerts_hmi_fram
 
 void alerts_hmi_present_tick(alerts_hmi_present_t *present, int elapsed_ms)
 {
-	if (present == NULL || !present->overlay_open || elapsed_ms <= 0) {
+	if (present == NULL || elapsed_ms <= 0) {
 		return;
 	}
-	present->overlay_elapsed_ms += elapsed_ms;
-	if (present->overlay_elapsed_ms >= ALERTS_HMI_OVERLAY_TIMEOUT_MS) {
-		present->overlay_open = false;
-		present->overlay_elapsed_ms = 0;
+	if (present->overlay_open) {
+		present->overlay_elapsed_ms += elapsed_ms;
+		if (present->overlay_elapsed_ms >= ALERTS_HMI_OVERLAY_TIMEOUT_MS) {
+			present->overlay_open = false;
+			present->overlay_elapsed_ms = 0;
+		}
 	}
+}
+
+void alerts_hmi_present_clear_pin_error(alerts_hmi_present_t *present)
+{
+	if (present == NULL || !present->pin_error) {
+		return;
+	}
+	present->pin_error = false;
+	present->pin_length = 0;
+	present->pin_entry[0] = '\0';
+}
+
+bool alerts_hmi_present_set_pin(alerts_hmi_present_t *present, const char *pin)
+{
+	if (present == NULL) {
+		return false;
+	}
+	if (pin == NULL || pin[0] == '\0') {
+		const bool changed = present->device_pin[0] != '\0';
+		present->device_pin[0] = '\0';
+		present->locked = false;
+		present->pin_error = false;
+		present->pin_length = 0;
+		return changed;
+	}
+	if (strcmp(present->device_pin, pin) == 0) {
+		return false;
+	}
+	strncpy(present->device_pin, pin, sizeof(present->device_pin) - 1);
+	present->device_pin[sizeof(present->device_pin) - 1] = '\0';
+	present->locked = true;
+	present->overlay_open = false;
+	present->pin_error = false;
+	present->pin_length = 0;
+	return true;
+}
+
+bool alerts_hmi_present_lock(alerts_hmi_present_t *present)
+{
+	if (present == NULL || present->device_pin[0] == '\0' || present->locked) {
+		return false;
+	}
+	present->locked = true;
+	present->overlay_open = false;
+	present->pin_error = false;
+	present->pin_length = 0;
+	return true;
+}
+
+bool alerts_hmi_present_pin_digit(alerts_hmi_present_t *present, int digit)
+{
+	if (present == NULL || !present->locked || present->pin_error || digit < 1 || digit > 4 ||
+	    present->pin_length >= 4) {
+		return false;
+	}
+	present->pin_entry[present->pin_length++] = (char)('0' + digit);
+	present->pin_entry[present->pin_length] = '\0';
+	if (present->pin_length < 4) {
+		return false;
+	}
+	if (strcmp(present->pin_entry, present->device_pin) == 0) {
+		present->locked = false;
+		present->pin_length = 0;
+		present->pin_entry[0] = '\0';
+		return true;
+	}
+	present->pin_error = true;
+	return false;
 }
 
 static int cmp_event(const alerts_event_t *a, const alerts_event_t *b)
@@ -268,7 +337,10 @@ int alerts_hmi_build_frame(int64_t now_unix, const alerts_schedule_t *schedule, 
 	}
 	memset(out, 0, sizeof(*out));
 	out->now_unix = now_unix;
-	out->overlay_open = overlay_open;
+	out->locked = present != NULL && present->locked;
+	out->pin_error = present != NULL && present->pin_error;
+	out->pin_length = present != NULL ? present->pin_length : 0;
+	out->overlay_open = !out->locked && overlay_open;
 
 	alerts_hmi_dismiss_expire(now_unix);
 
@@ -276,6 +348,7 @@ int alerts_hmi_build_frame(int64_t now_unix, const alerts_schedule_t *schedule, 
 		out->state = ALERTS_HMI_EMPTY;
 		return 0;
 	}
+	out->schedule_available = true;
 
 	strncpy(out->timezone, schedule->timezone, sizeof(out->timezone) - 1);
 	out->timezone[sizeof(out->timezone) - 1] = '\0';

@@ -676,6 +676,33 @@ static int parse_events(cur_t *c, alerts_schedule_t *out)
 	}
 }
 
+static int parse_device_pin(cur_t *c, alerts_schedule_t *out)
+{
+	bool seen[5] = {false};
+	skip_ws(c);
+	if (peek(c) == 'n') {
+		out->has_device_pin = false;
+		out->device_pin[0] = '\0';
+		return skip_literal(c, "null");
+	}
+	int err = parse_string(c, out->device_pin, sizeof(out->device_pin));
+	if (err != ALERTS_PARSE_OK) {
+		return err;
+	}
+	if (strlen(out->device_pin) != 4) {
+		return ALERTS_PARSE_TYPE;
+	}
+	for (int i = 0; i < 4; i++) {
+		const int digit = out->device_pin[i] - '0';
+		if (digit < 1 || digit > 4 || seen[digit]) {
+			return ALERTS_PARSE_TYPE;
+		}
+		seen[digit] = true;
+	}
+	out->has_device_pin = true;
+	return ALERTS_PARSE_OK;
+}
+
 int alerts_schedule_parse(const char *json, size_t len, alerts_schedule_t *out)
 {
 	cur_t c;
@@ -717,6 +744,8 @@ int alerts_schedule_parse(const char *json, size_t len, alerts_schedule_t *out)
 		} else if (strcmp(key, "showNextEvents") == 0) {
 			err = parse_int(&c, &out->show_next_events);
 			saw_show = true;
+		} else if (strcmp(key, "devicePin") == 0) {
+			err = parse_device_pin(&c, out);
 		} else if (strcmp(key, "events") == 0) {
 			err = parse_events(&c, out);
 			saw_events = true;

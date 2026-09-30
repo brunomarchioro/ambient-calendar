@@ -48,6 +48,7 @@ int main(void)
 	present_closed(&present);
 	s = sched(30, 2, events, 0);
 	assert(alerts_hmi_build_frame(1787850000, &s, &present, &frame) == 0);
+	assert(frame.schedule_available);
 	assert(frame.state == ALERTS_HMI_EMPTY);
 	assert(!frame.has_focus);
 	assert(frame.ambient_list_count == 0);
@@ -56,6 +57,7 @@ int main(void)
 	present_closed(&present);
 	assert(alerts_hmi_build_frame(1787850000, NULL, &present, &frame) == 0);
 	assert(frame.state == ALERTS_HMI_EMPTY);
+	assert(!frame.schedule_available);
 	assert(frame.now_unix == 1787850000);
 
 	/* Ambient — future timed at 15:00, now 14:00 */
@@ -167,6 +169,31 @@ int main(void)
 	assert(present.overlay_open);
 	alerts_hmi_present_tick(&present, 1000);
 	assert(!present.overlay_open);
+
+	/* Device lock lifecycle and input. */
+	present_closed(&present);
+	assert(!present.locked);
+	assert(alerts_hmi_present_set_pin(&present, "1234"));
+	assert(present.locked && present.pin_length == 0);
+	assert(!alerts_hmi_present_set_pin(&present, "1234"));
+	for (int digit = 1; digit <= 4; digit++) {
+		assert(alerts_hmi_present_pin_digit(&present, digit) == (digit == 4));
+	}
+	assert(!present.locked);
+	assert(alerts_hmi_present_lock(&present));
+	assert(present.locked);
+	assert(!alerts_hmi_present_pin_digit(&present, 1));
+	assert(!alerts_hmi_present_pin_digit(&present, 1));
+	assert(!alerts_hmi_present_pin_digit(&present, 2));
+	assert(!alerts_hmi_present_pin_digit(&present, 3));
+	assert(present.locked && present.pin_error && present.pin_length == 4);
+	alerts_hmi_present_tick(&present, 300);
+	assert(present.pin_error);
+	alerts_hmi_present_clear_pin_error(&present);
+	assert(!present.pin_error && present.pin_length == 0);
+	assert(alerts_hmi_present_set_pin(&present, NULL));
+	assert(!present.locked);
+	assert(!alerts_hmi_present_lock(&present));
 
 	puts("ok");
 	return 0;

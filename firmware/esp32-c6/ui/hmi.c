@@ -20,6 +20,10 @@ static alerts_hmi_frame_t s_frame;
 static int build_frame(void)
 {
 	const alerts_schedule_t *schedule = alerts_poll_current();
+	if (schedule != NULL) {
+		(void)alerts_hmi_present_set_pin(&s_present,
+						 schedule->has_device_pin ? schedule->device_pin : NULL);
+	}
 	if (alerts_hmi_build_frame(alerts_time_now_unix(), schedule, &s_present, &s_frame) != 0) {
 		return -1;
 	}
@@ -68,6 +72,8 @@ esp_err_t alerts_hmi_init(void)
 	}
 	alerts_hmi_lvgl_set_background_tap_cb(alerts_hmi_on_background_tap);
 	alerts_hmi_lvgl_set_dismiss_tap_cb(alerts_hmi_on_dismiss_tap);
+	alerts_hmi_lvgl_set_manual_lock_cb(alerts_hmi_on_manual_lock);
+	alerts_hmi_lvgl_set_pin_cb(alerts_hmi_on_pin_digit);
 	ESP_LOGI(TAG, "hmi init");
 	return ESP_OK;
 }
@@ -96,4 +102,32 @@ void alerts_hmi_on_dismiss_tap(void)
 		ESP_LOGI(TAG, "dismiss focus id=%s", s_frame.focus.id);
 	}
 	(void)hmi_paint(0, true);
+}
+
+void alerts_hmi_on_manual_lock(void)
+{
+	if (alerts_hmi_present_lock(&s_present)) {
+		ESP_LOGI(TAG, "device locked");
+		(void)hmi_paint(0, true);
+	}
+}
+
+static void pin_error_timer_cb(lv_timer_t *timer)
+{
+	lv_timer_delete(timer);
+	alerts_hmi_present_clear_pin_error(&s_present);
+	(void)hmi_paint(0, true);
+}
+
+void alerts_hmi_on_pin_digit(int digit)
+{
+	const bool was_error = s_present.pin_error;
+	const bool unlocked = alerts_hmi_present_pin_digit(&s_present, digit);
+	if (unlocked) {
+		ESP_LOGI(TAG, "device unlocked");
+	}
+	(void)hmi_paint(0, true);
+	if (!was_error && s_present.pin_error) {
+		(void)lv_timer_create(pin_error_timer_cb, ALERTS_HMI_PIN_ERROR_MS, NULL);
+	}
 }

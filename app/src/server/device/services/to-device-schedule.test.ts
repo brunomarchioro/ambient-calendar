@@ -35,6 +35,7 @@ test('envelope has settings fields and omits source externalId lookaheadDays aud
     timezone: 'America/Sao_Paulo',
     reminderMinutes: 30,
     showNextEvents: 2,
+    devicePin: null,
     events: [
       {
         id: 'evt_1',
@@ -47,6 +48,16 @@ test('envelope has settings fields and omits source externalId lookaheadDays aud
   })
   expect(schedule).not.toHaveProperty('lookaheadDays')
   expect(JSON.stringify(schedule)).not.toMatch(/source|externalId|createdAt|updatedAt|serverTime/)
+})
+
+test('device schedule carries the configured PIN', () => {
+  expect(
+    toDeviceSchedule({
+      now,
+      settings: { ...settings, devicePin: '3142' },
+      rows: [],
+    }).devicePin,
+  ).toBe('3142')
 })
 
 test('empty rows yield events []', () => {
@@ -144,8 +155,16 @@ test('events sort by startAt ascending', () => {
     now,
     settings,
     rows: [
-      row({ id: 'later', startAt: '2026-08-28T10:00:00-03:00', endAt: '2026-08-28T11:00:00-03:00' }),
-      row({ id: 'sooner', startAt: '2026-08-27T16:00:00-03:00', endAt: '2026-08-27T17:00:00-03:00' }),
+      row({
+        id: 'later',
+        startAt: '2026-08-28T10:00:00-03:00',
+        endAt: '2026-08-28T11:00:00-03:00',
+      }),
+      row({
+        id: 'sooner',
+        startAt: '2026-08-27T16:00:00-03:00',
+        endAt: '2026-08-27T17:00:00-03:00',
+      }),
     ],
   }).events.map((event) => event.id)
   expect(ids).toEqual(['sooner', 'later'])

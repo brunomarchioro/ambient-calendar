@@ -12,6 +12,7 @@ export type DeviceSchedule = {
   timezone: string
   reminderMinutes: number
   showNextEvents: number
+  devicePin: string | null
   events: DeviceEvent[]
 }
 

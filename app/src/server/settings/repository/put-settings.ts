@@ -12,6 +12,7 @@ export async function getSettingsRow(db: D1Database | AppDb): Promise<Settings |
     reminderMinutes: row.reminderMinutes,
     lookaheadDays: row.lookaheadDays,
     showNextEvents: row.showNextEvents,
+    devicePin: row.devicePin,
   }
 }
 
@@ -25,6 +26,7 @@ export async function putSettingsRow(db: D1Database | AppDb, value: Settings): P
       reminderMinutes: value.reminderMinutes,
       lookaheadDays: value.lookaheadDays,
       showNextEvents: value.showNextEvents,
+      devicePin: value.devicePin,
     })
     .onConflictDoUpdate({
       target: settings.id,
@@ -33,6 +35,7 @@ export async function putSettingsRow(db: D1Database | AppDb, value: Settings): P
         reminderMinutes: value.reminderMinutes,
         lookaheadDays: value.lookaheadDays,
         showNextEvents: value.showNextEvents,
+        devicePin: value.devicePin,
       },
     })
   return value

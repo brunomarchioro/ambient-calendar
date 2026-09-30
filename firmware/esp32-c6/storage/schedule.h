@@ -9,6 +9,7 @@ enum {
 	ALERTS_ID_LEN = 64,
 	ALERTS_TITLE_LEN = 96,
 	ALERTS_TZ_LEN = 64,
+	ALERTS_DEVICE_PIN_LEN = 5,
 };
 
 typedef struct {
@@ -25,6 +26,8 @@ typedef struct {
 	int reminder_minutes;
 	int show_next_events;
 	int64_t server_unix;
+	bool has_device_pin;
+	char device_pin[ALERTS_DEVICE_PIN_LEN];
 	alerts_event_t events[ALERTS_MAX_EVENTS];
 	size_t event_count;
 } alerts_schedule_t;
