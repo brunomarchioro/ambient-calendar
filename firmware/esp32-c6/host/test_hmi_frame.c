@@ -196,9 +196,15 @@ int main(void)
 	assert(!alerts_hmi_present_lock(&present));
 	assert(!alerts_hmi_present_toggle_tasks(&present, 0));
 	assert(alerts_hmi_present_toggle_tasks(&present, 1));
-	assert(present.tasks_view);
+	assert(present.view == ALERTS_HMI_TASKS);
+	assert(alerts_hmi_build_frame(1787850000, &s, &present, &frame) == 0);
+	assert(frame.view == ALERTS_HMI_TASKS && frame.task_count == 0);
 	assert(alerts_hmi_present_toggle_tasks(&present, 1));
-	assert(!present.tasks_view);
+	assert(present.view == ALERTS_HMI_AGENDA);
+	assert(alerts_hmi_present_set_pin(&present, "1234"));
+	present.view = ALERTS_HMI_TASKS;
+	assert(alerts_hmi_build_frame(1787850000, &s, &present, &frame) == 0);
+	assert(frame.locked && frame.view == ALERTS_HMI_AGENDA && frame.task_count == 0);
 
 	puts("ok");
 	return 0;

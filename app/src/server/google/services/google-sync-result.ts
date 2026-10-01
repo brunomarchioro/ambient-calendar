@@ -14,7 +14,8 @@ export function googleSyncResultFromOutcome(outcome: SyncOutcome): GoogleSyncRes
       }
     case 'partial':
       return {
-        ok: true,
+        ok: false,
+        partial: true,
         message: `${outcome.upserted} Events sincronizados; avisos: ${outcome.errors.join('; ')}`,
         eventCount: outcome.upserted,
       }

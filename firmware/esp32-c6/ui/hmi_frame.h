@@ -18,9 +18,14 @@ typedef enum {
 	ALERTS_HMI_NOW,
 } alerts_hmi_state_t;
 
+typedef enum {
+	ALERTS_HMI_AGENDA = 0,
+	ALERTS_HMI_TASKS,
+} alerts_hmi_view_t;
+
 typedef struct {
 	bool overlay_open;
-	bool tasks_view;
+	alerts_hmi_view_t view;
 	int overlay_elapsed_ms;
 	bool locked;
 	bool pin_error;
@@ -38,7 +43,7 @@ typedef struct {
 	alerts_event_t ambient_list[HMI_AMBIENT_FETCH_SLOTS];
 	size_t ambient_list_count;
 	bool overlay_open;
-	bool tasks_view;
+	alerts_hmi_view_t view;
 	alerts_task_t tasks[ALERTS_MAX_TASKS];
 	size_t task_count;
 	alerts_event_t overlay_list[HMI_OVERLAY_LIST_SLOTS];

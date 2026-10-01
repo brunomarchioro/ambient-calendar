@@ -1095,7 +1095,7 @@ esp_err_t alerts_hmi_lvgl_render(const alerts_hmi_frame_t *frame)
 
 	s_ui.last_state = frame->state;
 	s_ui.last_secondary = frame->has_secondary;
-	if (frame->tasks_view) {
+	if (frame->view == ALERTS_HMI_TASKS) {
 		set_label(s_ui.date_lbl, "TAREFAS", true);
 		set_visible(s_ui.focus_card, false);
 		set_visible(s_ui.secondary_card, false);

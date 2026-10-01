@@ -20,8 +20,8 @@ export function GoogleAccountsSection({
   const accountsQuery = useQuery(googleAccountsQueryOptions())
   const syncMutation = useMutation({
     ...googleSyncMutationOptions(),
-    onSuccess: (data) => {
-      if (data.ok) onChange()
+    onSuccess: () => {
+      onChange()
     },
   })
   const disconnectMutation = useMutation({

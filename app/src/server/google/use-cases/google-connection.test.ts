@@ -4,6 +4,7 @@ import { FIXTURE_GOOGLE_ITEMS, FIXTURE_NOW, TOKEN_OK } from '@/server/sync/sync.
 import { encryptSecret } from '@/server/google/infra/token-crypto'
 import { memoryStore } from '@/server/sync/services/memory-store'
 import { runScheduledSyncUseCase } from '@/server/sync/use-cases/run-scheduled-sync'
+import { buildOAuthAuthorizeUrl } from '@/server/google/infra/google-oauth'
 
 const TEST_KEY = btoa(String.fromCharCode(...new Uint8Array(32).fill(3)))
 
@@ -49,4 +50,17 @@ test('multi-calendar sync upserts events for enabled target', async () => {
     log: { error: () => {} },
   })
   expect(outcome).toEqual({ kind: 'ok', upserted: 3, deleted: 0 })
+})
+
+test('incremental Tasks authorization requests only the Tasks scope', () => {
+  const url = new URL(
+    buildOAuthAuthorizeUrl({
+      clientId: OAUTH.clientId,
+      redirectUri: 'https://ambient.example/api/google/oauth/callback',
+      state: 'state',
+      mode: 'connect_tasks',
+    }),
+  )
+  expect(url.searchParams.get('scope')).toBe('https://www.googleapis.com/auth/tasks.readonly')
+  expect(url.searchParams.get('include_granted_scopes')).toBe('true')
 })

@@ -42,6 +42,7 @@ export function parseGoogleAccountsResponse(input: unknown) {
 
 export const googleSyncResultSchema = z.object({
   ok: z.boolean(),
+  partial: z.boolean().optional(),
   message: z.string(),
   eventCount: z.number().int().nonnegative().optional(),
 })
