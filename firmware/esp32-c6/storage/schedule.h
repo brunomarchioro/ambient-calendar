@@ -6,6 +6,7 @@
 
 enum {
 	ALERTS_MAX_EVENTS = 64,
+	ALERTS_MAX_TASKS = 20,
 	ALERTS_ID_LEN = 64,
 	ALERTS_TITLE_LEN = 96,
 	ALERTS_TZ_LEN = 64,
@@ -22,6 +23,13 @@ typedef struct {
 } alerts_event_t;
 
 typedef struct {
+	char id[ALERTS_ID_LEN];
+	char title[ALERTS_TITLE_LEN];
+	bool has_due;
+	int64_t due_unix;
+} alerts_task_t;
+
+typedef struct {
 	char timezone[ALERTS_TZ_LEN];
 	int reminder_minutes;
 	int show_next_events;
@@ -30,4 +38,6 @@ typedef struct {
 	char device_pin[ALERTS_DEVICE_PIN_LEN];
 	alerts_event_t events[ALERTS_MAX_EVENTS];
 	size_t event_count;
+	alerts_task_t tasks[ALERTS_MAX_TASKS];
+	size_t task_count;
 } alerts_schedule_t;

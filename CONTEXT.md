@@ -29,7 +29,7 @@ Preferências singleton do Ambient Calendar Display: fuso, janela de Alerta, hor
 _Avoid_: Config, Preferences, AppConfig
 
 **Bloqueio do dispositivo**:
-Barreira de privacidade local que oculta o conteúdo dos Events e impede interações na HMI até o desbloqueio. Não protege contra acesso físico à flash do dispositivo.
+Barreira de privacidade local que oculta o conteúdo dos Events e das Tarefas Google e impede interações na HMI até o desbloqueio. Não protege contra acesso físico à flash do dispositivo.
 _Avoid_: Overlay, autenticação, bloqueio de segurança
 
 **PIN do dispositivo**:
@@ -43,6 +43,14 @@ _Avoid_: User, account (genérico), GoogleUser
 **Calendário Google**:
 Agenda dentro de uma Conta Google escolhida para espelho no D1. Identificado pelo `calendarId` da API Google; pode ser `primary`, próprio ou compartilhado.
 _Avoid_: Agenda Google (colide com a página Agenda), calendar (sem qualificador)
+
+**Tarefa Google**:
+Tarefa pendente espelhada do Google Tasks, pertencente a uma Conta Google e a uma Lista de tarefas Google. Pode ter prazo, mas não é um Event e não gera Alerta ou Agora.
+_Avoid_: Event, Lembrete
+
+**Lista de tarefas Google**:
+Lista dentro de uma Conta Google cujas Tarefas Google podem ser habilitadas para espelho e exibição no dispositivo.
+_Avoid_: task list, lista de lembretes
 
 **Overlay**:
 Modo de apresentação temporário que lista os próximos Events **além do foco** por cima do estado atual (Ambient, Alerta ou Agora). Abre com toque curto no header, na lista embutida, no card de foco (exceto Agora) ou no card secundário em Alerta; em Empty o toque não abre. Fecha com segundo toque no overlay ou após 15 s. Com overlay aberto, encerramento antecipado exige fechar o overlay antes. O scheduler continua calculando o estado de fundo; o Overlay só altera o que é desenhado.
@@ -61,8 +69,12 @@ Texto curto no header que reflete frescor do cache local: `OK` (verde, &lt; 5 mi
 _Avoid_: LIVE (ambiguidade com Agora), `LV_SYMBOL_*` (sem glifo na Montserrat 20)
 
 **Título no display**:
-Representação do título do Event enviada ao ESP32 — ASCII Basic Latin, truncada ao limite do firmware. Distinta do título canônico persistido (pode ter acentos ou emoji).
+Representação do título de um Event ou Tarefa Google enviada ao ESP32 — ASCII Basic Latin, truncada ao limite do firmware. Distinta do título canônico persistido (pode ter acentos ou emoji).
 _Avoid_: DeviceTitle (como entidade), sanitized title
+
+**Tela de Tarefas**:
+Apresentação no display das Tarefas Google pendentes habilitadas, separada da agenda e acessada por swipe horizontal. Agrupa-as em Atrasadas, Hoje, Próximas e Sem prazo.
+_Avoid_: Overlay de tarefas, agenda de tarefas
 
 **Cliente MCP**:
 Assistente de IA externo (ex.: ChatGPT, Claude) que se conecta ao Ambient Calendar Display via Model Context Protocol para listar ou administrar Lembretes. Um deploy pessoal reconhece um único humano autorizado; vários Clientes MCP podem registrar-se, mas compartilham o mesmo conjunto de Events.

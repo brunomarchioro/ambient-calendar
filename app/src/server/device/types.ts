@@ -14,7 +14,11 @@ export type DeviceSchedule = {
   showNextEvents: number
   devicePin: string | null
   events: DeviceEvent[]
+  tasks: DeviceTask[]
 }
+
+export type DeviceTask = { id: string; title: string; dueUnix: number | null }
+export type DeviceTaskRow = { id: string; title: string; due: string | null }
 
 export type DeviceEventRow = {
   id: string

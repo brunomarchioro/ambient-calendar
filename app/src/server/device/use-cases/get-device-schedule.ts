@@ -1,5 +1,6 @@
 import { createDb } from '@/server/common/infra/db'
 import { listDeviceEventRows } from '@/server/events/repository/event-queries'
+import { listDeviceGoogleTasks } from '@/server/google/repository/google-queries'
 import { toDeviceSchedule } from '@/server/device/services/to-device-schedule'
 import type { DeviceSchedule } from '@/server/device/types'
 import type { Settings } from '@/shared/settings/types'
@@ -11,5 +12,5 @@ export async function getDeviceScheduleUseCase(
 ): Promise<DeviceSchedule> {
   const drizzle = createDb(db)
   const rows = await listDeviceEventRows(drizzle)
-  return toDeviceSchedule({ now, settings, rows })
+  return toDeviceSchedule({ now, settings, rows, tasks: await listDeviceGoogleTasks(drizzle) })
 }

@@ -5,7 +5,7 @@ import { unavailable } from '@/server/device/services/to-device-schedule'
 import { getDeviceScheduleUseCase } from '@/server/device/use-cases/get-device-schedule'
 import { getOrSeedSettingsUseCase } from '@/server/settings/use-cases/put-settings'
 
-// GET /api/device/schedule — Bearer auth; JSON: serverUnix, timezone, reminderMinutes, showNextEvents, events[{ id, title, startUnix, endUnix, allDay }]
+// GET /api/device/schedule — Bearer auth; JSON: serverUnix, timezone, reminderMinutes, showNextEvents, events[{ id, title, startUnix, endUnix, allDay }], tasks[{ id, title, dueUnix }]
 export const Route = createFileRoute('/api/device/schedule')({
   server: {
     handlers: {

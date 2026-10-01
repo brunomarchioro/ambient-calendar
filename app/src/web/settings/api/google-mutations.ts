@@ -50,3 +50,10 @@ export function patchGoogleCalendarMutationOptions() {
     },
   }
 }
+
+export function patchGoogleTaskListMutationOptions() {
+  return { mutationFn: async (input: { id: string; enabled: boolean }): Promise<void> => {
+    const response = await fetch(`/api/google/task-lists/${input.id}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ enabled: input.enabled }) })
+    if (!response.ok) throw new Error(`http ${response.status}`)
+  } }
+}

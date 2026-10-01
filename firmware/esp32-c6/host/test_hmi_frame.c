@@ -194,6 +194,11 @@ int main(void)
 	assert(alerts_hmi_present_set_pin(&present, NULL));
 	assert(!present.locked);
 	assert(!alerts_hmi_present_lock(&present));
+	assert(!alerts_hmi_present_toggle_tasks(&present, 0));
+	assert(alerts_hmi_present_toggle_tasks(&present, 1));
+	assert(present.tasks_view);
+	assert(alerts_hmi_present_toggle_tasks(&present, 1));
+	assert(!present.tasks_view);
 
 	puts("ok");
 	return 0;

@@ -676,6 +676,58 @@ static int parse_events(cur_t *c, alerts_schedule_t *out)
 	}
 }
 
+static int parse_task_due(cur_t *c, alerts_task_t *task)
+{
+	skip_ws(c);
+	if (peek(c) == 'n') {
+		task->has_due = false;
+		return skip_literal(c, "null");
+	}
+	task->has_due = true;
+	return parse_int64(c, &task->due_unix);
+}
+
+static int parse_task(cur_t *c, alerts_task_t *task)
+{
+	bool saw_id = false, saw_title = false, saw_due = false;
+	int err;
+	memset(task, 0, sizeof(*task));
+	if (take(c) != '{') return ALERTS_PARSE_TYPE;
+	for (;;) {
+		char key[32];
+		if ((err = parse_string(c, key, sizeof(key))) != ALERTS_PARSE_OK || (err = expect_char(c, ':')) != ALERTS_PARSE_OK) return err;
+		if (strcmp(key, "id") == 0) { err = parse_string(c, task->id, sizeof(task->id)); saw_id = true; }
+		else if (strcmp(key, "title") == 0) { err = parse_string(c, task->title, sizeof(task->title)); saw_title = true; }
+		else if (strcmp(key, "dueUnix") == 0) { err = parse_task_due(c, task); saw_due = true; }
+		else err = skip_value(c);
+		if (err != ALERTS_PARSE_OK) return err;
+		skip_ws(c);
+		if (peek(c) == ',') { c->p++; continue; }
+		if (peek(c) == '}') { c->p++; break; }
+		return ALERTS_PARSE_SYNTAX;
+	}
+	if (!saw_id || !saw_title || !saw_due || task->id[0] == '\0') return ALERTS_PARSE_MISSING;
+	sanitize_event_title(task->title);
+	return ALERTS_PARSE_OK;
+}
+
+static int parse_tasks(cur_t *c, alerts_schedule_t *out)
+{
+	int err;
+	if (take(c) != '[') return ALERTS_PARSE_TYPE;
+	skip_ws(c);
+	if (peek(c) == ']') { c->p++; return ALERTS_PARSE_OK; }
+	for (;;) {
+		alerts_task_t discard;
+		alerts_task_t *task = out->task_count < ALERTS_MAX_TASKS ? &out->tasks[out->task_count++] : &discard;
+		if ((err = parse_task(c, task)) != ALERTS_PARSE_OK) return err;
+		skip_ws(c);
+		if (peek(c) == ',') { c->p++; continue; }
+		if (peek(c) == ']') { c->p++; return ALERTS_PARSE_OK; }
+		return ALERTS_PARSE_SYNTAX;
+	}
+}
+
 static int parse_device_pin(cur_t *c, alerts_schedule_t *out)
 {
 	bool seen[5] = {false};
@@ -749,6 +801,8 @@ int alerts_schedule_parse(const char *json, size_t len, alerts_schedule_t *out)
 		} else if (strcmp(key, "events") == 0) {
 			err = parse_events(&c, out);
 			saw_events = true;
+		} else if (strcmp(key, "tasks") == 0) {
+			err = parse_tasks(&c, out);
 		} else {
 			err = skip_value(&c);
 		}

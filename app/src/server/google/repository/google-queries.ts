@@ -4,6 +4,8 @@ import { events } from '@/server/events/repository/schema'
 import {
   googleAccounts,
   googleCalendars,
+  googleTaskLists,
+  googleTasks,
   oauthStates,
   type GoogleAccountRow,
   type GoogleCalendarRow,
@@ -35,6 +37,7 @@ export async function listGoogleAccountsWithCalendars(
     .from(googleCalendars)
     .where(inArray(googleCalendars.googleAccountId, accountIds))
     .orderBy(asc(googleCalendars.summary))
+  const taskLists = await drizzle.select().from(googleTaskLists)
   const byAccount = new Map<string, GoogleCalendarRow[]>()
   for (const cal of calendars) {
     const list = byAccount.get(cal.googleAccountId) ?? []
@@ -45,13 +48,24 @@ export async function listGoogleAccountsWithCalendars(
     id: account.id,
     email: account.email,
     status: account.status,
+    tasksAuthorized: account.tasksAuthorized,
     calendars: (byAccount.get(account.id) ?? []).map((cal) => ({
       id: cal.id,
       calendarId: cal.calendarId,
       summary: cal.summary,
       enabled: cal.enabled,
     })),
+    taskLists: taskLists.filter((list) => list.googleAccountId === account.id).map((list) => ({ id: list.id, taskListId: list.taskListId, title: list.title, enabled: list.enabled })),
   }))
+}
+
+export async function setGoogleTaskListEnabled(db: D1Database | AppDb, id: string, enabled: boolean, updatedAt: string): Promise<boolean> {
+  const drizzle = dbOrCreate(db)
+  const [list] = await drizzle.select().from(googleTaskLists).where(eq(googleTaskLists.id, id)).limit(1)
+  if (!list || !(await getGoogleAccount(db, list.googleAccountId))?.tasksAuthorized) return false
+  await drizzle.update(googleTaskLists).set({ enabled, updatedAt }).where(eq(googleTaskLists.id, id))
+  if (!enabled) await drizzle.delete(googleTasks).where(and(eq(googleTasks.googleAccountId, list.googleAccountId), eq(googleTasks.googleTaskListId, list.taskListId)))
+  return true
 }
 
 export async function countAccountCalendars(
@@ -101,6 +115,16 @@ export async function updateGoogleAccountTokens(
     .where(eq(googleAccounts.id, id))
 }
 
+export async function setGoogleAccountTasksAuthorized(
+  db: D1Database | AppDb,
+  id: string,
+  tasksAuthorized: boolean,
+  updatedAt: string,
+): Promise<void> {
+  const drizzle = dbOrCreate(db)
+  await drizzle.update(googleAccounts).set({ tasksAuthorized, updatedAt }).where(eq(googleAccounts.id, id))
+}
+
 export async function saveGoogleAccountTokens(
   db: D1Database | AppDb,
   row: {
@@ -110,6 +134,7 @@ export async function saveGoogleAccountTokens(
     status: 'active' | 'needs_reconnect'
     connectedAt: string
     updatedAt: string
+    tasksAuthorized?: boolean
   },
 ): Promise<string> {
   const drizzle = dbOrCreate(db)
@@ -125,7 +150,7 @@ export async function saveGoogleAccountTokens(
       .where(eq(googleAccounts.id, existing.id))
     return existing.id
   }
-  await drizzle.insert(googleAccounts).values({ ...row, status: 'active' })
+  await drizzle.insert(googleAccounts).values({ ...row, status: 'active', tasksAuthorized: row.tasksAuthorized ?? false })
   return row.id
 }
 
@@ -145,8 +170,57 @@ export async function updateGoogleAccountStatus(
 export async function deleteGoogleAccount(db: D1Database | AppDb, id: string): Promise<void> {
   const drizzle = dbOrCreate(db)
   await drizzle.delete(events).where(eq(events.googleAccountId, id))
+  await drizzle.delete(googleTasks).where(eq(googleTasks.googleAccountId, id))
+  await drizzle.delete(googleTaskLists).where(eq(googleTaskLists.googleAccountId, id))
   await drizzle.delete(googleCalendars).where(eq(googleCalendars.googleAccountId, id))
   await drizzle.delete(googleAccounts).where(eq(googleAccounts.id, id))
+}
+
+export async function replaceAccountTaskLists(db: D1Database | AppDb, accountId: string, lists: { taskListId: string; title: string }[], nowIso: string, newId: () => string) {
+  const drizzle = dbOrCreate(db)
+  const existing = await drizzle.select().from(googleTaskLists).where(eq(googleTaskLists.googleAccountId, accountId))
+  const byId = new Map(existing.map((list) => [list.taskListId, list]))
+  for (const list of lists) {
+    const previous = byId.get(list.taskListId)
+    if (previous) await drizzle.update(googleTaskLists).set({ title: list.title, updatedAt: nowIso }).where(eq(googleTaskLists.id, previous.id))
+    else await drizzle.insert(googleTaskLists).values({ id: newId(), googleAccountId: accountId, taskListId: list.taskListId, title: list.title, enabled: true, updatedAt: nowIso })
+    byId.delete(list.taskListId)
+  }
+  for (const removed of byId.values()) {
+    await drizzle.delete(googleTasks).where(and(eq(googleTasks.googleAccountId, accountId), eq(googleTasks.googleTaskListId, removed.taskListId)))
+    await drizzle.delete(googleTaskLists).where(eq(googleTaskLists.id, removed.id))
+  }
+}
+
+export async function listEnabledTaskTargets(db: D1Database | AppDb) {
+  const drizzle = dbOrCreate(db)
+  return drizzle.select({ googleAccountId: googleTaskLists.googleAccountId, googleTaskListId: googleTaskLists.taskListId, refreshTokenEnc: googleAccounts.refreshTokenEnc }).from(googleTaskLists).innerJoin(googleAccounts, eq(googleTaskLists.googleAccountId, googleAccounts.id)).where(and(eq(googleTaskLists.enabled, true), eq(googleAccounts.status, 'active'), eq(googleAccounts.tasksAuthorized, true)))
+}
+
+export async function listTaskAuthorizedAccounts(db: D1Database | AppDb) {
+  const drizzle = dbOrCreate(db)
+  return drizzle
+    .select({ id: googleAccounts.id, email: googleAccounts.email, refreshTokenEnc: googleAccounts.refreshTokenEnc })
+    .from(googleAccounts)
+    .where(and(eq(googleAccounts.status, 'active'), eq(googleAccounts.tasksAuthorized, true)))
+}
+
+export async function replaceOpenGoogleTasks(db: D1Database | AppDb, scope: { googleAccountId: string; googleTaskListId: string }, items: { id: string; title: string; due: string | null }[], nowIso: string, newId: () => string) {
+  const drizzle = dbOrCreate(db)
+  const existing = await drizzle.select().from(googleTasks).where(and(eq(googleTasks.googleAccountId, scope.googleAccountId), eq(googleTasks.googleTaskListId, scope.googleTaskListId)))
+  const byId = new Map(existing.map((task) => [task.externalId, task]))
+  for (const task of items) {
+    const previous = byId.get(task.id)
+    if (previous) await drizzle.update(googleTasks).set({ title: task.title, due: task.due, updatedAt: nowIso }).where(eq(googleTasks.id, previous.id))
+    else await drizzle.insert(googleTasks).values({ id: newId(), googleAccountId: scope.googleAccountId, googleTaskListId: scope.googleTaskListId, externalId: task.id, title: task.title, due: task.due, updatedAt: nowIso })
+    byId.delete(task.id)
+  }
+  for (const removed of byId.values()) await drizzle.delete(googleTasks).where(eq(googleTasks.id, removed.id))
+}
+
+export async function listDeviceGoogleTasks(db: D1Database | AppDb) {
+  const drizzle = dbOrCreate(db)
+  return drizzle.select({ id: googleTasks.id, title: googleTasks.title, due: googleTasks.due }).from(googleTasks).innerJoin(googleTaskLists, and(eq(googleTasks.googleAccountId, googleTaskLists.googleAccountId), eq(googleTasks.googleTaskListId, googleTaskLists.taskListId))).where(eq(googleTaskLists.enabled, true)).orderBy(asc(googleTasks.due), asc(googleTasks.title))
 }
 
 export async function replaceAccountCalendars(
@@ -254,7 +328,7 @@ export async function listEnabledSyncTargets(db: D1Database | AppDb) {
 
 export async function insertOAuthState(
   db: D1Database | AppDb,
-  row: { nonce: string; mode: 'connect' | 'reconnect'; googleAccountId: string | null; createdAt: string },
+  row: { nonce: string; mode: 'connect' | 'reconnect' | 'connect_tasks'; googleAccountId: string | null; createdAt: string },
 ): Promise<void> {
   const drizzle = dbOrCreate(db)
   await drizzle.insert(oauthStates).values(row)
@@ -263,7 +337,7 @@ export async function insertOAuthState(
 export async function consumeOAuthState(
   db: D1Database | AppDb,
   nonce: string,
-): Promise<{ mode: 'connect' | 'reconnect'; googleAccountId: string | null } | null> {
+): Promise<{ mode: 'connect' | 'reconnect' | 'connect_tasks'; googleAccountId: string | null } | null> {
   const drizzle = dbOrCreate(db)
   const [row] = await drizzle.select().from(oauthStates).where(eq(oauthStates.nonce, nonce)).limit(1)
   if (!row) return null

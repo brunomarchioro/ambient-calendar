@@ -74,6 +74,7 @@ esp_err_t alerts_hmi_init(void)
 	alerts_hmi_lvgl_set_dismiss_tap_cb(alerts_hmi_on_dismiss_tap);
 	alerts_hmi_lvgl_set_manual_lock_cb(alerts_hmi_on_manual_lock);
 	alerts_hmi_lvgl_set_pin_cb(alerts_hmi_on_pin_digit);
+	alerts_hmi_lvgl_set_swipe_cb(alerts_hmi_on_swipe);
 	ESP_LOGI(TAG, "hmi init");
 	return ESP_OK;
 }
@@ -91,6 +92,14 @@ void alerts_hmi_on_background_tap(void)
 	alerts_hmi_present_tap(&s_present, &s_frame);
 	ESP_LOGI(TAG, "tap overlay=%d", s_present.overlay_open);
 	(void)hmi_paint(0, true);
+}
+
+void alerts_hmi_on_swipe(void)
+{
+	const alerts_schedule_t *schedule = alerts_poll_current();
+	if (alerts_hmi_present_toggle_tasks(&s_present, schedule == NULL ? 0 : schedule->task_count)) {
+		(void)hmi_paint(0, true);
+	}
 }
 
 void alerts_hmi_on_dismiss_tap(void)

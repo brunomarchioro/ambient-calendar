@@ -1,10 +1,12 @@
 import { z } from 'zod'
 
-export const GOOGLE_OAUTH_SCOPES = [
+export const GOOGLE_CALENDAR_OAUTH_SCOPES = [
   'https://www.googleapis.com/auth/userinfo.email',
   'https://www.googleapis.com/auth/calendar.events.readonly',
   'https://www.googleapis.com/auth/calendar.calendarlist.readonly',
 ] as const
+
+export const GOOGLE_TASKS_OAUTH_SCOPES = ['https://www.googleapis.com/auth/tasks.readonly'] as const
 
 export const MAX_GOOGLE_ACCOUNTS = 5
 
@@ -16,12 +18,15 @@ export const googleCalendarPublicSchema = z.object({
   summary: z.string(),
   enabled: z.boolean(),
 })
+export const googleTaskListPublicSchema = z.object({ id: z.string().min(1), taskListId: z.string().min(1), title: z.string(), enabled: z.boolean() })
 
 export const googleAccountPublicSchema = z.object({
   id: z.string().min(1),
   email: z.string().email(),
   status: googleAccountStatusSchema,
+  tasksAuthorized: z.boolean(),
   calendars: z.array(googleCalendarPublicSchema),
+  taskLists: z.array(googleTaskListPublicSchema),
 })
 
 export const googleAccountsResponseSchema = z.object({
@@ -50,7 +55,9 @@ export function parseGoogleSyncResult(input: unknown) {
 export const patchGoogleCalendarSchema = z.strictObject({
   enabled: z.boolean(),
 })
+export const patchGoogleTaskListSchema = patchGoogleCalendarSchema
 
 export function parsePatchGoogleCalendar(input: unknown) {
   return patchGoogleCalendarSchema.safeParse(input)
 }
+export function parsePatchGoogleTaskList(input: unknown) { return patchGoogleTaskListSchema.safeParse(input) }

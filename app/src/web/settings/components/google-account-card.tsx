@@ -8,16 +8,22 @@ export function GoogleAccountCard({
   account,
   disconnecting,
   patchingCalendarId,
+  patchingTaskListId,
   onDisconnect,
   onReconnect,
+  onConnectTasks,
   onToggleCalendar,
+  onToggleTaskList,
 }: {
   account: GoogleAccountPublic
   disconnecting: boolean
   patchingCalendarId: string | null
+  patchingTaskListId: string | null
   onDisconnect: () => void
   onReconnect: () => void
+  onConnectTasks: () => void
   onToggleCalendar: (calendarRowId: string, enabled: boolean) => void
+  onToggleTaskList: (taskListRowId: string, enabled: boolean) => void
 }) {
   const needsReconnect = account.status === 'needs_reconnect'
   return (
@@ -30,6 +36,11 @@ export function GoogleAccountCard({
               <Badge variant="secondary" className="bg-orange-100 text-orange-900">
                 Reconectar
               </Badge>
+            ) : null}
+            {!needsReconnect && !account.tasksAuthorized ? (
+              <Button type="button" size="sm" variant="outline" onClick={onConnectTasks}>
+                Conectar Google Tasks
+              </Button>
             ) : null}
           </div>
           <div className="flex gap-2">
@@ -60,6 +71,12 @@ export function GoogleAccountCard({
               </Label>
             </div>
           ))}
+          {account.tasksAuthorized ? account.taskLists.map((list) => (
+            <div key={list.id} className="flex items-center gap-2">
+              <Checkbox id={`task-${list.id}`} checked={list.enabled} disabled={needsReconnect || patchingTaskListId === list.id} onCheckedChange={(checked) => onToggleTaskList(list.id, checked === true)} />
+              <Label htmlFor={`task-${list.id}`} className="font-normal">Tarefas: {list.title}</Label>
+            </div>
+          )) : <p className="text-sm text-muted-foreground">Google Tasks não conectado.</p>}
           {account.calendars.length === 0 ? (
             <p className="text-sm text-muted-foreground">Nenhum calendário importado.</p>
           ) : null}

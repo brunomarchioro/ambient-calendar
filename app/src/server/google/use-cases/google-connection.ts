@@ -10,6 +10,7 @@ import {
 } from '@/server/google/infra/google-oauth'
 import { encryptSecret, decryptSecret } from '@/server/google/infra/token-crypto'
 import { fetchCalendarList } from '@/server/google/infra/google-calendar-api'
+import { fetchGoogleTaskLists } from '@/server/google/infra/google-tasks-api'
 import {
   consumeOAuthState,
   countGoogleAccounts,
@@ -21,13 +22,25 @@ import {
   insertOAuthState,
   listGoogleAccountsWithCalendars,
   replaceAccountCalendars,
+  replaceAccountTaskLists,
   saveGoogleAccountTokens,
+  setGoogleAccountTasksAuthorized,
   setGoogleCalendarEnabled,
+  setGoogleTaskListEnabled,
   updateGoogleAccountTokens,
 } from '@/server/google/repository/google-queries'
 
 export function oauthRedirectUri(origin: string): string {
   return `${origin}/api/google/oauth/callback`
+}
+
+export async function patchGoogleTaskListUseCase(input: { db: D1Database; taskListRowId: string; enabled: boolean }): Promise<{ ok: true } | { ok: false; status: 404 }> {
+  return (await setGoogleTaskListEnabled(input.db, input.taskListRowId, input.enabled, new Date().toISOString())) ? { ok: true } : { ok: false, status: 404 }
+}
+
+async function importAccountTaskListsFromGoogle(input: { db: D1Database; accountId: string; accessToken: string; fetchImpl: typeof fetch; nowIso: string }) {
+  const lists = await fetchGoogleTaskLists(input.accessToken, input.fetchImpl)
+  await replaceAccountTaskLists(input.db, input.accountId, lists.map((list) => ({ taskListId: list.id, title: list.title })), input.nowIso, () => crypto.randomUUID())
 }
 
 async function importAccountCalendarsFromGoogle(input: {
@@ -74,7 +87,7 @@ export async function startGoogleOAuthUseCase(input: {
   db: D1Database
   env: { GOOGLE_CLIENT_ID?: string; GOOGLE_CLIENT_SECRET?: string; ENCRYPTION_KEY?: string }
   origin: string
-  mode: 'connect' | 'reconnect'
+  mode: 'connect' | 'reconnect' | 'connect_tasks'
   googleAccountId?: string
 }): Promise<{ kind: 'redirect'; url: string } | { kind: 'error'; message: string }> {
   const oauth = readOAuthClientConfig(input.env)
@@ -134,7 +147,7 @@ export async function handleGoogleOAuthCallbackUseCase(input: {
     if (!exchanged.ok) {
       return { kind: 'redirect', location: settingsUrl('google=error') }
     }
-    if (!exchanged.refreshToken) {
+    if (!exchanged.refreshToken && pending.mode !== 'connect_tasks') {
       return { kind: 'redirect', location: settingsUrl('google=no_refresh') }
     }
 
@@ -142,7 +155,20 @@ export async function handleGoogleOAuthCallbackUseCase(input: {
     if (!email) return { kind: 'redirect', location: settingsUrl('google=error') }
 
     const nowIso = new Date().toISOString()
-    const refreshTokenEnc = await encryptSecret(exchanged.refreshToken, oauth.encryptionKey)
+    if (pending.mode === 'connect_tasks') {
+      const accountId = pending.googleAccountId
+      if (!accountId) return { kind: 'redirect', location: settingsUrl('google=error') }
+      const account = await getGoogleAccount(input.db, accountId)
+      if (!account || account.email !== email) return { kind: 'redirect', location: settingsUrl('google=error') }
+      if (exchanged.refreshToken) {
+        await updateGoogleAccountTokens(input.db, accountId, await encryptSecret(exchanged.refreshToken, oauth.encryptionKey), nowIso)
+      }
+      await importAccountTaskListsFromGoogle({ db: input.db, accountId, accessToken: exchanged.accessToken, fetchImpl, nowIso })
+      await setGoogleAccountTasksAuthorized(input.db, accountId, true, nowIso)
+      return { kind: 'redirect', location: settingsUrl('google=tasks_connected') }
+    }
+
+    const refreshTokenEnc = await encryptSecret(exchanged.refreshToken!, oauth.encryptionKey)
 
     if (pending.mode === 'reconnect') {
       const accountId = pending.googleAccountId
@@ -192,7 +218,6 @@ export async function handleGoogleOAuthCallbackUseCase(input: {
     if (imported === 'calendar_error') {
       return { kind: 'redirect', location: settingsUrl('google=calendar_error') }
     }
-
     return { kind: 'redirect', location: settingsUrl('google=connected') }
   } catch (error) {
     console.error('handleGoogleOAuthCallback failed', error)

@@ -1,5 +1,5 @@
 import { httpFetch } from '@/server/common/infra/http-fetch'
-import { GOOGLE_OAUTH_SCOPES } from '@/shared/google/types'
+import { GOOGLE_CALENDAR_OAUTH_SCOPES, GOOGLE_TASKS_OAUTH_SCOPES } from '@/shared/google/types'
 
 export type OAuthClientConfig = {
   clientId: string
@@ -26,17 +26,20 @@ export function buildOAuthAuthorizeUrl(input: {
   clientId: string
   redirectUri: string
   state: string
-  mode: 'connect' | 'reconnect'
+  mode: 'connect' | 'reconnect' | 'connect_tasks'
 }): string {
   const url = new URL(AUTH_URL)
   url.searchParams.set('client_id', input.clientId)
   url.searchParams.set('redirect_uri', input.redirectUri)
   url.searchParams.set('response_type', 'code')
-  url.searchParams.set('scope', GOOGLE_OAUTH_SCOPES.join(' '))
+  url.searchParams.set(
+    'scope',
+    (input.mode === 'connect_tasks' ? GOOGLE_TASKS_OAUTH_SCOPES : GOOGLE_CALENDAR_OAUTH_SCOPES).join(' '),
+  )
   url.searchParams.set('access_type', 'offline')
   url.searchParams.set('include_granted_scopes', 'true')
   url.searchParams.set('state', input.state)
-  url.searchParams.set('prompt', input.mode === 'reconnect' ? 'consent' : 'select_account consent')
+  url.searchParams.set('prompt', input.mode === 'connect_tasks' ? 'consent' : input.mode === 'reconnect' ? 'consent' : 'select_account consent')
   return url.toString()
 }
 

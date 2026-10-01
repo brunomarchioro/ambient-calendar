@@ -36,6 +36,7 @@ test('envelope has settings fields and omits source externalId lookaheadDays aud
     reminderMinutes: 30,
     showNextEvents: 2,
     devicePin: null,
+    tasks: [],
     events: [
       {
         id: 'evt_1',
@@ -194,4 +195,19 @@ test('device payload sanitizes event titles for display charset', () => {
     ],
   })
   expect(schedule.events[0]?.title).toBe('Cafe')
+})
+
+test('tasks are grouped by local due day, stable, then limited for the device', () => {
+  const tasks = [
+    { id: 'none', title: 'Z sem prazo', due: null },
+    { id: 'future', title: 'C futura', due: '2026-08-29T03:00:00.000Z' },
+    { id: 'today-b', title: 'B hoje', due: '2026-08-27T12:00:00.000Z' },
+    { id: 'overdue', title: 'A atrasada', due: '2026-08-26T03:00:00.000Z' },
+    { id: 'today-a', title: 'A hoje', due: '2026-08-27T03:00:00.000Z' },
+    ...Array.from({ length: 20 }, (_, index) => ({ id: `later-${index}`, title: `Later ${index}`, due: '2026-09-01T03:00:00.000Z' })),
+  ]
+  const schedule = toDeviceSchedule({ now, settings, rows: [], tasks })
+  expect(schedule.tasks).toHaveLength(20)
+  expect(schedule.tasks.slice(0, 5).map((task) => task.id)).toEqual(['overdue', 'today-a', 'today-b', 'future', 'later-0'])
+  expect(schedule.tasks.at(-1)?.id).not.toBe('none')
 })

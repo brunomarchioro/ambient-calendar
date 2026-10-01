@@ -23,6 +23,7 @@ import { Route as ApiSettingsPinRouteImport } from './routes/api/settings/pin'
 import { Route as ApiGoogleCalendarsIdRouteImport } from './routes/api/google.calendars.$id'
 import { Route as ApiGoogleOauthCallbackRouteImport } from './routes/api/google.oauth.callback'
 import { Route as ApiGoogleOauthStartRouteImport } from './routes/api/google.oauth.start'
+import { Route as ApiGoogleTaskListsIdRouteImport } from './routes/api/google.task-lists.$id'
 import { Route as ApiGoogleAccountsIdDisconnectRouteImport } from './routes/api/google.accounts.$id.disconnect'
 
 const IndexRoute = IndexRouteImport.update({
@@ -95,6 +96,11 @@ const ApiGoogleOauthStartRoute = ApiGoogleOauthStartRouteImport.update({
   path: '/api/google/oauth/start',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiGoogleTaskListsIdRoute = ApiGoogleTaskListsIdRouteImport.update({
+  id: '/api/google/task-lists/$id',
+  path: '/api/google/task-lists/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiGoogleAccountsIdDisconnectRoute =
   ApiGoogleAccountsIdDisconnectRouteImport.update({
     id: '/$id/disconnect',
@@ -117,6 +123,7 @@ export interface FileRoutesByFullPath {
   '/api/google/calendars/$id': typeof ApiGoogleCalendarsIdRoute
   '/api/google/oauth/callback': typeof ApiGoogleOauthCallbackRoute
   '/api/google/oauth/start': typeof ApiGoogleOauthStartRoute
+  '/api/google/task-lists/$id': typeof ApiGoogleTaskListsIdRoute
   '/api/google/accounts/$id/disconnect': typeof ApiGoogleAccountsIdDisconnectRoute
 }
 export interface FileRoutesByTo {
@@ -134,6 +141,7 @@ export interface FileRoutesByTo {
   '/api/google/calendars/$id': typeof ApiGoogleCalendarsIdRoute
   '/api/google/oauth/callback': typeof ApiGoogleOauthCallbackRoute
   '/api/google/oauth/start': typeof ApiGoogleOauthStartRoute
+  '/api/google/task-lists/$id': typeof ApiGoogleTaskListsIdRoute
   '/api/google/accounts/$id/disconnect': typeof ApiGoogleAccountsIdDisconnectRoute
 }
 export interface FileRoutesById {
@@ -152,6 +160,7 @@ export interface FileRoutesById {
   '/api/google/calendars/$id': typeof ApiGoogleCalendarsIdRoute
   '/api/google/oauth/callback': typeof ApiGoogleOauthCallbackRoute
   '/api/google/oauth/start': typeof ApiGoogleOauthStartRoute
+  '/api/google/task-lists/$id': typeof ApiGoogleTaskListsIdRoute
   '/api/google/accounts/$id/disconnect': typeof ApiGoogleAccountsIdDisconnectRoute
 }
 export interface FileRouteTypes {
@@ -171,6 +180,7 @@ export interface FileRouteTypes {
     | '/api/google/calendars/$id'
     | '/api/google/oauth/callback'
     | '/api/google/oauth/start'
+    | '/api/google/task-lists/$id'
     | '/api/google/accounts/$id/disconnect'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -188,6 +198,7 @@ export interface FileRouteTypes {
     | '/api/google/calendars/$id'
     | '/api/google/oauth/callback'
     | '/api/google/oauth/start'
+    | '/api/google/task-lists/$id'
     | '/api/google/accounts/$id/disconnect'
   id:
     | '__root__'
@@ -205,6 +216,7 @@ export interface FileRouteTypes {
     | '/api/google/calendars/$id'
     | '/api/google/oauth/callback'
     | '/api/google/oauth/start'
+    | '/api/google/task-lists/$id'
     | '/api/google/accounts/$id/disconnect'
   fileRoutesById: FileRoutesById
 }
@@ -221,6 +233,7 @@ export interface RootRouteChildren {
   ApiGoogleCalendarsIdRoute: typeof ApiGoogleCalendarsIdRoute
   ApiGoogleOauthCallbackRoute: typeof ApiGoogleOauthCallbackRoute
   ApiGoogleOauthStartRoute: typeof ApiGoogleOauthStartRoute
+  ApiGoogleTaskListsIdRoute: typeof ApiGoogleTaskListsIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -323,6 +336,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiGoogleOauthStartRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/google/task-lists/$id': {
+      id: '/api/google/task-lists/$id'
+      path: '/api/google/task-lists/$id'
+      fullPath: '/api/google/task-lists/$id'
+      preLoaderRoute: typeof ApiGoogleTaskListsIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/google/accounts/$id/disconnect': {
       id: '/api/google/accounts/$id/disconnect'
       path: '/$id/disconnect'
@@ -381,6 +401,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiGoogleCalendarsIdRoute: ApiGoogleCalendarsIdRoute,
   ApiGoogleOauthCallbackRoute: ApiGoogleOauthCallbackRoute,
   ApiGoogleOauthStartRoute: ApiGoogleOauthStartRoute,
+  ApiGoogleTaskListsIdRoute: ApiGoogleTaskListsIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

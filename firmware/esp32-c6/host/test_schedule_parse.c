@@ -48,7 +48,8 @@ int main(void)
 		"\"reminderMinutes\":30,"
 		"\"showNextEvents\":2,"
 		"\"devicePin\":null,"
-		"\"events\":[]"
+		"\"events\":[],"
+		"\"tasks\":[]"
 		"}";
 	const char *locked =
 		"{"
@@ -156,6 +157,8 @@ int main(void)
 		"\"showNextEvents\":2,"
 		"\"events\":[]"
 		"}";
+	const char *tasks =
+		"{\"serverUnix\":1787850000,\"timezone\":\"UTC\",\"reminderMinutes\":30,\"showNextEvents\":2,\"events\":[],\"tasks\":[{\"id\":\"task-1\",\"title\":\"Café\",\"dueUnix\":null}]}";
 
 	expect_ok(ok, &s);
 	assert(strcmp(s.timezone, "America/Sao_Paulo") == 0);
@@ -195,12 +198,18 @@ int main(void)
 	assert(alerts_schedule_parse(bad_server, strlen(bad_server), &s) == ALERTS_PARSE_MISSING);
 	assert(alerts_schedule_parse(bad_start, strlen(bad_start), &s) == ALERTS_PARSE_MISSING);
 	assert(alerts_schedule_parse(garbage, strlen(garbage), &s) == ALERTS_PARSE_TYPE);
+	assert(alerts_schedule_parse("{\"serverUnix\":1787850000,\"timezone\":\"UTC\",\"reminderMinutes\":30,\"showNextEvents\":2,\"events\":[],\"tasks\":[", 116, &s) != ALERTS_PARSE_OK);
 	assert(alerts_schedule_parse("{", 1, &s) != ALERTS_PARSE_OK);
 	assert(alerts_schedule_parse("[]", 2, &s) == ALERTS_PARSE_SYNTAX);
 	assert(alerts_schedule_parse(NULL, 0, &s) == ALERTS_PARSE_ARG);
 
 	expect_ok(utc, &s);
 	assert(s.server_unix == UNIX_NOW);
+
+	expect_ok(tasks, &s);
+	assert(s.task_count == 1);
+	assert(!s.tasks[0].has_due);
+	assert(strcmp(s.tasks[0].title, "Cafe") == 0);
 
 	{
 		char many[8192];
@@ -218,6 +227,14 @@ int main(void)
 		n += (size_t)snprintf(many + n, sizeof(many) - n, "]}");
 		expect_ok(many, &s);
 		assert(s.event_count == ALERTS_MAX_EVENTS);
+	}
+	{
+		char many_tasks[8192];
+		size_t n = (size_t)snprintf(many_tasks, sizeof(many_tasks), "{\"serverUnix\":1787850000,\"timezone\":\"UTC\",\"reminderMinutes\":30,\"showNextEvents\":2,\"events\":[],\"tasks\":[");
+		for (int i = 0; i < 21; i++) n += (size_t)snprintf(many_tasks + n, sizeof(many_tasks) - n, "%s{\"id\":\"t%d\",\"title\":\"x\",\"dueUnix\":null}", i ? "," : "", i);
+		n += (size_t)snprintf(many_tasks + n, sizeof(many_tasks) - n, "]}");
+		expect_ok(many_tasks, &s);
+		assert(s.task_count == ALERTS_MAX_TASKS);
 	}
 
 	puts("ok");

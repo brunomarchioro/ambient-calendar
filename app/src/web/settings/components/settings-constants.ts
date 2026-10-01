@@ -19,4 +19,5 @@ export const GOOGLE_STATUS_MESSAGES: Record<string, string> = {
   limit: 'Limite de contas Google atingido.',
   calendar_error:
     'Conta conectada, mas não foi possível importar calendários. Conceda acesso ao Google Calendar e reconecte (contas corporativas podem exigir liberação do admin).',
+  tasks_connected: 'Google Tasks conectado para a conta.',
 }

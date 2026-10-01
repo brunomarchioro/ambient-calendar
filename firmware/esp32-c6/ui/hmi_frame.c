@@ -90,6 +90,7 @@ bool alerts_hmi_present_set_pin(alerts_hmi_present_t *present, const char *pin)
 	present->device_pin[sizeof(present->device_pin) - 1] = '\0';
 	present->locked = true;
 	present->overlay_open = false;
+	present->tasks_view = false;
 	present->pin_error = false;
 	present->pin_length = 0;
 	return true;
@@ -102,8 +103,20 @@ bool alerts_hmi_present_lock(alerts_hmi_present_t *present)
 	}
 	present->locked = true;
 	present->overlay_open = false;
+	present->tasks_view = false;
 	present->pin_error = false;
 	present->pin_length = 0;
+	return true;
+}
+
+bool alerts_hmi_present_toggle_tasks(alerts_hmi_present_t *present, size_t task_count)
+{
+	if (present == NULL || present->locked || task_count == 0) {
+		return false;
+	}
+	present->tasks_view = !present->tasks_view;
+	present->overlay_open = false;
+	present->overlay_elapsed_ms = 0;
 	return true;
 }
 
@@ -349,6 +362,11 @@ int alerts_hmi_build_frame(int64_t now_unix, const alerts_schedule_t *schedule, 
 		return 0;
 	}
 	out->schedule_available = true;
+	out->tasks_view = !out->locked && present != NULL && present->tasks_view;
+	if (out->tasks_view) {
+		out->task_count = schedule->task_count;
+		memcpy(out->tasks, schedule->tasks, schedule->task_count * sizeof(schedule->tasks[0]));
+	}
 
 	strncpy(out->timezone, schedule->timezone, sizeof(out->timezone) - 1);
 	out->timezone[sizeof(out->timezone) - 1] = '\0';

@@ -3,6 +3,7 @@ import {
   disconnectGoogleAccountMutationOptions,
   googleSyncMutationOptions,
   patchGoogleCalendarMutationOptions,
+  patchGoogleTaskListMutationOptions,
 } from '@/web/settings/api/google-mutations'
 import { googleAccountsQueryKey, googleAccountsQueryOptions } from '@/web/settings/api/google-accounts-query'
 import { Button } from '@/web/common/components/ui/button'
@@ -36,6 +37,10 @@ export function GoogleAccountsSection({
       void queryClient.invalidateQueries({ queryKey: googleAccountsQueryKey })
     },
   })
+  const taskPatchMutation = useMutation({
+    ...patchGoogleTaskListMutationOptions(),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: googleAccountsQueryKey }),
+  })
 
   const accounts = accountsQuery.data ?? []
   const hasAccounts = accounts.length > 0
@@ -64,11 +69,16 @@ export function GoogleAccountsSection({
           patchingCalendarId={
             patchMutation.isPending ? (patchMutation.variables?.id ?? null) : null
           }
+          patchingTaskListId={taskPatchMutation.isPending ? (taskPatchMutation.variables?.id ?? null) : null}
           onDisconnect={() => disconnectMutation.mutate(account.id)}
           onReconnect={() => {
             window.location.href = `/api/google/oauth/start?mode=reconnect&accountId=${account.id}`
           }}
+          onConnectTasks={() => {
+            window.location.href = `/api/google/oauth/start?mode=connect_tasks&accountId=${account.id}`
+          }}
           onToggleCalendar={(id, enabled) => patchMutation.mutate({ id, enabled })}
+          onToggleTaskList={(id, enabled) => taskPatchMutation.mutate({ id, enabled })}
         />
       ))}
       <div className="flex flex-wrap gap-3">
@@ -105,6 +115,11 @@ export function GoogleAccountsSection({
       {syncMutation.error ? (
         <p className="text-sm text-destructive" role="alert">
           {syncMutation.error.message}
+        </p>
+      ) : null}
+      {taskPatchMutation.error ? (
+        <p className="text-sm text-destructive" role="alert">
+          {taskPatchMutation.error.message}
         </p>
       ) : null}
     </div>

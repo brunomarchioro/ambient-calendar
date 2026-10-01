@@ -7,7 +7,8 @@ export const Route = createFileRoute('/api/google/oauth/start')({
     handlers: {
       GET: async ({ request }) => {
         const url = new URL(request.url)
-        const mode = url.searchParams.get('mode') === 'reconnect' ? 'reconnect' : 'connect'
+        const requestedMode = url.searchParams.get('mode')
+        const mode = requestedMode === 'reconnect' || requestedMode === 'connect_tasks' ? requestedMode : 'connect'
         const googleAccountId = url.searchParams.get('accountId') ?? undefined
         const result = await startGoogleOAuthUseCase({
           db: env.DB,

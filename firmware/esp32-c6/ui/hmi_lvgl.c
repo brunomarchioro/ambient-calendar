@@ -72,7 +72,9 @@ static alerts_hmi_tap_cb_t s_background_tap_cb;
 static alerts_hmi_tap_cb_t s_dismiss_tap_cb;
 static alerts_hmi_tap_cb_t s_manual_lock_cb;
 static alerts_hmi_pin_cb_t s_pin_cb;
+static alerts_hmi_swipe_cb_t s_swipe_cb;
 static bool s_long_press_consumed;
+static bool s_gesture_consumed;
 
 void alerts_hmi_lvgl_set_background_tap_cb(alerts_hmi_tap_cb_t cb)
 {
@@ -92,6 +94,11 @@ void alerts_hmi_lvgl_set_manual_lock_cb(alerts_hmi_tap_cb_t cb)
 void alerts_hmi_lvgl_set_pin_cb(alerts_hmi_pin_cb_t cb)
 {
 	s_pin_cb = cb;
+}
+
+void alerts_hmi_lvgl_set_swipe_cb(alerts_hmi_swipe_cb_t cb)
+{
+	s_swipe_cb = cb;
 }
 
 static const char *weekday_pt(int wday)
@@ -510,12 +517,29 @@ static size_t render_overlay_list(lv_obj_t **labels, int slot_count, const alert
 static void background_click_cb(lv_event_t *e)
 {
 	const lv_event_code_t code = lv_event_get_code(e);
+	if (s_gesture_consumed) {
+		s_gesture_consumed = false;
+		return;
+	}
 	if (s_long_press_consumed) {
 		s_long_press_consumed = false;
 		return;
 	}
 	if ((code == LV_EVENT_CLICKED || code == LV_EVENT_SHORT_CLICKED) && s_background_tap_cb != NULL) {
 		s_background_tap_cb();
+	}
+}
+
+static void gesture_cb(lv_event_t *e)
+{
+	lv_indev_t *indev = lv_indev_active();
+	const lv_dir_t direction = indev == NULL ? LV_DIR_NONE : lv_indev_get_gesture_dir(indev);
+	if (direction == LV_DIR_LEFT || direction == LV_DIR_RIGHT) {
+		s_gesture_consumed = true;
+		lv_event_stop_bubbling(e);
+		if (s_swipe_cb != NULL) {
+			s_swipe_cb();
+		}
 	}
 }
 
@@ -712,6 +736,7 @@ esp_err_t alerts_hmi_lvgl_init(void)
 	lv_obj_set_style_bg_opa(s_ui.root, LV_OPA_COVER, 0);
 	lv_obj_add_flag(s_ui.root, LV_OBJ_FLAG_CLICKABLE);
 	lv_obj_add_event_cb(s_ui.root, background_click_cb, LV_EVENT_CLICKED, NULL);
+	lv_obj_add_event_cb(s_ui.root, gesture_cb, LV_EVENT_GESTURE, NULL);
 	lv_obj_add_event_cb(s_ui.root, long_press_cb, LV_EVENT_LONG_PRESSED, NULL);
 
 	s_ui.date_lbl = lv_label_create(s_ui.root);
@@ -906,6 +931,60 @@ static void render_ambient_list(const alerts_event_t *events, size_t count, int6
 	}
 }
 
+static int task_group(const alerts_task_t *task, int today)
+{
+	if (!task->has_due) return 3;
+	return event_day_key(task->due_unix) < today ? 0 : event_day_key(task->due_unix) == today ? 1 : 2;
+}
+
+static const char *task_group_title(int group)
+{
+	static const char *titles[] = {"ATRASADAS", "HOJE", "PROXIMAS", "SEM PRAZO"};
+	return titles[group];
+}
+
+static int task_cmp(const alerts_task_t *a, const alerts_task_t *b, int today)
+{
+	const int group = task_group(a, today) - task_group(b, today);
+	if (group != 0) return group;
+	if (a->has_due && b->has_due && a->due_unix != b->due_unix) return a->due_unix < b->due_unix ? -1 : 1;
+	const int title = strcmp(a->title, b->title);
+	return title != 0 ? title : strcmp(a->id, b->id);
+}
+
+static void render_task_list(const alerts_hmi_frame_t *frame)
+{
+	bool used[ALERTS_MAX_TASKS] = {false};
+	const int today = event_day_key(frame->now_unix);
+	int slot = 0;
+	int last_group = -1;
+	for (; slot < HMI_AMBIENT_LIST_SLOTS;) {
+		int best = -1;
+		for (size_t i = 0; i < frame->task_count; i++) {
+			if (!used[i] && (best < 0 || task_cmp(&frame->tasks[i], &frame->tasks[best], today) < 0)) best = (int)i;
+		}
+		if (best < 0) break;
+		const int group = task_group(&frame->tasks[best], today);
+		if (group != last_group) {
+			set_label(s_ui.list_time_lbl[slot], "", false);
+			set_label(s_ui.list_title_lbl[slot], task_group_title(group), true);
+			set_visible(lv_obj_get_parent(s_ui.list_title_lbl[slot]), true);
+			last_group = group;
+			if (++slot >= HMI_AMBIENT_LIST_SLOTS) break;
+		}
+		set_label(s_ui.list_time_lbl[slot], "", false);
+		set_label(s_ui.list_title_lbl[slot], frame->tasks[best].title, true);
+		set_visible(lv_obj_get_parent(s_ui.list_title_lbl[slot]), true);
+		used[best] = true;
+		slot++;
+	}
+	for (; slot < HMI_AMBIENT_LIST_SLOTS; slot++) {
+		set_label(s_ui.list_time_lbl[slot], "", false);
+		set_label(s_ui.list_title_lbl[slot], "", false);
+		set_visible(lv_obj_get_parent(s_ui.list_title_lbl[slot]), false);
+	}
+}
+
 static void render_card_content(lv_obj_t *card, lv_obj_t *caption, lv_obj_t *title, lv_obj_t *time_lbl,
 				const alerts_event_t *event, int64_t now, bool is_now, const char *caption_text,
 				lv_color_t fill, bool text_on_fill)
@@ -1016,6 +1095,18 @@ esp_err_t alerts_hmi_lvgl_render(const alerts_hmi_frame_t *frame)
 
 	s_ui.last_state = frame->state;
 	s_ui.last_secondary = frame->has_secondary;
+	if (frame->tasks_view) {
+		set_label(s_ui.date_lbl, "TAREFAS", true);
+		set_visible(s_ui.focus_card, false);
+		set_visible(s_ui.secondary_card, false);
+		alert_blink_stop(s_ui.focus_card);
+		alert_blink_stop(s_ui.secondary_card);
+		set_label(s_ui.empty_title_lbl, "SEM TAREFAS", frame->task_count == 0);
+		if (frame->task_count > 0) render_task_list(frame);
+		else render_ambient_list(NULL, 0, -1);
+		lv_obj_add_flag(s_ui.overlay, LV_OBJ_FLAG_HIDDEN);
+		return ESP_OK;
+	}
 
 	const bool is_empty = frame->state == ALERTS_HMI_EMPTY;
 
