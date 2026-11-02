@@ -1,5 +1,7 @@
 # Migrar apps/lab para shadcn — map
 
+> **Superseded** por [ADR 0015](../../docs/adr/0015-heroui-ui-library.md): o app usa HeroUI v3, não shadcn/ui.
+
 Labels: `wayfinder:map`
 
 ## Destination

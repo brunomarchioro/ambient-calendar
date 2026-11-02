@@ -6,11 +6,7 @@ import {
   listEventsUseCase,
   updateEventUseCase,
 } from '@/server/events/use-cases/event-mutations'
-import {
-  filterManualReminders,
-  mcpScopeDenied,
-  mcpTextResult,
-} from '@/server/mcp/services/reminder-tool-actions'
+import { filterManualReminders } from '@/server/mcp/services/reminder-tool-actions'
 import {
   assertDeleteConfirmed,
   hasMcpScope,
@@ -18,6 +14,17 @@ import {
   MCP_SCOPE_WRITE,
 } from '@/server/mcp/services/mcp-scopes'
 import { getOrSeedSettingsUseCase } from '@/server/settings/use-cases/put-settings'
+
+function mcpTextResult(payload: unknown, isError = false) {
+  return {
+    content: [{ type: 'text' as const, text: JSON.stringify(payload, null, 2) }],
+    ...(isError ? { isError: true as const } : {}),
+  }
+}
+
+function mcpScopeDenied(required: typeof MCP_SCOPE_READ | typeof MCP_SCOPE_WRITE) {
+  return mcpTextResult({ error: `scope ${required} required` }, true)
+}
 
 export async function listRemindersAction(
   db: D1Database,

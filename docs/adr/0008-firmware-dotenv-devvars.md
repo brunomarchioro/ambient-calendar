@@ -2,7 +2,7 @@
 
 ## Status
 
-Aceito (2026-08-28), revisado (2026-08-28)
+Aceito (2026-08-28), revisado (2026-08-28). Wi-Fi superado pelo [ADR 0016](0016-firmware-wifi-networks-file.md).
 
 ## Contexto
 
@@ -30,5 +30,5 @@ No flash, secrets continuam em Kconfig (`CONFIG_ALERTS_*`); dotenv é só no hos
 ## Consequências
 
 - Dev local: `cp firmware/.dev.vars.example firmware/.dev.vars` e alinhar token com o Worker.
-- Wi-Fi opcional via `ALERTS_WIFI_*` no `.dev.vars` quando `sync-devvars` for rodado.
+- ~~Wi-Fi opcional via `ALERTS_WIFI_*` no `.dev.vars`~~ — ver [ADR 0016](0016-firmware-wifi-networks-file.md).
 - CI não depende de `firmware/.dev.vars` (gitignored).

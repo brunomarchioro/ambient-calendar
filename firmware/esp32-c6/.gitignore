@@ -9,3 +9,4 @@ host/test_schedule_parse
 host/test_hmi_frame
 host/test_poll
 host/test_scheduler_eval
+host/test_wifi_select

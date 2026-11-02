@@ -83,3 +83,7 @@ _Avoid_: MCP user, bot, agent (genérico)
 **Autorização MCP**:
 Fluxo OAuth que concede a um Cliente MCP permissão para invocar tools no Worker. Distinto de **Conta Google** (espelho de calendário) e de HTTP Basic Auth da UI web.
 _Avoid_: MCP auth (genérico), API key
+
+**Rede Wi-Fi**:
+Par SSID + senha que o display pode usar para chegar ao backend. O display conhece até 3 Redes Wi-Fi, em ordem de prioridade; ao conectar, tenta as que estiverem visíveis nessa ordem. Sem nenhuma conectada, segue offline com o cache local.
+_Avoid_: perfil de rede, AP, credencial Wi-Fi

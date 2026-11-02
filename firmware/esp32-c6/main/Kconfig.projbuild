@@ -1,13 +1,5 @@
 menu "Alerts device"
 
-config ALERTS_WIFI_SSID
-	string "Wi-Fi SSID"
-	default "YOUR_SSID"
-
-config ALERTS_WIFI_PASSWORD
-	string "Wi-Fi password"
-	default "YOUR_PASSWORD"
-
 config ALERTS_API_BASE_URL
 	string "API base URL, https, no trailing slash"
 	default "https://example.invalid"

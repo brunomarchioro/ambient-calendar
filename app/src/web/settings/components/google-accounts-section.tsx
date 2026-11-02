@@ -6,7 +6,8 @@ import {
   patchGoogleTaskListMutationOptions,
 } from '@/web/settings/api/google-mutations'
 import { googleAccountsQueryKey, googleAccountsQueryOptions } from '@/web/settings/api/google-accounts-query'
-import { Button } from '@/web/common/components/ui/button'
+import { Button } from '@heroui/react'
+import { PendingButton } from '@/web/common/components/pending-button'
 import { GoogleAccountCard } from '@/web/settings/components/google-account-card'
 
 export function GoogleAccountsSection({
@@ -49,13 +50,13 @@ export function GoogleAccountsSection({
     <div className="flex flex-col gap-3 border-t pt-4">
       <h3 className="text-base font-semibold">Contas Google</h3>
       {oauthBanner ? (
-        <p className="text-sm text-muted-foreground" role="status">
+        <p className="text-sm text-muted" role="status">
           {oauthBanner}
         </p>
       ) : null}
-      {accountsQuery.isPending ? <p className="text-sm text-muted-foreground">Carregando contas…</p> : null}
+      {accountsQuery.isPending ? <p className="text-sm text-muted">Carregando contas…</p> : null}
       {accountsQuery.error ? (
-        <p className="text-sm text-destructive" role="alert">
+        <p className="text-sm text-danger" role="alert">
           {accountsQuery.error.message}
         </p>
       ) : null}
@@ -83,42 +84,34 @@ export function GoogleAccountsSection({
       ))}
       <div className="flex flex-wrap gap-3">
         <Button
-          type="button"
           variant="outline"
-          className="w-fit"
-          onClick={() => {
+          onPress={() => {
             window.location.href = '/api/google/oauth/start?mode=connect'
           }}
         >
           Adicionar conta Google
         </Button>
         {hasAccounts ? (
-          <Button
-            type="button"
-            variant="outline"
-            loading={syncMutation.isPending}
-            className="w-fit"
-            onClick={() => syncMutation.mutate()}
-          >
+          <PendingButton variant="outline" isPending={syncMutation.isPending} onPress={() => syncMutation.mutate()}>
             Sincronizar agora
-          </Button>
+          </PendingButton>
         ) : null}
       </div>
       {syncMutation.data ? (
         <p
-          className={syncMutation.data.ok ? 'text-sm text-muted-foreground' : 'text-sm text-destructive'}
+          className={syncMutation.data.ok ? 'text-sm text-muted' : 'text-sm text-danger'}
           role="status"
         >
           {syncMutation.data.message}
         </p>
       ) : null}
       {syncMutation.error ? (
-        <p className="text-sm text-destructive" role="alert">
+        <p className="text-sm text-danger" role="alert">
           {syncMutation.error.message}
         </p>
       ) : null}
       {taskPatchMutation.error ? (
-        <p className="text-sm text-destructive" role="alert">
+        <p className="text-sm text-danger" role="alert">
           {taskPatchMutation.error.message}
         </p>
       ) : null}

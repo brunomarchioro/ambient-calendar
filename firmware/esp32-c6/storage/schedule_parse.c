@@ -689,7 +689,7 @@ static int parse_task_due(cur_t *c, alerts_task_t *task)
 
 static int parse_task(cur_t *c, alerts_task_t *task)
 {
-	bool saw_id = false, saw_title = false, saw_due = false;
+	bool saw_id = false, saw_title = false;
 	int err;
 	memset(task, 0, sizeof(*task));
 	if (take(c) != '{') return ALERTS_PARSE_TYPE;
@@ -698,7 +698,7 @@ static int parse_task(cur_t *c, alerts_task_t *task)
 		if ((err = parse_string(c, key, sizeof(key))) != ALERTS_PARSE_OK || (err = expect_char(c, ':')) != ALERTS_PARSE_OK) return err;
 		if (strcmp(key, "id") == 0) { err = parse_string(c, task->id, sizeof(task->id)); saw_id = true; }
 		else if (strcmp(key, "title") == 0) { err = parse_string(c, task->title, sizeof(task->title)); saw_title = true; }
-		else if (strcmp(key, "dueUnix") == 0) { err = parse_task_due(c, task); saw_due = true; }
+		else if (strcmp(key, "dueUnix") == 0) { err = parse_task_due(c, task); }
 		else err = skip_value(c);
 		if (err != ALERTS_PARSE_OK) return err;
 		skip_ws(c);
@@ -706,7 +706,7 @@ static int parse_task(cur_t *c, alerts_task_t *task)
 		if (peek(c) == '}') { c->p++; break; }
 		return ALERTS_PARSE_SYNTAX;
 	}
-	if (!saw_id || !saw_title || !saw_due || task->id[0] == '\0') return ALERTS_PARSE_MISSING;
+	if (!saw_id || !saw_title || task->id[0] == '\0') return ALERTS_PARSE_MISSING;
 	sanitize_event_title(task->title);
 	return ALERTS_PARSE_OK;
 }

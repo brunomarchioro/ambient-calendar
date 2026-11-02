@@ -4,6 +4,7 @@ dist/
 .tanstack/
 .dev.vars
 !.dev.vars.example
+firmware/wifi-networks.json
 .env
 .env.*
 !.env.example
@@ -16,3 +17,4 @@ firmware/esp32-c6/managed_components/
 firmware/esp32-c6/.vscode/*
 !firmware/esp32-c6/.vscode/settings.json
 .idea/
+.claude/settings.local.json

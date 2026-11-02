@@ -1,8 +1,8 @@
 import { useState, type FormEvent } from 'react'
 import { DEVICE_PIN_MESSAGE, parseDevicePin, type DevicePin } from '@/shared/settings/types'
-import { Button } from '@/web/common/components/ui/button'
-import { Field, FieldError, FieldLabel } from '@/web/common/components/ui/field'
-import { Input } from '@/web/common/components/ui/input'
+import { Button } from '@heroui/react'
+import { PendingButton } from '@/web/common/components/pending-button'
+import { PinField } from '@/web/settings/components/pin-field'
 
 export function DevicePinSection({
   configured,
@@ -38,6 +38,9 @@ export function DevicePinSection({
     setEditing(false)
   }
 
+  const message = validation ?? error
+  const errorId = message ? 'device-pin-error' : undefined
+
   if (configured && !editing) {
     return (
       <section aria-labelledby="device-pin-title" className="flex flex-col gap-3">
@@ -45,29 +48,28 @@ export function DevicePinSection({
           <h3 id="device-pin-title" className="font-medium">
             Bloqueio do dispositivo
           </h3>
-          <p className="text-sm text-muted-foreground" role="status">
+          <p className="text-sm text-muted" role="status">
             PIN configurado
           </p>
         </div>
         {error ? (
-          <p className="text-sm text-destructive" role="alert">
+          <p className="text-sm text-danger" role="alert">
             {error}
           </p>
         ) : null}
         <div className="flex gap-2">
-          <Button type="button" variant="outline" onClick={() => setEditing(true)}>
+          <Button variant="outline" onPress={() => setEditing(true)}>
             Alterar
           </Button>
-          <Button
-            type="button"
-            variant="destructive"
-            loading={pending}
-            onClick={() => {
+          <PendingButton
+            variant="danger"
+            isPending={pending}
+            onPress={() => {
               if (window.confirm('Remover o PIN do dispositivo?')) void onRemove()
             }}
           >
             Remover
-          </Button>
+          </PendingButton>
         </div>
       </section>
     )
@@ -79,45 +81,33 @@ export function DevicePinSection({
         <h3 id="device-pin-title" className="font-medium">
           Bloqueio do dispositivo
         </h3>
-        <p className="text-sm text-muted-foreground">Use os números 1, 2, 3 e 4 uma vez cada.</p>
+        <p className="text-sm text-muted">Use os números 1, 2, 3 e 4 uma vez cada.</p>
       </div>
-      <Field>
-        <FieldLabel htmlFor="device-pin">PIN de 4 dígitos</FieldLabel>
-        <Input
-          id="device-pin"
-          type="password"
-          inputMode="numeric"
-          autoComplete="new-password"
-          pattern="[1-4]{4}"
-          maxLength={4}
-          value={pin}
-          aria-invalid={validation !== null}
-          aria-describedby="device-pin-error"
-          onChange={(event) => setPin(event.target.value.replace(/[^1-4]/g, ''))}
-        />
-      </Field>
-      <Field>
-        <FieldLabel htmlFor="device-pin-confirmation">Confirmar PIN</FieldLabel>
-        <Input
-          id="device-pin-confirmation"
-          type="password"
-          inputMode="numeric"
-          autoComplete="new-password"
-          pattern="[1-4]{4}"
-          maxLength={4}
-          value={confirmation}
-          aria-invalid={validation !== null}
-          aria-describedby="device-pin-error"
-          onChange={(event) => setConfirmation(event.target.value.replace(/[^1-4]/g, ''))}
-        />
-      </Field>
-      <FieldError id="device-pin-error">{validation ?? error}</FieldError>
+      <PinField
+        label="PIN de 4 dígitos"
+        value={pin}
+        isInvalid={validation !== null}
+        describedBy={errorId}
+        onChange={setPin}
+      />
+      <PinField
+        label="Confirmar PIN"
+        value={confirmation}
+        isInvalid={validation !== null}
+        describedBy={errorId}
+        onChange={setConfirmation}
+      />
+      {message ? (
+        <p id="device-pin-error" className="text-sm text-danger" role="alert">
+          {message}
+        </p>
+      ) : null}
       <div className="flex gap-2">
-        <Button type="submit" loading={pending}>
+        <PendingButton type="submit" isPending={pending}>
           {configured ? 'Salvar novo PIN' : 'Cadastrar PIN'}
-        </Button>
+        </PendingButton>
         {configured ? (
-          <Button type="button" variant="outline" onClick={() => setEditing(false)}>
+          <Button variant="outline" onPress={() => setEditing(false)}>
             Cancelar
           </Button>
         ) : null}

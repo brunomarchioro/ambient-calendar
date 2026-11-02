@@ -8,7 +8,7 @@ Wi-Fi, HTTPS poll of `GET /api/device/schedule`, LittleFS cache, NVS meta, SNTP 
 cd firmware/esp32-c6/host && make test
 ```
 
-Runs JSON parse tests and HMI frame tests (Empty, Ambient, Alerta, Agora, all-day exclusion, focus ties, Overlay list).
+Runs JSON parse tests, Wi-Fi selection and `wifi-networks.json` validation, and HMI frame tests (Empty, Ambient, Alerta, Agora, all-day exclusion, focus ties, Overlay list).
 
 ## Pré-requisitos
 
@@ -29,14 +29,17 @@ Opcional no `~/.bashrc`: `alias get_idf='. ~/.espressif/v5.5.1/esp-idf/export.sh
 
 ```bash
 cd firmware/esp32-c6
-cp ../.dev.vars.example ../.dev.vars   # edite URL, token e Wi-Fi
+cp ../.dev.vars.example ../.dev.vars   # edite URL e token
+cp ../wifi-networks.example.json ../wifi-networks.json   # até 3 Redes Wi-Fi, em ordem de prioridade
 make -C tools sync-devvars             # firmware/.dev.vars → sdkconfig.defaults.devvars
 idf.py set-target esp32c6              # só na primeira vez ou ao trocar de chip
-idf.py menuconfig                      # Wi-Fi (e demais se não veio do .dev.vars)
+idf.py menuconfig                      # URL/token se não vieram do .dev.vars
 idf.py build flash monitor
 ```
 
 `sync-devvars` lê `firmware/.dev.vars` (dotenv-c, ADR 0008) e gera `sdkconfig.defaults.devvars` (gitignored). Sem esse passo, use menuconfig para URL/token.
+
+Redes Wi-Fi (ADR 0016): `firmware/wifi-networks.json` (gitignored) é lido pelo build do IDF, que falha se o arquivo faltar ou for inválido (1–3 redes, SSID 1–32 bytes, senha WPA2 de 8–63 caracteres ou 64 hex). O device escaneia, tenta as redes visíveis na ordem do arquivo e, sem conexão, segue com o cache e reescaneia a cada 30 s.
 
 Set `CONFIG_ALERTS_API_BASE_URL` to the Worker origin (no trailing slash) and `CONFIG_ALERTS_DEVICE_API_TOKEN` to the same value as the Worker secret.
 

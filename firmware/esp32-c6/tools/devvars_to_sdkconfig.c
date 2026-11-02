@@ -19,16 +19,6 @@ static void write_sdkconfig_string(FILE *out, const char *key, const char *value
 	fputc('\n', out);
 }
 
-static int write_key_if_set(FILE *out, const char *env_key, const char *kconfig_key)
-{
-	const char *value = getenv(env_key);
-	if (value == NULL || value[0] == '\0') {
-		return 0;
-	}
-	write_sdkconfig_string(out, kconfig_key, value);
-	return 1;
-}
-
 int main(int argc, char **argv)
 {
 	const char *input = argc > 1 ? argv[1] : ALERTS_DEVVARS_DEFAULT_PATH;
@@ -62,9 +52,6 @@ int main(int argc, char **argv)
 		url = ALERTS_DEVVARS_DEFAULT_API_URL;
 	}
 	write_sdkconfig_string(out, ALERTS_DEVVARS_KEY_API_URL, url);
-
-	(void)write_key_if_set(out, ALERTS_DEVVARS_KEY_WIFI_SSID, ALERTS_DEVVARS_KEY_WIFI_SSID);
-	(void)write_key_if_set(out, ALERTS_DEVVARS_KEY_WIFI_PASSWORD, ALERTS_DEVVARS_KEY_WIFI_PASSWORD);
 
 	fclose(out);
 	printf("devvars: wrote %s\n", output);

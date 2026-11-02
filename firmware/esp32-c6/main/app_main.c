@@ -31,7 +31,9 @@ void app_main(void)
 	ESP_ERROR_CHECK(alerts_lvgl_init());
 	ESP_ERROR_CHECK(alerts_hmi_init());
 	(void)alerts_hmi_loop_once();
-	ESP_ERROR_CHECK(alerts_wifi_start());
+	if (alerts_wifi_start() != ESP_OK) {
+		ESP_LOGW(TAG, "no Wi-Fi yet; running from cache");
+	}
 	ESP_ERROR_CHECK(alerts_time_init());
 
 	if (alerts_poll_current() != NULL) {

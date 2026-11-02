@@ -1,0 +1,4 @@
+[
+  { "ssid": "casa", "password": "senha-da-casa" },
+  { "ssid": "hotspot-celular", "password": "senha-do-hotspot" }
+]

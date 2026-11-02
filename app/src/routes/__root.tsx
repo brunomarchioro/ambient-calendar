@@ -2,7 +2,6 @@ import '@/styles/globals.css'
 import { useState, type ReactNode } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { HeadContent, Link, Outlet, Scripts, createRootRoute, useRouterState } from '@tanstack/react-router'
-import { cn } from '@/web/common/utils/cn'
 
 export const Route = createRootRoute({
   head: () => ({
@@ -58,10 +57,7 @@ function NavLink({
   return (
     <Link to={to} aria-current={current ? 'page' : undefined}>
       <span
-        className={cn(
-          'text-sm',
-          current ? 'font-semibold underline underline-offset-4' : 'font-medium hover:underline',
-        )}
+        className={`text-sm ${current ? 'font-semibold underline underline-offset-4' : 'font-medium hover:underline'}`}
       >
         {children}
       </span>

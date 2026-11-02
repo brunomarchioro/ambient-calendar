@@ -1,8 +1,7 @@
 import type { EventPublic } from '@/shared/events/types'
 import { canMutateEvent } from '@/web/events/utils'
-import { Badge } from '@/web/common/components/ui/badge'
-import { Button } from '@/web/common/components/ui/button'
-import { Card, CardContent } from '@/web/common/components/ui/card'
+import { Button, Card, Chip } from '@heroui/react'
+import { PendingButton } from '@/web/common/components/pending-button'
 
 function eventWhen(event: EventPublic): string {
   if (event.allDay) {
@@ -29,34 +28,36 @@ export function EventCard({
   const manual = canMutateEvent(event)
   return (
     <Card>
-      <CardContent className="pt-6">
+      <Card.Content>
         <div className="flex flex-col gap-3">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0 space-y-1">
               <h3 className="font-semibold leading-none">{event.title}</h3>
-              <p className="text-sm text-muted-foreground">{eventWhen(event)}</p>
+              <p className="text-sm text-muted">{eventWhen(event)}</p>
             </div>
             <div className="flex flex-wrap gap-2">
               {!manual && event.calendarSummary ? (
-                <Badge variant="secondary">{event.calendarSummary}</Badge>
+                <Chip size="sm">{event.calendarSummary}</Chip>
               ) : null}
-              <Badge variant={manual ? 'default' : 'outline'}>{manual ? 'Lembrete' : 'Google'}</Badge>
+              <Chip size="sm" color={manual ? 'accent' : 'default'} variant={manual ? 'primary' : 'tertiary'}>
+                {manual ? 'Lembrete' : 'Google'}
+              </Chip>
             </div>
           </div>
           {manual ? (
             <div className="flex flex-wrap gap-3">
-              <Button type="button" size="sm" variant="outline" onClick={onEdit}>
+              <Button size="sm" variant="outline" onPress={onEdit}>
                 Editar
               </Button>
-              <Button type="button" size="sm" variant="destructive" loading={deleting} onClick={onDelete}>
+              <PendingButton size="sm" variant="danger" isPending={deleting} onPress={onDelete}>
                 Excluir
-              </Button>
+              </PendingButton>
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground">Somente leitura</p>
+            <p className="text-sm text-muted">Somente leitura</p>
           )}
         </div>
-      </CardContent>
+      </Card.Content>
     </Card>
   )
 }

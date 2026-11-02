@@ -12,7 +12,7 @@ import { LembreteForm } from '@/web/events/components/lembrete-form'
 import { selectEventsInHorizon } from '@/shared/events/horizon'
 import { canMutateEvent } from '@/web/events/utils'
 import { settingsQueryOptions } from '@/web/settings/api/settings-query'
-import { Card, CardContent } from '@/web/common/components/ui/card'
+import { Card } from '@heroui/react'
 
 export function AgendaPage() {
   const queryClient = useQueryClient()
@@ -57,7 +57,7 @@ export function AgendaPage() {
         <h2 className="text-lg font-semibold">{editing ? 'Editar Lembrete' : 'Novo Lembrete'}</h2>
         {settings ? (
           <Card>
-            <CardContent className="pt-6">
+            <Card.Content>
               <LembreteForm
                 key={editing?.id ?? 'new'}
                 timeZone={settings.timezone}
@@ -70,20 +70,20 @@ export function AgendaPage() {
                 }}
                 onCancel={editing ? () => setEditing(null) : undefined}
               />
-            </CardContent>
+            </Card.Content>
           </Card>
         ) : (
-          <p className="text-sm text-muted-foreground">Carregando configurações…</p>
+          <p className="text-sm text-muted">Carregando configurações…</p>
         )}
       </section>
 
       <section className="flex flex-col gap-4">
         <h2 className="text-lg font-semibold">Próximos Events</h2>
         {eventsQuery.isPending || settingsQuery.isPending ? (
-          <p className="text-sm text-muted-foreground">Carregando agenda…</p>
+          <p className="text-sm text-muted">Carregando agenda…</p>
         ) : null}
         {eventsQuery.error ? (
-          <p className="text-sm text-destructive" role="alert">
+          <p className="text-sm text-danger" role="alert">
             {eventsQuery.error.message}
           </p>
         ) : null}

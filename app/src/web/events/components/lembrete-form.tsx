@@ -7,11 +7,9 @@ import {
   toDatetimeLocal,
   type LembreteFormValues,
 } from '@/web/events/utils'
-import { Button } from '@/web/common/components/ui/button'
-import { Checkbox } from '@/web/common/components/ui/checkbox'
-import { Field, FieldError, FieldGroup, FieldLabel } from '@/web/common/components/ui/field'
-import { Input } from '@/web/common/components/ui/input'
-import { Label } from '@/web/common/components/ui/label'
+import { Button, Checkbox, FieldError, Input, Label, TextField } from '@heroui/react'
+import { PendingButton } from '@/web/common/components/pending-button'
+import { fieldErrorText } from '@/web/common/utils'
 
 function emptyValues(timeZone: string): LembreteFormValues {
   return {
@@ -66,7 +64,7 @@ export function LembreteForm({
         void form.handleSubmit()
       }}
     >
-      <FieldGroup>
+      <div className="flex flex-col gap-4">
         <form.Field
           name="title"
           validators={{
@@ -76,50 +74,49 @@ export function LembreteForm({
           {(field) => {
             const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
             return (
-              <Field data-invalid={isInvalid}>
-                <FieldLabel htmlFor={field.name}>Título</FieldLabel>
-                <Input
-                  id={field.name}
-                  name={field.name}
-                  value={field.state.value}
-                  onBlur={field.handleBlur}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                  aria-invalid={isInvalid}
-                />
-                {isInvalid ? <FieldError errors={field.state.meta.errors} /> : null}
-              </Field>
+              <TextField
+                name={field.name}
+                value={field.state.value}
+                onBlur={field.handleBlur}
+                onChange={field.handleChange}
+                isInvalid={isInvalid}
+              >
+                <Label>Título</Label>
+                <Input />
+                <FieldError>{fieldErrorText(field.state.meta.errors)}</FieldError>
+              </TextField>
             )
           }}
         </form.Field>
 
         <form.Field name="allDay">
           {(field) => (
-            <Field className="flex-row items-center gap-2">
-              <Checkbox
-                id={field.name}
-                name={field.name}
-                checked={field.state.value}
-                onCheckedChange={(checked) => {
-                  const allDay = checked === true
-                  field.handleChange(allDay)
-                  const start = form.getFieldValue('start')
-                  const end = form.getFieldValue('end')
+            <Checkbox
+              name={field.name}
+              isSelected={field.state.value}
+              onChange={(allDay) => {
+                field.handleChange(allDay)
+                const start = form.getFieldValue('start')
+                const end = form.getFieldValue('end')
+                form.setFieldValue(
+                  'start',
+                  allDay ? start.slice(0, 10) : start.length === 10 ? `${start}T09:00` : start,
+                )
+                if (end) {
                   form.setFieldValue(
-                    'start',
-                    allDay ? start.slice(0, 10) : start.length === 10 ? `${start}T09:00` : start,
+                    'end',
+                    allDay ? end.slice(0, 10) : end.length === 10 ? `${end}T10:00` : end,
                   )
-                  if (end) {
-                    form.setFieldValue(
-                      'end',
-                      allDay ? end.slice(0, 10) : end.length === 10 ? `${end}T10:00` : end,
-                    )
-                  }
-                }}
-              />
-              <Label htmlFor={field.name} className="font-normal">
+                }
+              }}
+            >
+              <Checkbox.Content>
+                <Checkbox.Control>
+                  <Checkbox.Indicator />
+                </Checkbox.Control>
                 Dia inteiro
-              </Label>
-            </Field>
+              </Checkbox.Content>
+            </Checkbox>
           )}
         </form.Field>
 
@@ -128,17 +125,16 @@ export function LembreteForm({
             <>
               <form.Field name="start">
                 {(field) => (
-                  <Field>
-                    <FieldLabel htmlFor={field.name}>Início</FieldLabel>
-                    <Input
-                      id={field.name}
-                      type={allDay ? 'date' : 'datetime-local'}
-                      name={field.name}
-                      value={field.state.value}
-                      onBlur={field.handleBlur}
-                      onChange={(e) => field.handleChange(e.target.value)}
-                    />
-                  </Field>
+                  <TextField
+                    type={allDay ? 'date' : 'datetime-local'}
+                    name={field.name}
+                    value={field.state.value}
+                    onBlur={field.handleBlur}
+                    onChange={field.handleChange}
+                  >
+                    <Label>Início</Label>
+                    <Input />
+                  </TextField>
                 )}
               </form.Field>
               <form.Field
@@ -166,19 +162,18 @@ export function LembreteForm({
                 {(field) => {
                   const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
                   return (
-                    <Field data-invalid={isInvalid}>
-                      <FieldLabel htmlFor={field.name}>Fim (opcional)</FieldLabel>
-                      <Input
-                        id={field.name}
-                        type={allDay ? 'date' : 'datetime-local'}
-                        name={field.name}
-                        value={field.state.value}
-                        onBlur={field.handleBlur}
-                        onChange={(e) => field.handleChange(e.target.value)}
-                        aria-invalid={isInvalid}
-                      />
-                      {isInvalid ? <FieldError errors={field.state.meta.errors} /> : null}
-                    </Field>
+                    <TextField
+                      type={allDay ? 'date' : 'datetime-local'}
+                      name={field.name}
+                      value={field.state.value}
+                      onBlur={field.handleBlur}
+                      onChange={field.handleChange}
+                      isInvalid={isInvalid}
+                    >
+                      <Label>Fim (opcional)</Label>
+                      <Input />
+                      <FieldError>{fieldErrorText(field.state.meta.errors)}</FieldError>
+                    </TextField>
                   )
                 }}
               </form.Field>
@@ -187,22 +182,22 @@ export function LembreteForm({
         </form.Subscribe>
 
         {error ? (
-          <p className="text-sm text-destructive" role="alert">
+          <p className="text-sm text-danger" role="alert">
             {error}
           </p>
         ) : null}
 
         <div className="flex flex-wrap gap-3">
-          <Button type="submit" loading={pending}>
+          <PendingButton type="submit" isPending={pending}>
             {event ? 'Salvar Lembrete' : 'Criar Lembrete'}
-          </Button>
+          </PendingButton>
           {onCancel ? (
-            <Button type="button" variant="outline" onClick={onCancel}>
+            <Button variant="outline" onPress={onCancel}>
               Cancelar
             </Button>
           ) : null}
         </div>
-      </FieldGroup>
+      </div>
     </form>
   )
 }

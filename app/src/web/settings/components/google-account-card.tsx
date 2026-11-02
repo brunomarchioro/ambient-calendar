@@ -1,8 +1,6 @@
 import type { GoogleAccountPublic } from '@/shared/google/types'
-import { Badge } from '@/web/common/components/ui/badge'
-import { Button } from '@/web/common/components/ui/button'
-import { Checkbox } from '@/web/common/components/ui/checkbox'
-import { Label } from '@/web/common/components/ui/label'
+import { Button, Checkbox, Chip } from '@heroui/react'
+import { PendingButton } from '@/web/common/components/pending-button'
 
 export function GoogleAccountCard({
   account,
@@ -33,52 +31,62 @@ export function GoogleAccountCard({
           <div className="space-y-1">
             <p className="font-medium">{account.email}</p>
             {needsReconnect ? (
-              <Badge variant="secondary" className="bg-orange-100 text-orange-900">
+              <Chip size="sm" color="warning">
                 Reconectar
-              </Badge>
+              </Chip>
             ) : null}
             {!needsReconnect && !account.tasksAuthorized ? (
-              <Button type="button" size="sm" variant="outline" onClick={onConnectTasks}>
+              <Button size="sm" variant="outline" onPress={onConnectTasks}>
                 Conectar Google Tasks
               </Button>
             ) : null}
           </div>
           <div className="flex gap-2">
             {needsReconnect ? (
-              <Button type="button" size="sm" variant="outline" onClick={onReconnect}>
+              <Button size="sm" variant="outline" onPress={onReconnect}>
                 Reconectar
               </Button>
             ) : null}
-            <Button type="button" size="sm" variant="destructive" loading={disconnecting} onClick={onDisconnect}>
+            <PendingButton size="sm" variant="danger" isPending={disconnecting} onPress={onDisconnect}>
               Desconectar
-            </Button>
+            </PendingButton>
           </div>
         </div>
         <div className="flex flex-col gap-2 pl-1">
           {account.calendars.map((cal) => (
-            <div key={cal.id} className="flex items-center gap-2">
-              <Checkbox
-                id={`cal-${cal.id}`}
-                checked={cal.enabled}
-                disabled={needsReconnect || patchingCalendarId === cal.id}
-                onCheckedChange={(checked) => {
-                  const enabled = checked === true
-                  if (enabled !== cal.enabled) onToggleCalendar(cal.id, enabled)
-                }}
-              />
-              <Label htmlFor={`cal-${cal.id}`} className="font-normal">
+            <Checkbox
+              key={cal.id}
+              isSelected={cal.enabled}
+              isDisabled={needsReconnect || patchingCalendarId === cal.id}
+              onChange={(enabled) => {
+                if (enabled !== cal.enabled) onToggleCalendar(cal.id, enabled)
+              }}
+            >
+              <Checkbox.Content>
+                <Checkbox.Control>
+                  <Checkbox.Indicator />
+                </Checkbox.Control>
                 {cal.summary}
-              </Label>
-            </div>
+              </Checkbox.Content>
+            </Checkbox>
           ))}
           {account.tasksAuthorized ? account.taskLists.map((list) => (
-            <div key={list.id} className="flex items-center gap-2">
-              <Checkbox id={`task-${list.id}`} checked={list.enabled} disabled={needsReconnect || patchingTaskListId === list.id} onCheckedChange={(checked) => onToggleTaskList(list.id, checked === true)} />
-              <Label htmlFor={`task-${list.id}`} className="font-normal">Tarefas: {list.title}</Label>
-            </div>
-          )) : <p className="text-sm text-muted-foreground">Google Tasks não conectado.</p>}
+            <Checkbox
+              key={list.id}
+              isSelected={list.enabled}
+              isDisabled={needsReconnect || patchingTaskListId === list.id}
+              onChange={(enabled) => onToggleTaskList(list.id, enabled)}
+            >
+              <Checkbox.Content>
+                <Checkbox.Control>
+                  <Checkbox.Indicator />
+                </Checkbox.Control>
+                Tarefas: {list.title}
+              </Checkbox.Content>
+            </Checkbox>
+          )) : <p className="text-sm text-muted">Google Tasks não conectado.</p>}
           {account.calendars.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nenhum calendário importado.</p>
+            <p className="text-sm text-muted">Nenhum calendário importado.</p>
           ) : null}
         </div>
       </div>

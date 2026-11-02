@@ -61,7 +61,7 @@ esp_err_t alerts_poll_refresh(void)
 	(void)alerts_nvs_meta_set_http(body.status);
 
 	if (body.status == 200 && body.body != NULL && body.len > 0) {
-		alerts_schedule_t parsed;
+		static alerts_schedule_t parsed; /* ~15 KB: too big for the main task stack (poll runs only from main) */
 		int perr = alerts_schedule_parse(body.body, body.len, &parsed);
 		if (perr != ALERTS_PARSE_OK) {
 			ESP_LOGE(TAG, "parse: %s", alerts_schedule_parse_strerror(perr));

@@ -1,5 +1,5 @@
-import { Field, FieldError, FieldLabel } from '@/web/common/components/ui/field'
-import { Input } from '@/web/common/components/ui/input'
+import { FieldError, Label, NumberField } from '@heroui/react'
+import { fieldErrorText } from '@/web/common/utils'
 
 export function SettingsNumberField({
   field,
@@ -19,21 +19,23 @@ export function SettingsNumberField({
 }) {
   const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
   return (
-    <Field data-invalid={isInvalid}>
-      <FieldLabel htmlFor={field.name}>{label}</FieldLabel>
-      <Input
-        id={field.name}
-        type="number"
-        name={field.name}
-        min={min}
-        max={max}
-        step={1}
-        value={Number.isNaN(field.state.value) ? '' : field.state.value}
-        onBlur={field.handleBlur}
-        onChange={(e) => field.handleChange(e.target.valueAsNumber)}
-        aria-invalid={isInvalid}
-      />
-      {isInvalid ? <FieldError errors={field.state.meta.errors as Array<string | { message?: string }>} /> : null}
-    </Field>
+    <NumberField
+      name={field.name}
+      minValue={min}
+      maxValue={max}
+      step={1}
+      value={field.state.value}
+      onBlur={field.handleBlur}
+      onChange={(value) => field.handleChange(value ?? Number.NaN)}
+      isInvalid={isInvalid}
+    >
+      <Label>{label}</Label>
+      <NumberField.Group>
+        <NumberField.DecrementButton />
+        <NumberField.Input />
+        <NumberField.IncrementButton />
+      </NumberField.Group>
+      <FieldError>{fieldErrorText(field.state.meta.errors)}</FieldError>
+    </NumberField>
   )
 }

@@ -41,12 +41,12 @@ Feature-sliced architecture for Vanguarda fullstack applications. Follow when cr
 | Framework     | TanStack Start                                 |
 | Routing       | TanStack Router — file routes in `src/routes/` |
 | Data fetching | TanStack Query                                 |
-| UI            | shadcn/ui + Tailwind v4                        |
+| UI            | HeroUI v3 (`@heroui/react`) + Tailwind v4      |
 | Database      | Drizzle ORM + Cloudflare D1                    |
 | Validation    | Zod                                            |
 | Deploy        | Cloudflare Workers                             |
 
-UI → `building-components`. React/SSR performance → `vercel-react-best-practices`.
+UI → `heroui-react` (fetch v3 docs first); composição → `building-components`. Import HeroUI direto, sem wrappers 1:1; componentes em `web/common/components/` só quando adicionam comportamento (ex.: `PendingButton`) — ver [ADR 0015](../../../docs/adr/0015-heroui-ui-library.md). React/SSR performance → `vercel-react-best-practices`.
 
 ## Path Aliases
 
@@ -189,6 +189,7 @@ Same domain word can be both: background collection or external client → `comm
 
 ## Related Skills
 
-- `building-components` — shadcn/ui components and composition
+- `heroui-react` — HeroUI v3 components (no wrappers in `web/common/components/ui/`; import from `@heroui/react`)
+- `building-components` — accessible, composable component design
 - `vercel-react-best-practices` — React/SSR performance
 - `vercel-composition-patterns` — component composition
